@@ -1,0 +1,26 @@
+[package]
+name = "rustpi"
+version = "0.1.0"
+edition = "2018"
+authors = ["tonnylyz <lyztonny@gmail.com>"]
+build = "build.rs"
+
+[dependencies]
+rlibc = "0.1"
+register = "0.5.0"
+buddy_system_allocator = "0.6.0"
+spin = "0.5.2"
+xmas-elf = "0.7.0"
+lazy_static = { version = "1.4.0", features = ["spin_no_std"] }
+
+[target.'cfg(target_arch = "aarch64")'.dependencies]
+cortex-a = "5.0.1"
+
+[target.'cfg(target_arch = "riscv64")'.dependencies]
+riscv = { git = "https://github.com/tonnylyz/riscv" }
+
+[features]
+default = []
+aarch64_pi3 = []
+aarch64_virt = []
+riscv64_virt = []
