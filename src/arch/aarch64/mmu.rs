@@ -66,12 +66,11 @@ impl<T> BaseAddr for T {
 #[link_section = ".text.kvm"]
 pub unsafe extern "C" fn populate_page_table() {
   const ONE_GIGABYTE: usize = (1 << 30);
-  for i in 0..PHYSICAL_ADDRESS_LIMIT_GB {
-    let output_addr = i * ONE_GIGABYTE;
+  for output_addr in (0..BOARD_PHYSICAL_ADDRESS_LIMIT).step_by(ONE_GIGABYTE) {
     if crate::board::BOARD_NORMAL_MEMORY_RANGE.contains(&output_addr) {
-      KPT.lvl1[i] = BlockDescriptor::new(output_addr, false);
+      KPT.lvl1[output_addr >> 30] = BlockDescriptor::new(output_addr, false);
     } else if crate::board::BOARD_DEVICE_MEMORY_RANGE.contains(&output_addr) {
-      KPT.lvl1[i] = BlockDescriptor::new(output_addr, true);
+      KPT.lvl1[output_addr >> 30] = BlockDescriptor::new(output_addr, true);
     }
   }
   for i in PHYSICAL_ADDRESS_LIMIT_GB..ENTRY_PER_PAGE {

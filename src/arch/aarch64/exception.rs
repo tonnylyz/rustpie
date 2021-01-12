@@ -15,17 +15,17 @@ global_asm!(include_str!("exception.S"));
 //--------------------------------------------------------------------------------------------------
 
 #[no_mangle]
-unsafe extern "C" fn current_el0_synchronous() {
+unsafe extern "C" fn current_el_sp0_synchronous() {
   panic!("current_el0_synchronous");
 }
 
 #[no_mangle]
-unsafe extern "C" fn current_el0_irq(ctx: *mut ContextFrame) {
+unsafe extern "C" fn current_el_sp0_irq(ctx: *mut ContextFrame) {
   lower_aarch64_irq(ctx);
 }
 
 #[no_mangle]
-unsafe extern "C" fn current_el0_serror() {
+unsafe extern "C" fn current_el_sp0_serror() {
   panic!("current_el0_serror");
 }
 
@@ -36,17 +36,17 @@ unsafe extern "C" fn current_el0_serror() {
 /// Asynchronous exception taken from the current EL, using SP of the current EL.
 #[no_mangle]
 #[inline(never)]
-unsafe extern "C" fn current_elx_synchronous() {
+unsafe extern "C" fn current_el_spx_synchronous() {
   panic!("current_elx_synchronous {:016x}",cortex_a::regs::ELR_EL1.get());
 }
 
 #[no_mangle]
-unsafe extern "C" fn current_elx_irq() {
+unsafe extern "C" fn current_el_spx_irq() {
   panic!("current_elx_irq");
 }
 
 #[no_mangle]
-unsafe extern "C" fn current_elx_serror() {
+unsafe extern "C" fn current_el_spx_serror() {
   panic!("current_elx_serror");
 }
 

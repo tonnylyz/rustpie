@@ -17,7 +17,6 @@ extern crate rlibc;
 use arch::*;
 
 use crate::lib::current_thread;
-use cortex_a::regs::{SP, RegisterReadWrite};
 use spin::Mutex;
 
 #[macro_export]
@@ -66,15 +65,9 @@ fn static_check() {
 }
 
 #[no_mangle]
-pub unsafe fn change_stack(core_id: CoreId) -> ! {
-  let sp = lib::core::stack().top();
-  SP.set(sp as u64);
-  main(core_id)
-}
-
-#[no_mangle]
 pub unsafe fn main(core_id: CoreId) -> ! {
   if core_id == 0 {
+    println!("RUSTPI");
     clear_bss();
     board::init();
     static_check();

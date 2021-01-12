@@ -36,12 +36,18 @@ _el2_start:
 .global _el1_start
 _el1_start:
     mov x19, x1
+    mov x1, #1
+    msr spsel, x1
     adr x0, boot_stack_top
     mov sp, x0
     bl populate_page_table
     bl mmu_init
     mov x0, x19
-    ldr x1, =change_stack
+    ldr x1, =core_stack
+    blr x1
+    mov sp, x0
+    mov x0, x19
+    ldr x1, =main
     blr x1
 
 _loop:

@@ -131,6 +131,7 @@ impl InterruptServiceRoutine for Isr {
   }
 
   fn interrupt_request() {
+    println!("irq");
     crate::driver::timer::next();
     crate::lib::scheduler::schedule();
   }
