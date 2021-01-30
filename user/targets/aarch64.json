@@ -10,6 +10,7 @@
   "arch": "aarch64",
   "data-layout": "e-m:e-i8:8:32-i16:16:32-i64:64-i128:128-n32:64-S128",
   "executables": true,
+  "dynamic-linking": true,
   "linker": "rust-lld",
   "linker-flavor": "ld.lld",
   "pre-link-args": {
@@ -19,15 +20,17 @@
   },
   "llvm-target": "aarch64-unknown-none",
   "no-compiler-rt": true,
-  "features": "+a53,+strict-align,-neon",
+  "features": "+a53,+strict-align",
   "max-atomic-width": "128",
   "os": "none",
   "panic": "abort",
   "panic-strategy": "abort",
-  "position-independent-executables": false,
   "relocation-model": "static",
+  "position-independent-executables": true,
   "target-c-int-width": "32",
   "target-endian": "little",
   "target-pointer-width": "64",
-  "disable-redzone": true
+  "target-family": "unix",
+  "disable-redzone": true,
+  "eliminate-frame-pointer": false
 }

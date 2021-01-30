@@ -7,31 +7,29 @@
     "win64",
     "sysv64"
   ],
-  "arch": "aarch64",
-  "data-layout": "e-m:e-i8:8:32-i16:16:32-i64:64-i128:128-n32:64-S128",
+  "arch": "riscv64",
+  "data-layout": "e-m:e-p:64:64-i64:64-n64-S128",
   "executables": true,
-  "dynamic-linking": true,
   "linker": "rust-lld",
   "linker-flavor": "ld.lld",
   "pre-link-args": {
     "ld.lld": [
-      "-Tsrc/linkers/aarch64_virt.lds",
+      "-Tsrc/linkers/riscv64.lds",
       "-e_start"
     ]
   },
-  "llvm-target": "aarch64-unknown-none",
+  "llvm-target": "riscv64-unknown-none",
   "no-compiler-rt": true,
-  "features": "+a53,+strict-align,-neon,-fp-armv8",
-  "max-atomic-width": "128",
+  "features": "+m,+a",
+  "max-atomic-width": "64",
   "os": "none",
+  "cpu": "generic-rv64",
   "panic": "abort",
   "panic-strategy": "abort",
+  "position-independent-executables": false,
   "relocation-model": "static",
-  "position-independent-executables": true,
   "target-c-int-width": "32",
   "target-endian": "little",
   "target-pointer-width": "64",
-  "target-family": "unix",
-  "disable-redzone": true,
-  "eliminate-frame-pointer": false
+  "disable-redzone": true
 }

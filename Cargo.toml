@@ -21,6 +21,5 @@ riscv = { git = "https://github.com/tonnylyz/riscv" }
 
 [features]
 default = []
-aarch64_pi3 = []
 aarch64_virt = []
 riscv64_virt = []
