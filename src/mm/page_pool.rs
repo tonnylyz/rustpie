@@ -63,8 +63,9 @@ impl PagePoolTrait for PagePool {
       return Err(UnmanagedFrameError);
     }
     if let Ok(0) = self.rc(frame) {
-      if let Some(pa) = self.allocated.remove_item(&frame.pa()) {
-        self.free.push(pa);
+      if self.allocated.contains(&frame.pa()) {
+        self.allocated.retain(|&pa| pa != frame.pa());
+        self.free.push(frame.pa());
         Ok(())
       } else {
         Err(FreeUnallocatedFrameError)

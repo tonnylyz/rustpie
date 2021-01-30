@@ -5,7 +5,6 @@
 #![feature(panic_info_message)]
 #![feature(core_intrinsics)]
 #![feature(format_args_nl)]
-#![feature(vec_remove_item)]
 #![feature(const_in_array_repeat_expressions)]
 #![feature(llvm_asm)]
 

@@ -125,7 +125,8 @@ impl ProcessPool {
   }
 
   fn free(&mut self, p: &Process) -> Result<(), Error> {
-    if let Some(p) = self.alloced.remove_item(p) {
+    if self.alloced.contains(p) {
+      self.alloced.retain(|_p| _p.pid() != p.pid());
       let mut map = PROCESS_MAP.lock();
       map.remove(&p.pid());
       drop(map);

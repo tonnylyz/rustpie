@@ -172,7 +172,8 @@ impl ThreadPool {
   }
 
   fn free(&mut self, t: &Thread) -> Result<(), Error> {
-    if let Some(t) = self.alloced.remove_item(t) {
+    if self.alloced.contains(t) {
+      self.alloced.retain(|_t| _t.tid() != t.tid());
       let mut map = THREAD_MAP.lock();
       map.remove(&t.tid());
       drop(map);
