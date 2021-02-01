@@ -1,4 +1,4 @@
-.PHONY: all emu-aarch64 emu-riscv64 debug-aarch64 debug-riscv64 clean dependencies
+.PHONY: all emu-aarch64 emu-riscv64 debug-aarch64 debug-riscv64 clean dependencies aarch64.bin riscv64.bin
 
 all: aarch64.bin riscv64.bin
 
@@ -28,7 +28,7 @@ debug-aarch64: aarch64.bin
 	qemu-system-aarch64 -M virt -cpu cortex-a53 -smp 4 -m 4096 -kernel $< -serial stdio -display none -s -S
 
 debug-riscv64: riscv64.bin
-	qemu-system-riscv64 -M virt -smp 1 -m 1024 -bios default -kernel $< -serial stdio -display none -s -S
+	qemu-system-riscv64 -M virt -smp 4 -m 1024 -bios default -kernel $< -serial stdio -display none -s -S
 
 clean:
 	-cargo clean
