@@ -1,6 +1,3 @@
-use crate::arch::ArchTrait;
-use crate::driver::mmio::write_byte;
-
 const TIMER_DEFAULT_COUNT: u64 = 10000000;
 
 pub fn next() {

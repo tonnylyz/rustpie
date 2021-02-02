@@ -3,8 +3,8 @@ pub const SBI_FID_SET_TIMER: u32 = 0x00;
 
 pub const SBI_EID_HSM: u32 = 0x48534D;
 pub const SBI_FID_HART_START: u32 = 0x00;
-pub const SBI_FID_HART_STOP: u32 = 0x01;
-pub const SBI_FID_HART_GET_STATUS: u32 = 0x02;
+//pub const SBI_FID_HART_STOP: u32 = 0x01;
+//pub const SBI_FID_HART_GET_STATUS: u32 = 0x02;
 
 pub enum Error {
   Failed = 1,

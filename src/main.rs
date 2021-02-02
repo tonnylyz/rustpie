@@ -16,7 +16,7 @@ extern crate rlibc;
 use arch::*;
 
 use crate::lib::current_thread;
-use spin::Mutex;
+use crate::lib::core::barrier;
 
 #[macro_export]
 macro_rules! print {
@@ -85,7 +85,7 @@ pub unsafe fn main(core_id: CoreId) -> ! {
     #[cfg(target_arch = "riscv64")]
       lib::process::create(&lib::user_image::_binary_user_riscv64_elf_start, 0);
   }
-
+  barrier();
   lib::scheduler::schedule();
   start_first_thread(core_id)
 }

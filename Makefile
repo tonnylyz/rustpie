@@ -19,13 +19,13 @@ riscv64.bin: user/riscv64.elf
 	rust-objcopy target/riscv64/debug/rustpi -O binary riscv64.bin
 
 emu-aarch64: aarch64.bin
-	qemu-system-aarch64 -M virt -cpu cortex-a53 -smp 4 -m 4096 -kernel $< -serial stdio -display none
+	qemu-system-aarch64 -M virt,virtualization=on -cpu cortex-a53 -smp 4 -m 1024 -kernel $< -serial stdio -display none
 
 emu-riscv64: riscv64.bin
 	qemu-system-riscv64 -M virt -smp 4 -m 1024 -bios default -kernel $< -serial stdio -display none
 
 debug-aarch64: aarch64.bin
-	qemu-system-aarch64 -M virt -cpu cortex-a53 -smp 4 -m 4096 -kernel $< -serial stdio -display none -s -S
+	qemu-system-aarch64 -M virt,virtualization=on -cpu cortex-a53 -smp 4 -m 1024 -kernel $< -serial stdio -display none -s -S
 
 debug-riscv64: riscv64.bin
 	qemu-system-riscv64 -M virt -smp 4 -m 1024 -bios default -kernel $< -serial stdio -display none -s -S

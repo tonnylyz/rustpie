@@ -4,7 +4,7 @@ use crate::arch::{ArchTrait, ContextFrame, CoreTrait, PAGE_SIZE};
 use crate::board::BOARD_CORE_NUMBER;
 use crate::lib::scheduler::{RoundRobinScheduler, SchedulerTrait};
 use crate::lib::thread::Thread;
-use core::intrinsics::size_of;
+use crate::lib::round_up;
 
 pub struct Core {
   context: Mutex<*mut ContextFrame>,
@@ -17,7 +17,7 @@ const CORE_STACK_PAGE_NUM: usize = 7;
 
 #[repr(align(4096))]
 pub struct Stack {
-  protective_hole: [u8; PAGE_SIZE],
+  _protective_hole: [u8; PAGE_SIZE],
   stack: [u8; PAGE_SIZE * CORE_STACK_PAGE_NUM],
 }
 
@@ -29,7 +29,7 @@ impl Stack {
 
 #[no_mangle]
 static STACKS: [Stack; BOARD_CORE_NUMBER] = [Stack {
-  protective_hole: [0; PAGE_SIZE],
+  _protective_hole: [0; PAGE_SIZE],
   stack: [0; PAGE_SIZE * CORE_STACK_PAGE_NUM]
 }; BOARD_CORE_NUMBER];
 
@@ -125,6 +125,23 @@ pub fn current() -> &'static Core {
 pub fn stack() -> &'static Stack {
   let core_id = crate::arch::Arch::core_id();
   &STACKS[core_id]
+}
+
+struct CoreBarrier {
+  count: u32,
+}
+static CORE_BARRIER: Mutex<CoreBarrier> = Mutex::new(CoreBarrier { count: 0 });
+pub fn barrier() {
+  let next_count;
+  let mut barrier = CORE_BARRIER.lock();
+  barrier.count += 1;
+  next_count = round_up(barrier.count as usize, BOARD_CORE_NUMBER);
+  drop(barrier);
+  loop {
+    if CORE_BARRIER.lock().count as usize >= next_count {
+      break;
+    }
+  }
 }
 
 fn idle_thread(_arg: usize) {

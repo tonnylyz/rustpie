@@ -1,10 +1,9 @@
 use core::ops::Range;
 use core::sync::atomic::{AtomicBool, Ordering};
 
-use crate::arch::{ArchTrait, CoreTrait, CoreId};
+use crate::arch::{ArchTrait, CoreTrait};
 use crate::lib::current_core;
 use spin::Mutex;
-use crate::main;
 
 #[allow(dead_code)]
 pub const BOARD_CORE_NUMBER: usize = 4;
@@ -37,9 +36,9 @@ pub unsafe extern "C" fn hart_spin(core_id: usize) {
   let mut hart_boot = HART_BOOT.lock();
   if hart_boot.is_none() {
     *hart_boot = Some(core_id);
-    for i in 0..3 {
+    for i in 0..BOARD_CORE_NUMBER {
       if i != core_id {
-        crate::driver::hsm::hart_start(i, 0x80200000, 0);
+        let _ = crate::driver::hsm::hart_start(i, 0x80200000, 0);
       }
     }
   }

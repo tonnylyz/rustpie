@@ -2,9 +2,6 @@ use crate::board::*;
 
 use super::interface::PAGE_SHIFT;
 use super::interface::PAGE_SIZE;
-use super::page_table::PAGE_TABLE_L1_SHIFT;
-use super::page_table::PAGE_TABLE_L2_SHIFT;
-use super::page_table::PAGE_TABLE_L3_SHIFT;
 use super::vm_descriptor::*;
 
 const PHYSICAL_ADDRESS_LIMIT_GB: usize = BOARD_PHYSICAL_ADDRESS_LIMIT >> 30;
@@ -65,7 +62,7 @@ impl<T> BaseAddr for T {
 #[no_mangle]
 #[link_section = ".text.kvm"]
 pub unsafe extern "C" fn populate_page_table() {
-  const ONE_GIGABYTE: usize = (1 << 30);
+  const ONE_GIGABYTE: usize = 1 << 30;
   for output_addr in (0..BOARD_PHYSICAL_ADDRESS_LIMIT).step_by(ONE_GIGABYTE) {
     if crate::board::BOARD_NORMAL_MEMORY_RANGE.contains(&output_addr) {
       KPT.lvl1[output_addr >> 30] = BlockDescriptor::new(output_addr, false);

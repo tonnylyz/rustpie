@@ -39,9 +39,13 @@ _el1_start:
     mov x1, #1
     msr spsel, x1
     adr x0, boot_stack_top
+    mov x1, 4096
+    mul x1, x1, x19
+    sub x0, x0, x1
     mov sp, x0
+    cbnz x19, 1f
     bl populate_page_table
-    bl mmu_init
+1:  bl mmu_init
     mov x0, x19
     ldr x1, =core_stack
     blr x1
@@ -56,5 +60,8 @@ _loop:
 .section .data.start
 boot_stack:
     .align 12
+    .space 4096
+    .space 4096
+    .space 4096
     .space 4096
 boot_stack_top:
