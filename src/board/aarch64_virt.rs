@@ -10,11 +10,17 @@ pub const BOARD_DEVICE_MEMORY_RANGE: Range<usize> = 0x0000_0000..0x4000_0000;
 pub const BOARD_PHYSICAL_ENTRY: u64 = 0x40080000;
 pub fn init() {
     crate::driver::uart::init();
+    crate::driver::gic::init();
 }
 
+const GIC_IRQ_VIRTUAL_TIMER: usize = 27;
+
 pub fn init_per_core() {
-    crate::driver::timer::init();
+    let core_id = crate::arch::Arch::core_id();
     crate::arch::Arch::exception_init();
+    crate::driver::gic::init_per_core();
+    crate::driver::gic::enable_interrupt(GIC_IRQ_VIRTUAL_TIMER, 1 << core_id as u8);
+    crate::driver::timer::init();
     current_core().create_idle_thread();
 }
 

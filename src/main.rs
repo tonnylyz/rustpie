@@ -69,12 +69,17 @@ pub unsafe fn main(core_id: CoreId) -> ! {
     println!("RUSTPI");
     clear_bss();
     board::init();
+    println!("board init ok");
     static_check();
     mm::heap::init();
+    println!("heap init ok");
     mm::page_pool::init();
+    println!("page pool init ok");
     board::launch_other_cores();
+    println!("launched other cores");
   }
   board::init_per_core();
+  println!("init core {}", core_id);
   if core_id == 0 {
     // Note: `arg` is used to start different programs:
     //    0 - fktest: a `fork` test

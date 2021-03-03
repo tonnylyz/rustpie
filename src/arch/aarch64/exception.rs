@@ -66,6 +66,7 @@ unsafe extern "C" fn lower_aarch64_synchronous(ctx: *mut ContextFrame) {
   } else {
     let ec = ESR_EL1.read(ESR_EL1::EC);
     println!("lower_aarch64_synchronous: ec {:06b}", ec);
+    println!("{}", *ctx);
     Isr::default();
   }
   core.clear_context();

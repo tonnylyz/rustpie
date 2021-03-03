@@ -1,9 +1,11 @@
-const TIMER_DEFAULT_COUNT: u64 = 10000000;
+const TIMER_TICK_MS: u64 = 100;
 
 pub fn next() {
   use cortex_a::regs::*;
-  CNTP_TVAL_EL0.set(TIMER_DEFAULT_COUNT);
-  CNTP_CTL_EL0.write(CNTP_CTL_EL0::ENABLE.val(1) + CNTP_CTL_EL0::IMASK.val(0));
+  let freq = CNTFRQ_EL0.get();
+  let count = TIMER_TICK_MS * freq / 1000;
+  CNTV_TVAL_EL0.set(count);
+  CNTV_CTL_EL0.write(CNTV_CTL_EL0::ENABLE.val(1) + CNTV_CTL_EL0::IMASK.val(0));
 }
 
 pub fn init() {
