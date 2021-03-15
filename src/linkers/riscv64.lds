@@ -19,8 +19,6 @@ SECTIONS
         *(.bss*)
     }
     BSS_END = .;
-    /DISCARD/ : {
-        *(.comment)
-    }
+    .eh_frame : { KEEP (*(.eh_frame)) }
     KERNEL_END = .;
 }

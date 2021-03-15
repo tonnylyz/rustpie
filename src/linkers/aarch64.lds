@@ -23,5 +23,6 @@ SECTIONS
         *(.bss*)
     }
     BSS_END = .;
+    .eh_frame : { KEEP (*(.eh_frame)) }
     KERNEL_END = .;
 }

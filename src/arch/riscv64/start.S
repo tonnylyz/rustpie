@@ -14,7 +14,7 @@ _start:
     slli  t0, t0, 32
     srli  t0, t0, 32 // truncate t0 to 32 bits
     srli  t0, t0, 12 // pa -> ppn
-    # Note: Supervisor Adress Translation and Protection (satp) Register
+    # Note: Supervisor Address Translation and Protection (satp) Register
     #  [   8   ][   16    ][      44      ]  ~ 64 bit
     #    mode      asid          PPN(physical page number)
     # we choose `mode` == 8

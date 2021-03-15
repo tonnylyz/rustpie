@@ -4,9 +4,11 @@
 #![feature(alloc_error_handler)]
 #![feature(panic_info_message)]
 #![feature(core_intrinsics)]
+#![feature(core_panic)]
 #![feature(format_args_nl)]
 #![feature(const_in_array_repeat_expressions)]
 #![feature(llvm_asm)]
+#![feature(lang_items)]
 
 extern crate alloc;
 #[macro_use]
@@ -31,6 +33,36 @@ macro_rules! println {
     })
 }
 
+#[lang = "eh_personality"]
+#[no_mangle]
+pub extern fn rust_eh_personality() {
+  println!("rust_eh_personality called");
+  loop {}
+}
+
+#[allow(non_snake_case)]
+#[no_mangle]
+pub extern fn _Unwind_Resume() {
+  println!("_Unwind_Resume called");
+  loop {}
+}
+
+#[lang = "panic_impl"]
+#[no_mangle]
+pub extern fn rust_begin_panic(info: &core::panic::PanicInfo) -> ! {
+  if let Some(m) = info.message() {
+    if let Some(l) = info.location() {
+      println!("\nkernel panic: {} \n {}", m, l);
+    } else {
+      println!("\nkernel panic: {}", m);
+    }
+  } else {
+    println!("\nkernel panic!");
+  }
+  loop {
+    Arch::wait_for_event();
+  }
+}
 mod arch;
 mod board;
 mod driver;
@@ -65,6 +97,8 @@ fn static_check() {
 
 #[no_mangle]
 pub unsafe fn main(core_id: CoreId) -> ! {
+  let a: Option<u32> = None;
+  a.unwrap();
   if core_id == 0 {
     println!("RUSTPI");
     clear_bss();
