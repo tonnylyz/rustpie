@@ -12,6 +12,7 @@ pub mod page_table;
 pub mod thread;
 pub mod bitmap;
 pub mod core;
+pub mod interrupt;
 
 #[inline(always)]
 pub fn round_up(addr: usize, n: usize) -> usize {

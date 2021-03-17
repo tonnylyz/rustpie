@@ -94,7 +94,7 @@ unsafe extern "C" fn exception_entry(ctx: usize) {
       Interrupt::SupervisorSoftware => { panic!("Interrupt::SupervisorSoft") }
       Interrupt::UserTimer => { panic!("Interrupt::UserTimer") }
       Interrupt::SupervisorTimer => {
-        Isr::interrupt_request()
+        Isr::timer_interrupt()
       }
       Interrupt::UserExternal => { panic!("Interrupt::UserExternal") }
       Interrupt::SupervisorExternal => { panic!("Interrupt::SupervisorExternal") }

@@ -97,8 +97,6 @@ fn static_check() {
 
 #[no_mangle]
 pub unsafe fn main(core_id: CoreId) -> ! {
-  let a: Option<u32> = None;
-  a.unwrap();
   if core_id == 0 {
     println!("RUSTPI");
     clear_bss();

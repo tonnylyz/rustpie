@@ -3,8 +3,6 @@ use core::fmt::Write;
 
 use spin::Mutex;
 
-use crate::arch::{Arch, ArchTrait};
-
 pub struct Writer;
 
 static WRITER: Mutex<Writer> = Mutex::new(Writer);

@@ -1,4 +1,5 @@
-use crate::arch::Address;
+use crate::arch::{Address, ArchTrait};
+use crate::lib::interrupt::{InterruptController, InterruptNo};
 
 const GIC_INTERRUPT_NUM: usize = 1024;
 const GIC_SGI_NUM: usize = 16;
@@ -57,7 +58,7 @@ struct GicCpuInterface {
 
 impl GicCpuInterface {
   fn init(&mut self) {
-    self.pmr = u32::max_value();
+    self.pmr = u32::MAX;
     self.control |= 1 | (1 << 9);
   }
 }
@@ -66,26 +67,26 @@ impl GicDistributor {
   fn init(&mut self) {
     let max_spi = (self.typer & 0b11111) * 32 + 1;
     for i in 1usize..(max_spi as usize / 32) {
-      self.clear_enable[i] = u32::max_value();
-      self.clear_pend[i] = u32::max_value();
-      self.clear_active[i] = u32::max_value();
+      self.clear_enable[i] = u32::MAX;
+      self.clear_pend[i] = u32::MAX;
+      self.clear_active[i] = u32::MAX;
     }
     for i in 8usize..(max_spi as usize * 8 / 32) {
-      self.priority[i] = u32::max_value();
-      self.target[i] = u32::max_value();
+      self.priority[i] = u32::MAX;
+      self.target[i] = u32::MAX;
     }
     self.control |= 1;
   }
 
   fn init_per_core(&mut self) {
-    self.clear_enable[0] = u32::max_value();
-    self.clear_pend[0] = u32::max_value();
-    self.clear_active[0] = u32::max_value();
+    self.clear_enable[0] = u32::MAX;
+    self.clear_pend[0] = u32::MAX;
+    self.clear_active[0] = u32::MAX;
     for i in 0..4 {
-      self.clear_pend_sgi[i] = u32::max_value();
+      self.clear_pend_sgi[i] = u32::MAX;
     }
     for i in 0..8 {
-      self.priority[i] = u32::max_value();
+      self.priority[i] = u32::MAX;
     }
   }
 
@@ -116,29 +117,74 @@ impl GicDistributor {
     self.priority[priority_index] =
         (self.priority[priority_index] & (!mask)) | (((priority as u32) << offset) & mask);
   }
-
 }
 
-pub fn init() {
-  let gicd = unsafe { (GICD_BASE.pa2kva() as *mut GicDistributor).as_mut().unwrap() };
-  gicd.init();
+fn gicd() -> &'static mut GicDistributor {
+  unsafe { (GICD_BASE.pa2kva() as *mut GicDistributor).as_mut().unwrap() }
 }
 
-pub fn init_per_core() {
-  let gicd = unsafe { (GICD_BASE.pa2kva() as *mut GicDistributor).as_mut().unwrap() };
-  let gicc = unsafe { (GICC_BASE.pa2kva() as *mut GicCpuInterface).as_mut().unwrap() };
-  gicd.init_per_core();
-  gicc.init();
+fn gicc() -> &'static mut GicCpuInterface {
+  unsafe { (GICC_BASE.pa2kva() as *mut GicCpuInterface).as_mut().unwrap() }
 }
 
-pub fn enable_interrupt(int: usize, target: u8) {
-  let gicd = unsafe { (GICD_BASE.pa2kva() as *mut GicDistributor).as_mut().unwrap() };
-  gicd.set_enable(int);
-  gicd.set_priority(int, 0x7f);
-  gicd.set_target(int, target);
+pub struct Gic;
+
+impl InterruptController for Gic {
+  fn init(&self) {
+    let core_id = crate::arch::Arch::core_id();
+    let gicd = gicd();
+    if core_id == 0 {
+      gicd.init();
+    }
+    let gicc = gicc();
+    gicd.init_per_core();
+    gicc.init();
+  }
+
+  fn enable(&self, int: InterruptNo) {
+    match int {
+      InterruptNo::Timer => {panic!("GIC use numbered timer irq");}
+      InterruptNo::Numbered(int) => {
+        let core_id = crate::arch::Arch::core_id();
+        let gicd = gicd();
+        gicd.set_enable(int);
+        gicd.set_priority(int, 0x7f);
+        gicd.set_target(int, (1 << core_id) as u8);
+      }
+    }
+  }
+
+  fn disable(&self, int: InterruptNo) {
+    match int {
+      InterruptNo::Timer => {panic!("GIC use numbered timer irq");}
+      InterruptNo::Numbered(int) => {
+        let gicd = gicd();
+        gicd.clear_enable(int);
+      }
+    }
+  }
+
+  fn fetch(&self) -> Option<InterruptNo> {
+    let gicc = gicc();
+    let i = gicc.int_ack;
+    if i >= 1022 {
+      None
+    } else {
+      Some(InterruptNo::Numbered(i as usize))
+    }
+  }
+
+  fn finish(&self, int: InterruptNo) {
+    match int {
+      InterruptNo::Timer => {panic!("GIC use numbered timer irq");}
+      InterruptNo::Numbered(int) => {
+        let gicc = gicc();
+        gicc.end_of_int = int as u32;
+      }
+    }
+  }
 }
 
-pub fn clear_interrupt(int: usize) {
-  let gicc = unsafe { (GICC_BASE.pa2kva() as *mut GicCpuInterface).as_mut().unwrap() };
-  gicc.end_of_int = int as u32;
-}
+pub const INT_TIMER: InterruptNo = InterruptNo::Numbered(27);
+
+pub static INTERRUPT_CONTROLLER: Gic = Gic{};

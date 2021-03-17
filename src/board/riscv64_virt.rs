@@ -4,6 +4,7 @@ use core::sync::atomic::{AtomicBool, Ordering};
 use crate::arch::{ArchTrait, CoreTrait};
 use crate::lib::current_core;
 use spin::Mutex;
+use crate::lib::interrupt::InterruptController;
 
 #[allow(dead_code)]
 pub const BOARD_CORE_NUMBER: usize = 4;
@@ -16,11 +17,11 @@ pub const BOARD_DEVICE_MEMORY_RANGE: Range<usize> = 0x0000_0000..0x8000_0000;
 
 pub fn init() {
   crate::driver::uart::init();
-  crate::driver::plic::init();
 }
 
 pub fn init_per_core() {
   crate::driver::timer::init();
+  crate::driver::INTERRUPT_CONTROLLER.init();
   crate::arch::Arch::exception_init();
   current_core().create_idle_thread();
 }

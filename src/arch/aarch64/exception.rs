@@ -7,6 +7,7 @@
 use cortex_a::{barrier, regs::*};
 
 use crate::arch::{ContextFrame, CoreTrait};
+use crate::lib::interrupt::InterruptController;
 
 global_asm!(include_str!("exception.S"));
 
@@ -75,9 +76,32 @@ unsafe extern "C" fn lower_aarch64_synchronous(ctx: *mut ContextFrame) {
 #[no_mangle]
 unsafe extern "C" fn lower_aarch64_irq(ctx: *mut ContextFrame) {
   use crate::lib::isr::*;
+  use crate::lib::interrupt::*;
   let core = crate::lib::core::current();
   core.set_context(ctx);
-  Isr::interrupt_request();
+  use crate::driver::{INTERRUPT_CONTROLLER, gic::INT_TIMER};
+  let irq = INTERRUPT_CONTROLLER.fetch();
+  match irq {
+    Some(InterruptNo::Timer) => {
+      panic!("GIC use numbered timer irq");
+    }
+    Some(INT_TIMER) => {
+      Isr::timer_interrupt();
+    }
+    Some(InterruptNo::Numbered(i)) => {
+      if i >= 32 {
+        Isr::external_interrupt();
+      } else {
+        panic!("GIC unhandled SGI PPI")
+      }
+    }
+    None => {
+      panic!("GIC unknown irq")
+    }
+  }
+  if irq.is_some() {
+    INTERRUPT_CONTROLLER.finish(irq.unwrap());
+  }
   core.clear_context();
 }
 

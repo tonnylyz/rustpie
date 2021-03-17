@@ -2,24 +2,23 @@ use core::ops::Range;
 
 use crate::arch::{ArchTrait, CoreTrait};
 use crate::lib::current_core;
+use crate::lib::interrupt::InterruptController;
+use crate::driver::gic::INT_TIMER;
 
 pub const BOARD_CORE_NUMBER: usize = 4;
 pub const BOARD_PHYSICAL_ADDRESS_LIMIT: usize = 0x8000_0000;
 pub const BOARD_NORMAL_MEMORY_RANGE: Range<usize> = 0x4000_0000..0x8000_0000;
 pub const BOARD_DEVICE_MEMORY_RANGE: Range<usize> = 0x0000_0000..0x4000_0000;
 pub const BOARD_PHYSICAL_ENTRY: u64 = 0x40080000;
+
 pub fn init() {
     crate::driver::uart::init();
-    crate::driver::gic::init();
 }
 
-const GIC_IRQ_VIRTUAL_TIMER: usize = 27;
-
 pub fn init_per_core() {
-    let core_id = crate::arch::Arch::core_id();
     crate::arch::Arch::exception_init();
-    crate::driver::gic::init_per_core();
-    crate::driver::gic::enable_interrupt(GIC_IRQ_VIRTUAL_TIMER, 1 << core_id as u8);
+    crate::driver::INTERRUPT_CONTROLLER.init();
+    crate::driver::INTERRUPT_CONTROLLER.enable(INT_TIMER);
     crate::driver::timer::init();
     current_core().create_idle_thread();
 }

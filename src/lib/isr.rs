@@ -10,7 +10,8 @@ use crate::mm::PageFrame;
 
 pub trait InterruptServiceRoutine {
   fn system_call();
-  fn interrupt_request();
+  fn timer_interrupt();
+  fn external_interrupt();
   fn page_fault();
   fn default();
 }
@@ -130,9 +131,13 @@ impl InterruptServiceRoutine for Isr {
     }
   }
 
-  fn interrupt_request() {
+  fn timer_interrupt() {
     crate::driver::timer::next();
     crate::lib::scheduler::schedule();
+  }
+
+  fn external_interrupt() {
+    panic!("external_interrupt");
   }
 
   fn page_fault() {
