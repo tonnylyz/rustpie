@@ -75,4 +75,8 @@ impl crate::arch::traits::ContextFrameTrait for Aarch64ContextFrame {
   fn set_argument(&mut self, arg: usize) {
     self.gpr[0] = arg as u64;
   }
+
+  fn gpr(&self, index: usize) -> usize {
+    self.gpr[index] as usize
+  }
 }

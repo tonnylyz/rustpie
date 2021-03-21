@@ -70,8 +70,8 @@ pub unsafe extern "C" fn populate_page_table() {
       KPT.lvl1[output_addr >> 30] = BlockDescriptor::new(output_addr, true);
     }
   }
-  for i in PHYSICAL_ADDRESS_LIMIT_GB..ENTRY_PER_PAGE {
-    KPT.lvl1[i] = BlockDescriptor::invalid();
+  for output_addr in (BOARD_PHYSICAL_ADDRESS_LIMIT..(512 * ONE_GIGABYTE)).step_by(ONE_GIGABYTE) {
+    KPT.lvl1[output_addr >> 30] = BlockDescriptor::new(output_addr, false);
   }
 }
 

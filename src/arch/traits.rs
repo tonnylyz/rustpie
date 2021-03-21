@@ -47,6 +47,7 @@ pub trait ContextFrameTrait {
   fn stack_pointer(&self) -> usize;
   fn set_stack_pointer(&mut self, sp: usize);
   fn set_argument(&mut self, arg: usize);
+  fn gpr(&self, index: usize) -> usize;
 }
 
 pub trait ArchPageTableEntryTrait {

@@ -13,8 +13,12 @@ spin = "0.5.2"
 xmas-elf = "0.7.0"
 lazy_static = { version = "1.4.0", features = ["spin_no_std"] }
 
+elfloader = "0.11.0"
+backtracer = { path="../backtracer" }
+addr2line = { path="../addr2line", default-features = false, features = ["alloc", "rustc-demangle"] }
+#addr2line =  { version = "0.14.1", default-features = false, features = ["alloc", "rustc-demangle"] }
 [target.'cfg(target_arch = "aarch64")'.dependencies]
-cortex-a = "5.0.1"
+cortex-a = { path = "../cortex-a" }
 
 [target.'cfg(target_arch = "riscv64")'.dependencies]
 riscv = { git = "https://github.com/tonnylyz/riscv" }

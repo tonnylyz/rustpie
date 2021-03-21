@@ -13,7 +13,7 @@ pub struct Core {
   idle_thread: Mutex<Option<Thread>>,
 }
 
-const CORE_STACK_PAGE_NUM: usize = 7;
+const CORE_STACK_PAGE_NUM: usize = 127;
 
 #[repr(align(4096))]
 pub struct Stack {

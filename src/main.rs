@@ -9,6 +9,7 @@
 #![feature(const_in_array_repeat_expressions)]
 #![feature(llvm_asm)]
 #![feature(lang_items)]
+#![feature(thread_local)]
 
 extern crate alloc;
 #[macro_use]
@@ -19,6 +20,7 @@ use arch::*;
 
 use crate::lib::current_thread;
 use crate::lib::core::barrier;
+use crate::panic::{init_backtrace, init_backtrace_context};
 
 #[macro_export]
 macro_rules! print {
@@ -47,28 +49,30 @@ pub extern fn _Unwind_Resume() {
   loop {}
 }
 
-#[lang = "panic_impl"]
-#[no_mangle]
-pub extern fn rust_begin_panic(info: &core::panic::PanicInfo) -> ! {
-  if let Some(m) = info.message() {
-    if let Some(l) = info.location() {
-      println!("\nkernel panic: {} \n {}", m, l);
-    } else {
-      println!("\nkernel panic: {}", m);
-    }
-  } else {
-    println!("\nkernel panic!");
-  }
-  loop {
-    Arch::wait_for_event();
-  }
-}
+// #[lang = "panic_impl"]
+// #[no_mangle]
+// pub extern fn rust_begin_panic(info: &core::panic::PanicInfo) -> ! {
+//   if let Some(m) = info.message() {
+//     if let Some(l) = info.location() {
+//       println!("\nkernel panic: {} \n {}", m, l);
+//     } else {
+//       println!("\nkernel panic: {}", m);
+//     }
+//   } else {
+//     println!("\nkernel panic!");
+//   }
+//   loop {
+//     Arch::wait_for_event();
+//   }
+// }
+
 mod arch;
 mod board;
 mod driver;
 mod lib;
 mod mm;
 mod config;
+mod panic;
 
 fn clear_bss() {
   extern "C" {
@@ -112,6 +116,19 @@ pub unsafe fn main(core_id: CoreId) -> ! {
   }
   board::init_per_core();
   println!("init core {}", core_id);
+  if core_id == 0 {
+
+    extern "C" {
+      static KERNEL_ELF: [u8; 0x40000000];
+    }
+    init_backtrace(&KERNEL_ELF);
+    println!("init_backtrace ok");
+    init_backtrace_context();
+    println!("init_backtrace_context ok");
+    panic!("YO");
+
+  }
+
   if core_id == 0 {
     // Note: `arg` is used to start different programs:
     //    0 - fktest: a `fork` test

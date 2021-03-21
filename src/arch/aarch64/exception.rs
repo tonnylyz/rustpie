@@ -7,7 +7,6 @@
 use cortex_a::{barrier, regs::*};
 
 use crate::arch::{ContextFrame, CoreTrait};
-use crate::lib::interrupt::InterruptController;
 
 global_asm!(include_str!("exception.S"));
 
