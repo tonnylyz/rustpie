@@ -44,8 +44,10 @@ _el1_start:
     sub x0, x0, x1
     mov sp, x0
     cbnz x19, 1f
+    adr x0, KERNEL_PAGE_DIRECTORY
     bl populate_page_table
-1:  bl mmu_init
+1:  adr x0, KERNEL_PAGE_DIRECTORY
+    bl mmu_init
     mov x0, x19
     ldr x1, =core_stack
     blr x1
@@ -65,3 +67,8 @@ boot_stack:
     .space 4096
     .space 4096
 boot_stack_top:
+
+.align 12
+.global KERNEL_PAGE_DIRECTORY
+KERNEL_PAGE_DIRECTORY:
+    .space 4096

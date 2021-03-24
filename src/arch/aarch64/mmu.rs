@@ -35,15 +35,9 @@ impl BlockDescriptor {
 
 #[repr(C)]
 #[repr(align(4096))]
-struct PageTables {
+pub struct PageTables {
   lvl1: [BlockDescriptor; ENTRY_PER_PAGE],
 }
-
-#[no_mangle]
-#[link_section = ".data.kvm"]
-static mut KPT: PageTables = PageTables {
-  lvl1: [BlockDescriptor(0); ENTRY_PER_PAGE],
-};
 
 trait BaseAddr {
   fn base_addr_u64(&self) -> u64;
@@ -61,23 +55,26 @@ impl<T> BaseAddr for T {
 
 #[no_mangle]
 #[link_section = ".text.kvm"]
-pub unsafe extern "C" fn populate_page_table() {
+pub unsafe extern "C" fn populate_page_table(pt: &mut PageTables) {
+  // pt.lvl1[0] = BlockDescriptor::new(0, true);
+  // pt.lvl1[1] = BlockDescriptor::new(0x40000000, false);
+  // pt.lvl1[2] = BlockDescriptor::new(0x80000000, false);
   const ONE_GIGABYTE: usize = 1 << 30;
   for output_addr in (0..BOARD_PHYSICAL_ADDRESS_LIMIT).step_by(ONE_GIGABYTE) {
     if crate::board::BOARD_NORMAL_MEMORY_RANGE.contains(&output_addr) {
-      KPT.lvl1[output_addr >> 30] = BlockDescriptor::new(output_addr, false);
+      pt.lvl1[output_addr >> 30] = BlockDescriptor::new(output_addr, false);
     } else if crate::board::BOARD_DEVICE_MEMORY_RANGE.contains(&output_addr) {
-      KPT.lvl1[output_addr >> 30] = BlockDescriptor::new(output_addr, true);
+      pt.lvl1[output_addr >> 30] = BlockDescriptor::new(output_addr, true);
     }
   }
   for output_addr in (BOARD_PHYSICAL_ADDRESS_LIMIT..(512 * ONE_GIGABYTE)).step_by(ONE_GIGABYTE) {
-    KPT.lvl1[output_addr >> 30] = BlockDescriptor::new(output_addr, false);
+    pt.lvl1[output_addr >> 30] = BlockDescriptor::new(output_addr, false);
   }
 }
 
 #[no_mangle]
 #[link_section = ".text.kvm"]
-pub unsafe extern "C" fn mmu_init() {
+pub unsafe extern "C" fn mmu_init(pt: &PageTables) {
   use cortex_a::regs::*;
   use cortex_a::*;
   MAIR_EL1.write(
@@ -85,8 +82,8 @@ pub unsafe extern "C" fn mmu_init() {
         + MAIR_EL1::Attr0_Normal_Inner::WriteBack_NonTransient_ReadWriteAlloc
         + MAIR_EL1::Attr1_Device::nonGathering_nonReordering_noEarlyWriteAck
   );
-  TTBR0_EL1.set(KPT.lvl1.base_addr_u64());
-  TTBR1_EL1.set(KPT.lvl1.base_addr_u64());
+  TTBR0_EL1.set(pt.lvl1.base_addr_u64());
+  TTBR1_EL1.set(pt.lvl1.base_addr_u64());
 
   TCR_EL1.write(TCR_EL1::TBI0::Ignored
       + TCR_EL1::TBI1::Ignored

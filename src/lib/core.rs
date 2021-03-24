@@ -27,23 +27,27 @@ impl Stack {
   }
 }
 
-#[no_mangle]
-static STACKS: [Stack; BOARD_CORE_NUMBER] = [Stack {
+const STACK: Stack = Stack {
   _protective_hole: [0; PAGE_SIZE],
   stack: [0; PAGE_SIZE * CORE_STACK_PAGE_NUM]
-}; BOARD_CORE_NUMBER];
+};
+
+#[no_mangle]
+static STACKS: [Stack; BOARD_CORE_NUMBER] = [STACK; BOARD_CORE_NUMBER];
 
 // Note: only the core itself can be allowed to access its `Core`
 unsafe impl core::marker::Send for Core {}
 
 unsafe impl core::marker::Sync for Core {}
 
-static CORES: [Core; BOARD_CORE_NUMBER] = [Core {
+const CORE: Core = Core {
   context: Mutex::new(0usize as *mut ContextFrame),
   running_thread: Mutex::new(None),
   scheduler: Mutex::new(RoundRobinScheduler::new()),
   idle_thread: Mutex::new(None),
-}; BOARD_CORE_NUMBER];
+};
+
+static CORES: [Core; BOARD_CORE_NUMBER] = [CORE; BOARD_CORE_NUMBER];
 
 impl CoreTrait for Core {
   fn context(&self) -> &ContextFrame {

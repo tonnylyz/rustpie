@@ -1,5 +1,4 @@
 .PHONY: all emu-aarch64 emu-riscv64 debug-aarch64 debug-riscv64 clean dependencies aarch64.bin riscv64.bin
-PATH:=/home/tonny/CLionProjects/qemu/aarch64-softmmu:${PATH}
 
 all: aarch64.bin riscv64.bin
 

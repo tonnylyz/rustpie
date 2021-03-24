@@ -6,7 +6,6 @@
 #![feature(core_intrinsics)]
 #![feature(core_panic)]
 #![feature(format_args_nl)]
-#![feature(const_in_array_repeat_expressions)]
 #![feature(llvm_asm)]
 #![feature(lang_items)]
 #![feature(thread_local)]
@@ -117,7 +116,6 @@ pub unsafe fn main(core_id: CoreId) -> ! {
   board::init_per_core();
   println!("init core {}", core_id);
   if core_id == 0 {
-
     extern "C" {
       static KERNEL_ELF: [u8; 0x40000000];
     }
@@ -125,8 +123,6 @@ pub unsafe fn main(core_id: CoreId) -> ! {
     println!("init_backtrace ok");
     init_backtrace_context();
     println!("init_backtrace_context ok");
-    panic!("YO");
-
   }
 
   if core_id == 0 {
