@@ -10,7 +10,7 @@ fn main() {
       .arg(&format!("{}/user_image.riscv64.o", out_dir))
       .arg("user/riscv64.elf")
       .status().unwrap();
-    Command::new("rust-ar")
+    Command::new("llvm-ar")
       .arg("crus")
       .arg(&format!("{}/libuserspace.a", out_dir))
       .arg(&format!("{}/user_image.riscv64.o", out_dir))
@@ -21,7 +21,7 @@ fn main() {
       .arg(&format!("{}/user_image.aarch64.o", out_dir))
       .arg("user/aarch64.elf")
       .status().unwrap();
-    Command::new("rust-ar")
+    Command::new("llvm-ar")
       .arg("crus")
       .arg(&format!("{}/libuserspace.a", out_dir))
       .arg(&format!("{}/user_image.aarch64.o", out_dir))

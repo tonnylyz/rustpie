@@ -8,4 +8,6 @@ mod riscv64_virt;
 #[cfg(feature = "riscv64_virt")]
 pub use self::riscv64_virt::*;
 
+
+pub mod common;
 pub mod mmio;

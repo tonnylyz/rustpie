@@ -98,6 +98,7 @@ fn static_check() {
   }
 }
 
+static BUF: [u8; PAGE_SIZE] = [0; PAGE_SIZE];
 #[no_mangle]
 pub unsafe fn main(core_id: CoreId) -> ! {
   if core_id == 0 {
@@ -116,6 +117,16 @@ pub unsafe fn main(core_id: CoreId) -> ! {
   board::init_per_core();
   println!("init core {}", core_id);
   if core_id == 0 {
+    use crate::driver::common::virtio_blk::Operation::Read;
+    let (hdr, status) = crate::driver::common::virtio_blk::io(0, 8, &BUF as *const u8, Read);
+
+    for i in 0..PAGE_SIZE {
+      print!("{:02x} ", BUF[i]);
+      if (i + 1) % 32 == 0 {
+        println!();
+      }
+    }
+
     extern "C" {
       static KERNEL_ELF: [u8; 0x40000000];
     }
@@ -123,6 +134,7 @@ pub unsafe fn main(core_id: CoreId) -> ! {
     println!("init_backtrace ok");
     init_backtrace_context();
     println!("init_backtrace_context ok");
+    panic!();
   }
 
   if core_id == 0 {
