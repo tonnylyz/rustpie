@@ -22,7 +22,8 @@ riscv64.bin: user/riscv64.elf
 emu-aarch64: aarch64.bin
 	qemu-system-aarch64 -M virt,virtualization=on -cpu cortex-a53 -smp 4 -m 2048 -kernel $< -serial stdio -display none \
  		-device loader,file=target/aarch64/debug/rustpi,addr=0x80000000,force-raw=on \
-		-drive file=disk.img,if=none,format=raw,id=x0 -device virtio-blk-device,drive=x0 -global virtio-mmio.force-legacy=false
+		-drive file=disk.img,if=none,format=raw,id=x0 -device virtio-blk-device,drive=x0,bus=virtio-mmio-bus.0 \
+		-global virtio-mmio.force-legacy=false
 
 emu-riscv64: riscv64.bin
 	qemu-system-riscv64 -M virt -smp 4 -m 1024 -bios default -kernel $< -serial stdio -display none
@@ -30,7 +31,8 @@ emu-riscv64: riscv64.bin
 debug-aarch64: aarch64.bin
 	qemu-system-aarch64 -M virt,virtualization=on -cpu cortex-a53 -smp 4 -m 2048 -kernel $< -serial stdio -display none -s -S \
 		-device loader,file=target/aarch64/debug/rustpi,addr=0x80000000,force-raw=on \
-		-drive file=disk.img,if=none,format=raw,id=x0 -device virtio-blk-device,drive=x0 -global virtio-mmio.force-legacy=false
+		-drive file=disk.img,if=none,format=raw,id=x0 -device virtio-blk-device,drive=x0,bus=virtio-mmio-bus.0 \
+		-global virtio-mmio.force-legacy=false
 
 debug-riscv64: riscv64.bin
 	qemu-system-riscv64 -M virt -smp 4 -m 1024 -bios default -kernel $< -serial stdio -display none -s -S

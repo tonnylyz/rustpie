@@ -98,7 +98,6 @@ fn static_check() {
   }
 }
 
-static BUF: [u8; PAGE_SIZE] = [0; PAGE_SIZE];
 #[no_mangle]
 pub unsafe fn main(core_id: CoreId) -> ! {
   if core_id == 0 {
@@ -117,11 +116,17 @@ pub unsafe fn main(core_id: CoreId) -> ! {
   board::init_per_core();
   println!("init core {}", core_id);
   if core_id == 0 {
-    use crate::driver::common::virtio_blk::Operation::Read;
-    let (hdr, status) = crate::driver::common::virtio_blk::io(0, 8, &BUF as *const u8, Read);
+    let mut buf = [0u8; 4096];
+    let req = crate::driver::common::virtio_blk::read(0, 8, &mut buf);
 
+
+    // use crate::driver::common::virtio_blk::Operation::Read;
+    // let (hdr, status) = crate::driver::common::virtio_blk::io(0, 8, &BUF as *const u8, Read);
+    // use cortex_a::regs::*;
+    // DAIF.write(DAIF::I::Unmasked);
+    loop {}
     for i in 0..PAGE_SIZE {
-      print!("{:02x} ", BUF[i]);
+      print!("{:02x} ", buf[i]);
       if (i + 1) % 32 == 0 {
         println!();
       }

@@ -1,8 +1,10 @@
 use crate::arch::{Address, PAGE_SIZE, PAGE_SHIFT};
 use core::mem::size_of;
 use alloc::boxed::Box;
+use spin::Mutex;
+use crate::driver::common::virtio_blk::Operation::{Read, Write};
 
-const VIRTIO_MMIO_BASE: usize = 0x0a003000;
+const VIRTIO_MMIO_BASE: usize = 0x0a000000;
 
 #[repr(C)]
 struct VirtioMMio {
@@ -93,7 +95,7 @@ const VIRTIO_RING_F_INDIRECT_DESC: u32 = 28;
 
 
 fn virtio_mmio() -> &'static mut VirtioMMio {
-    unsafe { ((VIRTIO_MMIO_BASE + 7 * 0x200).pa2kva() as *mut VirtioMMio).as_mut() }.unwrap()
+    unsafe { (VIRTIO_MMIO_BASE.pa2kva() as *mut VirtioMMio).as_mut() }.unwrap()
 }
 
 trait BaseAddr {
@@ -124,14 +126,16 @@ fn setup_queue(idx: u32) {
         panic!("queue size not supported");
     }
     mmio.queue_num = QUEUE_SIZE as u32;
-    unsafe {
-        mmio.queue_desc_low = VIRTIO_RING.desc.base_addr_usize().kva2pa() as u32;
-        mmio.queue_desc_high = (VIRTIO_RING.desc.base_addr_usize().kva2pa() >> 32) as u32;
-        mmio.queue_avail_low = VIRTIO_RING.avail.base_addr_usize().kva2pa() as u32;
-        mmio.queue_avail_high = (VIRTIO_RING.avail.base_addr_usize().kva2pa() >> 32) as u32;
-        mmio.queue_used_low = VIRTIO_RING.used.base_addr_usize().kva2pa() as u32;
-        mmio.queue_used_high = (VIRTIO_RING.used.base_addr_usize().kva2pa() >> 32) as u32;
-    }
+
+    let ring = VIRTIO_RING.lock();
+
+    mmio.queue_desc_low = ring.desc.base_addr_usize().kva2pa() as u32;
+    mmio.queue_desc_high = (ring.desc.base_addr_usize().kva2pa() >> 32) as u32;
+    mmio.queue_avail_low = ring.avail.base_addr_usize().kva2pa() as u32;
+    mmio.queue_avail_high = (ring.avail.base_addr_usize().kva2pa() >> 32) as u32;
+    mmio.queue_used_low = ring.used.base_addr_usize().kva2pa() as u32;
+    mmio.queue_used_high = (ring.used.base_addr_usize().kva2pa() >> 32) as u32;
+
     mmio.queue_ready = 1;
 }
 
@@ -182,7 +186,8 @@ struct VirtioRing {
     used: VirtioRingUsed,
 }
 
-static mut VIRTIO_RING: VirtioRing = VirtioRing {
+
+static VIRTIO_RING: Mutex<VirtioRing> = Mutex::new(VirtioRing {
     desc: [VirtioRingDesc {
         addr: 0,
         len: 0,
@@ -202,7 +207,7 @@ static mut VIRTIO_RING: VirtioRing = VirtioRing {
             len: 0,
         }; QUEUE_SIZE],
     },
-};
+});
 
 #[repr(C)]
 #[derive(Debug, Copy, Clone)]
@@ -247,6 +252,7 @@ pub struct VirtioBlkOutHdr {
     t: u32,
     priority: u32,
     sector: u64,
+    status: u8,
 }
 
 /* This marks a buffer as continuing via the next field */
@@ -256,7 +262,43 @@ const VRING_DESC_F_WRITE: u16 = 2;
 /* This means the buffer contains a list of buffer descriptors */
 const VRING_DESC_F_INDIRECT: u16 = 4;
 
-pub fn io(sector: usize, count: usize, buf: *const u8, op: Operation) -> (Box<VirtioBlkOutHdr>, Box<u8>) {
+pub enum DiskRequestData<'a> {
+    Read(&'a mut[u8]),
+    Write(&'a [u8]),
+}
+
+pub struct DiskRequest<'a> {
+    sector: usize,
+    count: usize,
+    data: DiskRequestData<'a>,
+    imp: Box<VirtioBlkOutHdr>, // implementation specified (desc chain head idx)
+}
+
+pub struct Disk {
+    last_used: u16,
+}
+
+pub fn read(sector: usize, count: usize, buf: &mut [u8]) -> Box<DiskRequest> {
+    let addr = buf.base_addr_usize();
+    Box::new(DiskRequest {
+        sector,
+        count,
+        data: DiskRequestData::Read(buf),
+        imp: io(sector, count, addr, Read),
+    })
+}
+
+pub fn write(sector: usize, count: usize, buf: &[u8]) -> Box<DiskRequest> {
+    let addr = buf.base_addr_usize();
+    Box::new(DiskRequest {
+        sector,
+        count,
+        data: DiskRequestData::Write(buf),
+        imp: io(sector, count, addr, Write),
+    })
+}
+
+fn io(sector: usize, count: usize, buf: usize, op: Operation) -> Box<VirtioBlkOutHdr> {
     let hdr = Box::new(VirtioBlkOutHdr {
         t: match op {
             Operation::Read => 0,
@@ -264,16 +306,17 @@ pub fn io(sector: usize, count: usize, buf: *const u8, op: Operation) -> (Box<Vi
         },
         priority: 0,
         sector: sector as u64,
+        status: 255,
     });
-    let status = Box::new(255u8);
+    let mut ring = VIRTIO_RING.lock();
 
-    let desc = unsafe { VIRTIO_RING.desc.get_unchecked_mut(0) };
+    let desc = ring.desc.get_mut(0).unwrap();
     desc.addr = (hdr.as_ref() as *const VirtioBlkOutHdr as usize).kva2pa() as u64;
-    desc.len = unsafe { size_of::<VirtioBlkOutHdr>() } as u32;
+    desc.len = size_of::<VirtioBlkOutHdr>() as u32;
     desc.flags = VRING_DESC_F_NEXT;
     desc.next = 1;
-    let desc = unsafe { VIRTIO_RING.desc.get_unchecked_mut(1) };
-    desc.addr = (buf as usize).kva2pa() as u64;
+    let desc = ring.desc.get_mut(1).unwrap();
+    desc.addr = buf.kva2pa() as u64;
     desc.len = (512 * count) as u32;
     desc.flags = match op {
         Operation::Read => VRING_DESC_F_WRITE,
@@ -282,26 +325,27 @@ pub fn io(sector: usize, count: usize, buf: *const u8, op: Operation) -> (Box<Vi
     desc.flags |= VRING_DESC_F_NEXT;
     desc.next = 2;
 
-    let desc = unsafe { VIRTIO_RING.desc.get_unchecked_mut(2) };
-    desc.addr = (status.as_ref() as *const u8 as usize).kva2pa() as u64;
+    let desc = ring.desc.get_mut(2).unwrap();
+    desc.addr = (&hdr.status as *const u8 as usize).kva2pa() as u64;
     desc.len = 1;
     desc.flags = VRING_DESC_F_WRITE;
     desc.next = 0;
 
-    let avail = unsafe { &mut VIRTIO_RING.avail };
+    let avail = &mut ring.avail;
     avail.ring[(avail.idx as usize) % QUEUE_SIZE] = 0;
     // barrier
-    avail.idx += 1;
+    avail.idx = avail.idx.wrapping_add(1);
 
     let mmio = virtio_mmio();
 
     mmio.queue_notify = 0; // queue num
 
-    loop {
-        if mmio.interrupt_status == 1 {
-            break;
-        }
-    }
+    // loop {
+    //     if mmio.interrupt_status == 1 {
+    //         println!("status {}", *status);
+    //         break;
+    //     }
+    // }
 
-    (hdr, status)
+    hdr
 }
