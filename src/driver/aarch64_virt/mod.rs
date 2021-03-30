@@ -1,7 +1,7 @@
 pub mod uart;
-pub mod timer;
+pub mod gic;
 mod smc;
 pub mod psci;
-pub mod gic;
+pub mod timer;
 
-pub use gic::INTERRUPT_CONTROLLER;
+pub use gic::{INTERRUPT_CONTROLLER, Interrupt};

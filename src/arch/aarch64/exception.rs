@@ -81,13 +81,10 @@ unsafe extern "C" fn lower_aarch64_irq(ctx: *mut ContextFrame) {
   use crate::driver::{INTERRUPT_CONTROLLER, gic::INT_TIMER};
   let irq = INTERRUPT_CONTROLLER.fetch();
   match irq {
-    Some(InterruptNo::Timer) => {
-      panic!("GIC use numbered timer irq");
-    }
     Some(INT_TIMER) => {
       Isr::timer_interrupt();
     }
-    Some(InterruptNo::Numbered(i)) => {
+    Some(i) => {
       if i >= 32 {
         Isr::external_interrupt();
       } else {

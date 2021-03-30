@@ -1,80 +1,58 @@
-use crate::board::*;
-
 use super::interface::PAGE_SHIFT;
 use super::interface::PAGE_SIZE;
 use super::vm_descriptor::*;
 
-const PHYSICAL_ADDRESS_LIMIT_GB: usize = BOARD_PHYSICAL_ADDRESS_LIMIT >> 30;
 const ENTRY_PER_PAGE: usize = PAGE_SIZE / 8;
 
-#[derive(Copy, Clone)]
-#[repr(transparent)]
-struct BlockDescriptor(u64);
+type PageDirectoryEntry = u64;
 
-impl BlockDescriptor {
-  fn new(output_addr: usize, device: bool) -> BlockDescriptor {
-    BlockDescriptor((
-      PAGE_DESCRIPTOR::PXN::False
-          + PAGE_DESCRIPTOR::OUTPUT_PPN.val((output_addr >> PAGE_SHIFT) as u64)
-          + PAGE_DESCRIPTOR::AF::True
-          + PAGE_DESCRIPTOR::AP::RW_EL1
-          + PAGE_DESCRIPTOR::TYPE::Block
-          + PAGE_DESCRIPTOR::VALID::True
-          +
-          if device {
-            PAGE_DESCRIPTOR::AttrIndx::DEVICE + PAGE_DESCRIPTOR::SH::OuterShareable
-          } else {
-            PAGE_DESCRIPTOR::AttrIndx::NORMAL + PAGE_DESCRIPTOR::SH::InnerShareable
-          }
-    ).value)
-  }
-  const fn invalid() -> BlockDescriptor {
-    BlockDescriptor(0)
-  }
+#[inline(always)]
+fn block_entry(output_addr: usize, device: bool) -> PageDirectoryEntry {
+  (
+    PAGE_DESCRIPTOR::PXN::False
+        + PAGE_DESCRIPTOR::OUTPUT_PPN.val((output_addr >> PAGE_SHIFT) as u64)
+        + PAGE_DESCRIPTOR::AF::True
+        + PAGE_DESCRIPTOR::AP::RW_EL1
+        + PAGE_DESCRIPTOR::TYPE::Block
+        + PAGE_DESCRIPTOR::VALID::True
+        +
+        if device {
+          PAGE_DESCRIPTOR::AttrIndx::DEVICE + PAGE_DESCRIPTOR::SH::OuterShareable
+        } else {
+          PAGE_DESCRIPTOR::AttrIndx::NORMAL + PAGE_DESCRIPTOR::SH::InnerShareable
+        }
+  ).value
 }
+
+#[inline(always)]
+const fn invalid_entry() -> PageDirectoryEntry { 0 }
 
 #[repr(C)]
 #[repr(align(4096))]
-pub struct PageTables {
-  lvl1: [BlockDescriptor; ENTRY_PER_PAGE],
-}
+pub struct PageDirectory([PageDirectoryEntry; ENTRY_PER_PAGE]);
 
-trait BaseAddr {
-  fn base_addr_u64(&self) -> u64;
-  fn base_addr_usize(&self) -> usize;
-}
+#[no_mangle]
+#[link_section = ".text.kvm"]
+pub unsafe extern "C" fn populate_page_table(pt: &mut PageDirectory) {
+  use crate::board::*;
+  const ONE_GIGABYTE: usize = 0x4000_0000;
 
-impl<T> BaseAddr for T {
-  fn base_addr_u64(&self) -> u64 {
-    self as *const T as u64
+  for i in 0..ENTRY_PER_PAGE {
+    pt.0[i] = invalid_entry();
   }
-  fn base_addr_usize(&self) -> usize {
-    self as *const T as usize
+  for i in BOARD_DEVICE_MEMORY_RANGE.step_by(ONE_GIGABYTE) {
+    pt.0[i / ONE_GIGABYTE] = block_entry(i, true);
   }
+  for i in BOARD_NORMAL_MEMORY_RANGE.step_by(ONE_GIGABYTE) {
+    pt.0[i / ONE_GIGABYTE] = block_entry(i, false);
+  }
+  // special mapping for kernel elf image
+  pt.0[2] = block_entry(0x80000000, false);
 }
 
 #[no_mangle]
 #[link_section = ".text.kvm"]
-pub unsafe extern "C" fn populate_page_table(pt: &mut PageTables) {
-  // pt.lvl1[0] = BlockDescriptor::new(0, true);
-  // pt.lvl1[1] = BlockDescriptor::new(0x40000000, false);
-  // pt.lvl1[2] = BlockDescriptor::new(0x80000000, false);
-  const ONE_GIGABYTE: usize = 1 << 30;
-  for output_addr in (0..BOARD_PHYSICAL_ADDRESS_LIMIT).step_by(ONE_GIGABYTE) {
-    if crate::board::BOARD_NORMAL_MEMORY_RANGE.contains(&output_addr) {
-      pt.lvl1[output_addr >> 30] = BlockDescriptor::new(output_addr, false);
-    } else if crate::board::BOARD_DEVICE_MEMORY_RANGE.contains(&output_addr) {
-      pt.lvl1[output_addr >> 30] = BlockDescriptor::new(output_addr, true);
-    }
-  }
-  for output_addr in (BOARD_PHYSICAL_ADDRESS_LIMIT..(512 * ONE_GIGABYTE)).step_by(ONE_GIGABYTE) {
-    pt.lvl1[output_addr >> 30] = BlockDescriptor::new(output_addr, false);
-  }
-}
-
-#[no_mangle]
-#[link_section = ".text.kvm"]
-pub unsafe extern "C" fn mmu_init(pt: &PageTables) {
+pub unsafe extern "C" fn mmu_init(pt: &PageDirectory) {
   use cortex_a::regs::*;
   use cortex_a::*;
   MAIR_EL1.write(
@@ -82,8 +60,8 @@ pub unsafe extern "C" fn mmu_init(pt: &PageTables) {
         + MAIR_EL1::Attr0_Normal_Inner::WriteBack_NonTransient_ReadWriteAlloc
         + MAIR_EL1::Attr1_Device::nonGathering_nonReordering_noEarlyWriteAck
   );
-  TTBR0_EL1.set(pt.lvl1.base_addr_u64());
-  TTBR1_EL1.set(pt.lvl1.base_addr_u64());
+  TTBR0_EL1.set(&pt.0 as *const _ as u64);
+  TTBR1_EL1.set(&pt.0 as *const _ as u64);
 
   TCR_EL1.write(TCR_EL1::TBI0::Ignored
       + TCR_EL1::TBI1::Ignored

@@ -74,5 +74,9 @@ impl crate::arch::traits::ContextFrameTrait for Riscv64ContextFrame {
   fn set_argument(&mut self, arg: usize) {
     self.gpr[10] = arg as u64;
   }
+
+  fn gpr(&self, index: usize) -> usize {
+    self.gpr[index] as usize
+  }
 }
 

@@ -5,77 +5,30 @@ use crate::lib::isr::{InterruptServiceRoutine, Isr};
 
 global_asm!(include_str!("exception.S"));
 
-#[derive(Debug)]
-enum Interrupt {
-  UserSoftware = 0,
-  SupervisorSoftware = 1,
-  MachineSoftware = 3,
-  UserTimer = 4,
-  SupervisorTimer = 5,
-  MachineTimer = 7,
-  UserExternal = 8,
-  SupervisorExternal = 9,
-  MachineExternal = 11,
-  Unknown,
-}
+const INTERRUPT_USER_SOFTWARE: usize = 0;
+const INTERRUPT_SUPERVISOR_SOFTWARE: usize = 1;
+const INTERRUPT_MACHINE_SOFTWARE: usize = 3;
+const INTERRUPT_USER_TIMER: usize = 4;
+const INTERRUPT_SUPERVISOR_TIMER: usize = 5;
+const INTERRUPT_MACHINE_TIMER: usize = 7;
+const INTERRUPT_USER_EXTERNAL: usize = 8;
+const INTERRUPT_SUPERVISOR_EXTERNAL: usize = 9;
+const INTERRUPT_MACHINE_EXTERNAL: usize = 11;
 
-impl core::convert::From<usize> for Interrupt {
-  fn from(u: usize) -> Self {
-    match u {
-      0 => Interrupt::UserSoftware,
-      1 => Interrupt::SupervisorSoftware,
-      3 => Interrupt::MachineSoftware,
-      4 => Interrupt::UserTimer,
-      5 => Interrupt::SupervisorTimer,
-      7 => Interrupt::MachineTimer,
-      8 => Interrupt::UserExternal,
-      9 => Interrupt::SupervisorExternal,
-      11 => Interrupt::MachineExternal,
-      _ => Interrupt::Unknown
-    }
-  }
-}
-
-#[derive(Debug)]
-enum Exception {
-  InstructionAddressMisaligned = 0,
-  InstructionAccessFault = 1,
-  IllegalInstruction = 2,
-  Breakpoint = 3,
-  LoadAddressMisaligned = 4,
-  LoadAccessFault = 5,
-  StoreAddressMisaligned = 6,
-  StoreAccessFault = 7,
-  EnvironmentCallFromUserMode = 8,
-  EnvironmentCallFromSupervisorMode = 9,
-  EnvironmentCallFromMachineMode = 11,
-  InstructionPageFault = 12,
-  LoadPageFault = 13,
-  StorePageFault = 15,
-  Unknown,
-}
-
-impl core::convert::From<usize> for Exception {
-  fn from(u: usize) -> Self {
-    match u {
-      0 => Exception::InstructionAddressMisaligned,
-      1 => Exception::InstructionAccessFault,
-      2 => Exception::IllegalInstruction,
-      3 => Exception::Breakpoint,
-      4 => Exception::LoadAddressMisaligned,
-      5 => Exception::LoadAccessFault,
-      6 => Exception::StoreAddressMisaligned,
-      7 => Exception::StoreAccessFault,
-      8 => Exception::EnvironmentCallFromUserMode,
-      9 => Exception::EnvironmentCallFromSupervisorMode,
-      11 => Exception::EnvironmentCallFromMachineMode,
-      12 => Exception::InstructionPageFault,
-      13 => Exception::LoadPageFault,
-      15 => Exception::StorePageFault,
-      _ => Exception::Unknown
-    }
-  }
-}
+const EXCEPTION_INSTRUCTION_ADDRESS_MISALIGNED: usize = 0;
+const EXCEPTION_INSTRUCTION_ACCESS_FAULT: usize = 1;
+const EXCEPTION_ILLEGAL_INSTRUCTION: usize = 2;
+const EXCEPTION_BREAKPOINT: usize = 3;
+const EXCEPTION_LOAD_ADDRESS_MISALIGNED: usize = 4;
+const EXCEPTION_LOAD_ACCESS_FAULT: usize = 5;
+const EXCEPTION_STORE_ADDRESS_MISALIGNED: usize = 6;
+const EXCEPTION_STORE_ACCESS_FAULT: usize = 7;
+const EXCEPTION_ENVIRONMENT_CALL_FROM_USER_MODE: usize = 8;
+const EXCEPTION_ENVIRONMENT_CALL_FROM_SUPERVISOR_MODE: usize = 9;
+const EXCEPTION_ENVIRONMENT_CALL_FROM_MACHINE_MODE: usize = 11;
+const EXCEPTION_INSTRUCTION_PAGE_FAULT: usize = 12;
+const EXCEPTION_LOAD_PAGE_FAULT: usize = 13;
+const EXCEPTION_STORE_PAGE_FAULT: usize = 15;
 
 #[no_mangle]
 unsafe extern "C" fn exception_entry(ctx: usize) {
@@ -89,39 +42,40 @@ unsafe extern "C" fn exception_entry(ctx: usize) {
   let irq = (cause >> 63) != 0;
   let code = (cause & 0xf) as usize;
   if irq {
-    match Interrupt::from(code) {
-      Interrupt::UserSoftware => { panic!("Interrupt::UserSoft") }
-      Interrupt::SupervisorSoftware => { panic!("Interrupt::SupervisorSoft") }
-      Interrupt::UserTimer => { panic!("Interrupt::UserTimer") }
-      Interrupt::SupervisorTimer => {
+    match code {
+      INTERRUPT_USER_SOFTWARE => { panic!("Interrupt::UserSoft") }
+      INTERRUPT_SUPERVISOR_SOFTWARE => { panic!("Interrupt::SupervisorSoft") }
+      INTERRUPT_USER_TIMER => { panic!("Interrupt::UserTimer") }
+      INTERRUPT_SUPERVISOR_TIMER => {
         Isr::timer_interrupt()
       }
-      Interrupt::UserExternal => { panic!("Interrupt::UserExternal") }
-      Interrupt::SupervisorExternal => { panic!("Interrupt::SupervisorExternal") }
+      INTERRUPT_USER_EXTERNAL => { panic!("Interrupt::UserExternal") }
+      INTERRUPT_SUPERVISOR_EXTERNAL => { panic!("Interrupt::SupervisorExternal") }
       _ => { panic!("Interrupt::Unknown") }
     }
   } else {
-    match Exception::from(code) {
-      Exception::InstructionAddressMisaligned => { panic!("Exception::InstructionMisaligned") }
-      Exception::InstructionAccessFault => { panic!("Exception::InstructionFault") }
-      Exception::IllegalInstruction => { Isr::default() }
-      Exception::Breakpoint => { panic!("Exception::Breakpoint") }
-      Exception::LoadAccessFault => { panic!("Exception::LoadFault") }
-      Exception::StoreAddressMisaligned => { panic!("Exception::StoreMisaligned") }
-      Exception::StoreAccessFault => {
+    match code {
+      EXCEPTION_INSTRUCTION_ADDRESS_MISALIGNED => { panic!("Exception::InstructionMisaligned") }
+      EXCEPTION_INSTRUCTION_ACCESS_FAULT => { panic!("Exception::InstructionFault") }
+      EXCEPTION_ILLEGAL_INSTRUCTION => { Isr::default() }
+      EXCEPTION_BREAKPOINT => { panic!("Exception::Breakpoint") }
+      EXCEPTION_LOAD_ADDRESS_MISALIGNED => { panic!("Exception::LoadMisaligned") }
+      EXCEPTION_LOAD_ACCESS_FAULT => { panic!("Exception::LoadFault") }
+      EXCEPTION_STORE_ADDRESS_MISALIGNED => { panic!("Exception::StoreMisaligned") }
+      EXCEPTION_STORE_ACCESS_FAULT => {
         println!("{:016x}", STVAL.get());
         panic!("Exception::StoreFault")
       }
-      Exception::EnvironmentCallFromUserMode => {
+      EXCEPTION_ENVIRONMENT_CALL_FROM_USER_MODE => {
         // Note: we need to set epc to next instruction before doing system call
         //       pay attention to yield and process_alloc
         let pc = core.context_mut().exception_pc();
         core.context_mut().set_exception_pc(pc + 4);
         Isr::system_call();
       }
-      Exception::InstructionPageFault => { Isr::page_fault() }
-      Exception::LoadPageFault => { Isr::page_fault() }
-      Exception::StorePageFault => { Isr::page_fault() }
+      EXCEPTION_INSTRUCTION_PAGE_FAULT => { Isr::page_fault() }
+      EXCEPTION_LOAD_PAGE_FAULT => { Isr::page_fault() }
+      EXCEPTION_STORE_PAGE_FAULT => { Isr::page_fault() }
       _ => { panic!("Exception::Unknown") }
     }
   }

@@ -1,9 +1,10 @@
 use core::ops::Range;
 
-use crate::arch::{ArchTrait, CoreTrait, PAGE_SIZE};
+use crate::arch::{ArchTrait, CoreTrait};
 use crate::lib::current_core;
-use crate::lib::interrupt::{InterruptController, InterruptNo};
+use crate::lib::interrupt::{InterruptController};
 use crate::driver::gic::INT_TIMER;
+use crate::driver::Interrupt;
 
 pub const BOARD_CORE_NUMBER: usize = 4;
 pub const BOARD_PHYSICAL_ADDRESS_LIMIT: usize = 0x8000_0000;
@@ -12,7 +13,7 @@ pub const BOARD_DEVICE_MEMORY_RANGE: Range<usize> = 0x0000_0000..0x4000_0000;
 pub const BOARD_PHYSICAL_ENTRY: u64 = 0x40080000;
 
 
-pub const INT_VIRTIO_MMIO_0: InterruptNo = InterruptNo::Numbered(0x10 + 32);
+pub const INT_VIRTIO_MMIO_0: Interrupt = 0x10 + 32;
 
 pub fn init() {
     crate::driver::uart::init();
