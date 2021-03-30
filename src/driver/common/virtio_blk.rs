@@ -1,52 +1,77 @@
-use crate::arch::{Address, PAGE_SIZE, PAGE_SHIFT};
+use crate::arch::{Address};
 use core::mem::size_of;
 use alloc::boxed::Box;
 use spin::Mutex;
 use crate::driver::common::virtio_blk::Operation::{Read, Write};
+use register::*;
+use register::mmio::*;
 
 const VIRTIO_MMIO_BASE: usize = 0x0a000000;
 
-#[repr(C)]
-struct VirtioMMio {
-    magic_value: u32,
-    mmio_version: u32,
-    device_id: u32,
-    vendor_id: u32,
-    device_features: u32,
-    host_features_sel: u32,
-    _pad0: u32,
-    _pad1: u32,
-    driver_features: u32,
-    guest_features_sel: u32,
-    guest_page_size: u32,
-    // legacy only
-    _pad2: u32,
-    queue_sel: u32,
-    queue_num_max: u32,
-    queue_num: u32,
-    queue_align: u32,
-    // legacy only
-    queue_pfn: u32,
-    // legacy only
-    queue_ready: u32,
-    _pad3: u32,
-    _pad4: u32,
-    queue_notify: u32,
-    _pad5: [u32; 3],
-    interrupt_status: u32,
-    interrupt_ack: u32,
-    _pad6: [u32; 2],
-    status: u32,
-    _pad7: [u32; 3],
-    queue_desc_low: u32,
-    queue_desc_high: u32,
-    _pad8: [u32; 2],
-    queue_avail_low: u32,
-    queue_avail_high: u32,
-    _pad9: [u32; 2],
-    queue_used_low: u32,
-    queue_used_high: u32,
-    // ignore left
+register_structs! {
+  #[allow(non_snake_case)]
+  VirtioMmioBlock {
+    (0x000 => MagicValue: ReadOnly<u32>),
+    (0x004 => Version: ReadOnly<u32>),
+    (0x008 => DeviceID: ReadOnly<u32>),
+    (0x00c => VendorID: ReadOnly<u32>),
+    (0x010 => DeviceFeatures: ReadOnly<u32>),
+    (0x014 => DeviceFeaturesSel: WriteOnly<u32>),
+    (0x018 => _reserved_0),
+    (0x020 => DriverFeatures: WriteOnly<u32>),
+    (0x024 => DriverFeaturesSel: WriteOnly<u32>),
+    (0x028 => _reserved_1),
+    (0x030 => QueueSel: WriteOnly<u32>),
+    (0x034 => QueueNumMax: ReadOnly<u32>),
+    (0x038 => QueueNum: WriteOnly<u32>),
+    (0x03c => _reserved_2),
+    (0x044 => QueueReady: ReadWrite<u32>),
+    (0x048 => _reserved_3),
+    (0x050 => QueueNotify: WriteOnly<u32>),
+    (0x054 => _reserved_4),
+    (0x060 => InterruptStatus: ReadOnly<u32>),
+    (0x064 => InterruptACK: WriteOnly<u32>),
+    (0x068 => _reserved_5),
+    (0x070 => Status: ReadWrite<u32>),
+    (0x074 => _reserved_6),
+    (0x080 => QueueDescLow: WriteOnly<u32>),
+    (0x084 => QueueDescHigh: WriteOnly<u32>),
+    (0x088 => _reserved_7),
+    (0x090 => QueueDriverLow: WriteOnly<u32>),
+    (0x094 => QueueDriverHigh: WriteOnly<u32>),
+    (0x098 => _reserved_8),
+    (0x0a0 => QueueDeviceLow: WriteOnly<u32>),
+    (0x0a4 => QueueDeviceHigh: WriteOnly<u32>),
+    (0x0a8 => _reserved_9),
+    (0x0fc => ConfigGeneration: ReadOnly<u32>),
+    (0x0fd => _reserved_10),
+    (0x100 => _reserved_config),
+    (0x200 => @END),
+  }
+}
+
+struct VirtioMmio {
+  base_addr: usize,
+}
+
+impl core::ops::Deref for VirtioMmio {
+  type Target = VirtioMmioBlock;
+
+  fn deref(&self) -> &Self::Target {
+    unsafe { &*self.ptr() }
+  }
+}
+
+impl VirtioMmio {
+
+  const fn new(base_addr: usize) -> Self {
+    VirtioMmio { base_addr }
+  }
+
+  fn ptr(&self) -> *const VirtioMmioBlock {
+    self.base_addr as *const _
+  }
+
 }
 
 /* We have seen device and processed generic fields (VIRTIO_CONFIG_F_VIRTIO) */
@@ -93,86 +118,76 @@ const VIRTIO_RING_F_EVENT_IDX: u32 = 29;
 /* We support indirect buffer descriptors */
 const VIRTIO_RING_F_INDIRECT_DESC: u32 = 28;
 
+static VIRTIO_MMIO: VirtioMmio = VirtioMmio::new(VIRTIO_MMIO_BASE | 0xFFFF_FF80_0000_0000);
 
-fn virtio_mmio() -> &'static mut VirtioMMio {
-    unsafe { (VIRTIO_MMIO_BASE.pa2kva() as *mut VirtioMMio).as_mut() }.unwrap()
-}
 
 trait BaseAddr {
-    fn base_addr_u64(&self) -> u64;
-    fn base_addr_usize(&self) -> usize;
+  fn base_addr_u64(&self) -> u64;
+  fn base_addr_usize(&self) -> usize;
 }
 
 impl<T> BaseAddr for T {
-    fn base_addr_u64(&self) -> u64 {
-        self as *const T as u64
-    }
-    fn base_addr_usize(&self) -> usize {
-        self as *const T as usize
-    }
+  fn base_addr_u64(&self) -> u64 {
+    self as *const T as u64
+  }
+  fn base_addr_usize(&self) -> usize {
+    self as *const T as usize
+  }
 }
 
 fn setup_queue(idx: u32) {
-    let mmio = virtio_mmio();
-    mmio.queue_sel = idx;
-    if mmio.queue_pfn != 0 {
-        panic!("queue already set up");
-    }
-    let num = mmio.queue_num_max;
-    if num == 0 {
-        panic!("queue num max is zero");
-    }
-    if num < QUEUE_SIZE as u32 {
-        panic!("queue size not supported");
-    }
-    mmio.queue_num = QUEUE_SIZE as u32;
+  let mmio = &VIRTIO_MMIO;
+  mmio.QueueSel.set(idx);
+  let num = mmio.QueueNumMax.get();
+  if num == 0 {
+    panic!("queue num max is zero");
+  }
+  if num < QUEUE_SIZE as u32 {
+    panic!("queue size not supported");
+  }
+  mmio.QueueNum.set(QUEUE_SIZE as u32);
 
-    let ring = VIRTIO_RING.lock();
+  let ring = VIRTIO_RING.lock();
 
-    mmio.queue_desc_low = ring.desc.base_addr_usize().kva2pa() as u32;
-    mmio.queue_desc_high = (ring.desc.base_addr_usize().kva2pa() >> 32) as u32;
-    mmio.queue_avail_low = ring.avail.base_addr_usize().kva2pa() as u32;
-    mmio.queue_avail_high = (ring.avail.base_addr_usize().kva2pa() >> 32) as u32;
-    mmio.queue_used_low = ring.used.base_addr_usize().kva2pa() as u32;
-    mmio.queue_used_high = (ring.used.base_addr_usize().kva2pa() >> 32) as u32;
+  mmio.QueueDescLow.set(ring.desc.base_addr_usize().kva2pa() as u32);
+  mmio.QueueDescHigh.set((ring.desc.base_addr_usize().kva2pa() >> 32) as u32);
+  mmio.QueueDriverLow.set(ring.driver.base_addr_usize().kva2pa() as u32);
+  mmio.QueueDriverHigh.set((ring.driver.base_addr_usize().kva2pa() >> 32) as u32);
+  mmio.QueueDeviceLow.set(ring.device.base_addr_usize().kva2pa() as u32);
+  mmio.QueueDeviceHigh.set((ring.device.base_addr_usize().kva2pa() >> 32) as u32);
 
-    mmio.queue_ready = 1;
+  mmio.QueueReady.set(1);
 }
 
 pub fn init() {
-    let mmio = virtio_mmio();
-    if mmio.magic_value != 0x74726976
-        || mmio.mmio_version != 2
-        || mmio.device_id != 2
-        || mmio.vendor_id != 0x554d4551 {
-        panic!("could not find virtio disk");
-    }
-    let mut status: u32 = 0;
-    status |= VIRTIO_CONFIG_S_ACKNOWLEDGE;
-    mmio.status = status;
-    status |= VIRTIO_CONFIG_S_DRIVER;
-    mmio.status = status;
+  let mmio = &VIRTIO_MMIO;
+  if mmio.MagicValue.get() != 0x74726976
+    || mmio.Version.get() != 2
+    || mmio.DeviceID.get() != 2
+    || mmio.VendorID.get() != 0x554d4551 {
+    panic!("could not find virtio disk");
+  }
+  let mut status: u32 = 0;
+  status |= VIRTIO_CONFIG_S_ACKNOWLEDGE;
+  mmio.Status.set(status);
+  status |= VIRTIO_CONFIG_S_DRIVER;
+  mmio.Status.set(status);
 
-    mmio.host_features_sel = 0;
-    let mut features: u64 = mmio.device_features as u64;
-    mmio.host_features_sel = 1;
-    features |= (mmio.device_features as u64) << 32;
+  // TODO: support more features
+  let features: u64 = 1 << VIRTIO_F_VERSION_1;
 
-    // TODO: support more features
-    features = 1 << VIRTIO_F_VERSION_1;
+  mmio.DriverFeaturesSel.set(0);
+  mmio.DriverFeatures.set(features as u32);
+  mmio.DriverFeaturesSel.set(1);
+  mmio.DriverFeatures.set((features >> 32) as u32);
 
-    mmio.guest_features_sel = 0;
-    mmio.driver_features = features as u32;
-    mmio.guest_features_sel = 1;
-    mmio.driver_features = (features >> 32) as u32;
+  status |= VIRTIO_CONFIG_S_FEATURES_OK;
+  mmio.Status.set(status);
 
-    status |= VIRTIO_CONFIG_S_FEATURES_OK;
-    mmio.status = status;
+  status |= VIRTIO_CONFIG_S_DRIVER_OK;
+  mmio.Status.set(status);
 
-    status |= VIRTIO_CONFIG_S_DRIVER_OK;
-    mmio.status = status;
-
-    setup_queue(0);
+  setup_queue(0);
 }
 
 const QUEUE_SIZE: usize = 16;
@@ -181,78 +196,78 @@ const QUEUE_SIZE: usize = 16;
 #[repr(align(4096))]
 #[derive(Debug)]
 struct VirtioRing {
-    desc: [VirtioRingDesc; QUEUE_SIZE],
-    avail: VirtioRingAvail,
-    used: VirtioRingUsed,
+  desc: [VirtioRingDesc; QUEUE_SIZE],
+  driver: VirtioRingDriver,
+  device: VirtioRingDevice,
 }
 
 
 static VIRTIO_RING: Mutex<VirtioRing> = Mutex::new(VirtioRing {
-    desc: [VirtioRingDesc {
-        addr: 0,
-        len: 0,
-        flags: 0,
-        next: 0,
+  desc: [VirtioRingDesc {
+    addr: 0,
+    len: 0,
+    flags: 0,
+    next: 0,
+  }; QUEUE_SIZE],
+  driver: VirtioRingDriver {
+    flags: 0,
+    idx: 0,
+    ring: [0; QUEUE_SIZE],
+  },
+  device: VirtioRingDevice {
+    flags: 0,
+    idx: 0,
+    ring: [VirtioRingDeviceElement {
+      id: 0,
+      len: 0,
     }; QUEUE_SIZE],
-    avail: VirtioRingAvail {
-        flags: 0,
-        idx: 0,
-        ring: [0; QUEUE_SIZE],
-    },
-    used: VirtioRingUsed {
-        flags: 0,
-        idx: 0,
-        ring: [VirtioRingUsedElement {
-            id: 0,
-            len: 0,
-        }; QUEUE_SIZE],
-    },
+  },
 });
 
 #[repr(C)]
 #[derive(Debug, Copy, Clone)]
 struct VirtioRingDesc {
-    addr: u64,
-    len: u32,
-    flags: u16,
-    next: u16,
+  addr: u64,
+  len: u32,
+  flags: u16,
+  next: u16,
 }
 
 #[repr(C)]
 #[derive(Debug)]
-struct VirtioRingAvail {
-    flags: u16,
-    idx: u16,
-    ring: [u16; QUEUE_SIZE],
+struct VirtioRingDriver {
+  flags: u16,
+  idx: u16,
+  ring: [u16; QUEUE_SIZE],
 }
 
 #[repr(C)]
 #[derive(Debug, Copy, Clone)]
-struct VirtioRingUsedElement {
-    id: u32,
-    len: u32,
+struct VirtioRingDeviceElement {
+  id: u32,
+  len: u32,
 }
 
 #[repr(C)]
 #[repr(align(4096))]
 #[derive(Debug)]
-struct VirtioRingUsed {
-    flags: u16,
-    idx: u16,
-    ring: [VirtioRingUsedElement; QUEUE_SIZE],
+struct VirtioRingDevice {
+  flags: u16,
+  idx: u16,
+  ring: [VirtioRingDeviceElement; QUEUE_SIZE],
 }
 
 pub enum Operation {
-    Read,
-    Write,
+  Read,
+  Write,
 }
 
 #[repr(C)]
 pub struct VirtioBlkOutHdr {
-    t: u32,
-    priority: u32,
-    sector: u64,
-    status: u8,
+  t: u32,
+  priority: u32,
+  sector: u64,
+  status: u8,
 }
 
 /* This marks a buffer as continuing via the next field */
@@ -263,89 +278,89 @@ const VRING_DESC_F_WRITE: u16 = 2;
 const VRING_DESC_F_INDIRECT: u16 = 4;
 
 pub enum DiskRequestData<'a> {
-    Read(&'a mut[u8]),
-    Write(&'a [u8]),
+  Read(&'a mut[u8]),
+  Write(&'a [u8]),
 }
 
 pub struct DiskRequest<'a> {
-    sector: usize,
-    count: usize,
-    data: DiskRequestData<'a>,
-    imp: Box<VirtioBlkOutHdr>, // implementation specified (desc chain head idx)
+  sector: usize,
+  count: usize,
+  data: DiskRequestData<'a>,
+  imp: Box<VirtioBlkOutHdr>, // implementation specified (desc chain head idx)
 }
 
 pub struct Disk {
-    last_used: u16,
+  last_used: u16,
 }
 
 pub fn read(sector: usize, count: usize, buf: &mut [u8]) -> Box<DiskRequest> {
-    let addr = buf.base_addr_usize();
-    Box::new(DiskRequest {
-        sector,
-        count,
-        data: DiskRequestData::Read(buf),
-        imp: io(sector, count, addr, Read),
-    })
+  let addr = buf.base_addr_usize();
+  Box::new(DiskRequest {
+    sector,
+    count,
+    data: DiskRequestData::Read(buf),
+    imp: io(sector, count, addr, Read),
+  })
 }
 
 pub fn write(sector: usize, count: usize, buf: &[u8]) -> Box<DiskRequest> {
-    let addr = buf.base_addr_usize();
-    Box::new(DiskRequest {
-        sector,
-        count,
-        data: DiskRequestData::Write(buf),
-        imp: io(sector, count, addr, Write),
-    })
+  let addr = buf.base_addr_usize();
+  Box::new(DiskRequest {
+    sector,
+    count,
+    data: DiskRequestData::Write(buf),
+    imp: io(sector, count, addr, Write),
+  })
 }
 
 fn io(sector: usize, count: usize, buf: usize, op: Operation) -> Box<VirtioBlkOutHdr> {
-    let hdr = Box::new(VirtioBlkOutHdr {
-        t: match op {
-            Operation::Read => 0,
-            Operation::Write => 1,
-        },
-        priority: 0,
-        sector: sector as u64,
-        status: 255,
-    });
-    let mut ring = VIRTIO_RING.lock();
+  let hdr = Box::new(VirtioBlkOutHdr {
+    t: match op {
+      Operation::Read => 0,
+      Operation::Write => 1,
+    },
+    priority: 0,
+    sector: sector as u64,
+    status: 255,
+  });
+  let mut ring = VIRTIO_RING.lock();
 
-    let desc = ring.desc.get_mut(0).unwrap();
-    desc.addr = (hdr.as_ref() as *const VirtioBlkOutHdr as usize).kva2pa() as u64;
-    desc.len = size_of::<VirtioBlkOutHdr>() as u32;
-    desc.flags = VRING_DESC_F_NEXT;
-    desc.next = 1;
-    let desc = ring.desc.get_mut(1).unwrap();
-    desc.addr = buf.kva2pa() as u64;
-    desc.len = (512 * count) as u32;
-    desc.flags = match op {
-        Operation::Read => VRING_DESC_F_WRITE,
-        Operation::Write => 0
-    };
-    desc.flags |= VRING_DESC_F_NEXT;
-    desc.next = 2;
+  let desc = ring.desc.get_mut(0).unwrap();
+  desc.addr = (hdr.as_ref() as *const VirtioBlkOutHdr as usize).kva2pa() as u64;
+  desc.len = size_of::<VirtioBlkOutHdr>() as u32;
+  desc.flags = VRING_DESC_F_NEXT;
+  desc.next = 1;
+  let desc = ring.desc.get_mut(1).unwrap();
+  desc.addr = buf.kva2pa() as u64;
+  desc.len = (512 * count) as u32;
+  desc.flags = match op {
+    Operation::Read => VRING_DESC_F_WRITE,
+    Operation::Write => 0
+  };
+  desc.flags |= VRING_DESC_F_NEXT;
+  desc.next = 2;
 
-    let desc = ring.desc.get_mut(2).unwrap();
-    desc.addr = (&hdr.status as *const u8 as usize).kva2pa() as u64;
-    desc.len = 1;
-    desc.flags = VRING_DESC_F_WRITE;
-    desc.next = 0;
+  let desc = ring.desc.get_mut(2).unwrap();
+  desc.addr = (&hdr.status as *const u8 as usize).kva2pa() as u64;
+  desc.len = 1;
+  desc.flags = VRING_DESC_F_WRITE;
+  desc.next = 0;
 
-    let avail = &mut ring.avail;
-    avail.ring[(avail.idx as usize) % QUEUE_SIZE] = 0;
-    // barrier
-    avail.idx = avail.idx.wrapping_add(1);
+  let avail = &mut ring.driver;
+  avail.ring[(avail.idx as usize) % QUEUE_SIZE] = 0;
+  // barrier
+  avail.idx = avail.idx.wrapping_add(1);
 
-    let mmio = virtio_mmio();
+  let mmio = &VIRTIO_MMIO;
 
-    mmio.queue_notify = 0; // queue num
+  mmio.QueueNotify.set(0); // queue num
 
-    // loop {
-    //     if mmio.interrupt_status == 1 {
-    //         println!("status {}", *status);
-    //         break;
-    //     }
-    // }
+  // loop {
+  //     if mmio.interrupt_status == 1 {
+  //         println!("status {}", *status);
+  //         break;
+  //     }
+  // }
 
-    hdr
+  hdr
 }
