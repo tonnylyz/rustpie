@@ -102,7 +102,7 @@ impl GicCpuInterface {
 
   fn init(&self) {
     self.PMR.set(u32::MAX);
-    self.CTLR.set(1 | (1 << 9));
+    self.CTLR.set(1);
   }
   
 }
@@ -127,7 +127,7 @@ impl GicDistributor {
       self.IPRIORITYR[i].set(u32::MAX);
       self.ITARGETSR[i].set(u32::MAX);
     }
-    self.CTLR.set(0b1);
+    self.CTLR.set(1);
   }
 
   fn init_per_core(&self) {

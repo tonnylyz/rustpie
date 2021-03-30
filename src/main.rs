@@ -8,7 +8,7 @@
 #![feature(format_args_nl)]
 #![feature(llvm_asm)]
 #![feature(lang_items)]
-#![feature(thread_local)]
+// #![feature(thread_local)]
 
 extern crate alloc;
 #[macro_use]
@@ -48,23 +48,6 @@ pub extern fn _Unwind_Resume() {
   loop {}
 }
 
-// #[lang = "panic_impl"]
-// #[no_mangle]
-// pub extern fn rust_begin_panic(info: &core::panic::PanicInfo) -> ! {
-//   if let Some(m) = info.message() {
-//     if let Some(l) = info.location() {
-//       println!("\nkernel panic: {} \n {}", m, l);
-//     } else {
-//       println!("\nkernel panic: {}", m);
-//     }
-//   } else {
-//     println!("\nkernel panic!");
-//   }
-//   loop {
-//     Arch::wait_for_event();
-//   }
-// }
-
 mod arch;
 mod board;
 mod driver;
@@ -84,17 +67,14 @@ fn clear_bss() {
 }
 
 fn static_check() {
-  use core::intrinsics::size_of;
-  #[allow(unused_unsafe)]
-    unsafe {
-    // Note: size of ContextFrame needs to be synced with `arch/*/exception.S`
-    if cfg!(target_arch = "aarch64") {
-      assert_eq!(size_of::<ContextFrame>(), 0x110);
-    } else if cfg!(target_arch = "riscv64") {
-      assert_eq!(size_of::<ContextFrame>(), 0x110);
-    } else {
-      panic!("unsupported arch");
-    }
+  use core::mem::size_of;
+  // Note: size of ContextFrame needs to be synced with `arch/*/exception.S`
+  if cfg!(target_arch = "aarch64") {
+    assert_eq!(size_of::<ContextFrame>(), 0x110);
+  } else if cfg!(target_arch = "riscv64") {
+    assert_eq!(size_of::<ContextFrame>(), 0x110);
+  } else {
+    panic!("unsupported arch");
   }
 }
 
@@ -132,13 +112,13 @@ pub unsafe fn main(core_id: CoreId) -> ! {
     //   }
     // }
 
-    extern "C" {
-      static KERNEL_ELF: [u8; 0x40000000];
-    }
-    init_backtrace(&KERNEL_ELF);
-    println!("init_backtrace ok");
-    init_backtrace_context();
-    println!("init_backtrace_context ok");
+    // extern "C" {
+    //   static KERNEL_ELF: [u8; 0x40000000];
+    // }
+    // init_backtrace(&KERNEL_ELF);
+    // println!("init_backtrace ok");
+    // init_backtrace_context();
+    // println!("init_backtrace_context ok");
   }
 
   if core_id == 0 {
