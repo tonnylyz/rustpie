@@ -1,11 +1,11 @@
+ENTRY(_start)
+
 SECTIONS
 {
-    . = 0xFFFFFF8040080000;
+    . = 0xFFFFFFFF80200000;
     .init : {
         *(.text.start)
         *(.data.start)
-        *(.text.kvm)
-        *(.data.kvm)
     }
     .text : {
         *(.text*)
@@ -26,5 +26,5 @@ SECTIONS
 
     KERNEL_END = .;
 
-    KERNEL_ELF = 0xFFFFFF8080000000;
+    KERNEL_ELF = 0xFFFFFFFFc0000000;
 }

@@ -14,7 +14,7 @@
   "linker-flavor": "ld.lld",
   "pre-link-args": {
     "ld.lld": [
-      "-Tsrc/user.lds"
+      "-Tsrc/linker.ld"
     ]
   },
   "llvm-target": "riscv64-unknown-none",

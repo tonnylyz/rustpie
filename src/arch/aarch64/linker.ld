@@ -1,9 +1,13 @@
+ENTRY(_start)
+
 SECTIONS
 {
-    . = 0xFFFFFFFF80200000;
-    .text : {
+    . = 0xFFFFFF8040080000;
+    .init : {
         *(.text.start)
         *(.data.start)
+    }
+    .text : {
         *(.text*)
     }
     .rodata : {
@@ -22,5 +26,5 @@ SECTIONS
 
     KERNEL_END = .;
 
-    KERNEL_ELF = 0xFFFFFFFFc0000000;
+    KERNEL_ELF = 0xFFFFFF8080000000;
 }

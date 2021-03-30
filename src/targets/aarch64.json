@@ -15,8 +15,7 @@
   "linker-flavor": "ld.lld",
   "pre-link-args": {
     "ld.lld": [
-      "-Tsrc/linkers/aarch64.lds",
-      "-e_start"
+      "-Tsrc/arch/aarch64/linker.ld"
     ]
   },
   "llvm-target": "aarch64-unknown-none",
