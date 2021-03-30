@@ -8,11 +8,8 @@
 #![feature(format_args_nl)]
 #![feature(llvm_asm)]
 #![feature(lang_items)]
-// #![feature(thread_local)]
 
 extern crate alloc;
-#[macro_use]
-extern crate lazy_static;
 extern crate rlibc;
 
 use arch::*;
@@ -90,6 +87,11 @@ pub unsafe fn main(core_id: CoreId) -> ! {
     println!("heap init ok");
     mm::page_pool::init();
     println!("page pool init ok");
+    lib::process::init();
+    println!("process pool init ok");
+    lib::thread::init();
+    println!("thread pool init ok");
+
     board::launch_other_cores();
     println!("launched other cores");
   }

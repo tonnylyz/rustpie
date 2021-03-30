@@ -148,7 +148,7 @@ impl ThreadPool {
       context: Mutex::new(ContextFrame::new(pc, sp, arg, false)),
       core: Mutex::new(None),
     });
-    let mut map = THREAD_MAP.lock();
+    let mut map = THREAD_MAP.get().unwrap().lock();
     map.insert(id, arc.clone());
     drop(map);
     self.alloced.push(Thread(arc.clone()));
@@ -164,7 +164,7 @@ impl ThreadPool {
       context: Mutex::new(ContextFrame::new(pc, sp, arg, true)),
       core: Mutex::new(None),
     });
-    let mut map = THREAD_MAP.lock();
+    let mut map = THREAD_MAP.get().unwrap().lock();
     map.insert(id, arc.clone());
     drop(map);
     self.alloced.push(Thread(arc.clone()));
@@ -174,7 +174,7 @@ impl ThreadPool {
   fn free(&mut self, t: &Thread) -> Result<(), Error> {
     if self.alloced.contains(t) {
       self.alloced.retain(|_t| _t.tid() != t.tid());
-      let mut map = THREAD_MAP.lock();
+      let mut map = THREAD_MAP.get().unwrap().lock();
       map.remove(&t.tid());
       drop(map);
       self.bitmap.clear(t.tid() as usize);
@@ -189,8 +189,12 @@ impl ThreadPool {
   }
 }
 
-lazy_static! {
-  static ref THREAD_MAP: Mutex<BTreeMap<Tid, Arc<ControlBlock>>> = Mutex::new(BTreeMap::new());
+static THREAD_MAP: spin::Once<Mutex<BTreeMap<Tid, Arc<ControlBlock>>>> = spin::Once::new();
+
+pub fn init() {
+  THREAD_MAP.call_once(|| {
+    Mutex::new(BTreeMap::new())
+  });
 }
 
 static THREAD_POOL: Mutex<ThreadPool> = Mutex::new(ThreadPool {
@@ -230,7 +234,7 @@ pub fn list() -> Vec<Thread> {
 
 #[allow(dead_code)]
 pub fn lookup(tid: Tid) -> Option<Thread> {
-  let map = THREAD_MAP.lock();
+  let map = THREAD_MAP.get().unwrap().lock();
   let r = match map.get(&tid) {
     Some(arc) => Some(Thread(arc.clone())),
     None => None

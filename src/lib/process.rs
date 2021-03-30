@@ -117,7 +117,7 @@ impl ProcessPool {
       page_table: make_user_page_table(),
       exception_handler: Mutex::new(None),
     });
-    let mut map = PROCESS_MAP.lock();
+    let mut map = PROCESS_MAP.get().unwrap().lock();
     map.insert(id, arc.clone());
     drop(map);
     self.alloced.push(Process(arc.clone()));
@@ -127,7 +127,7 @@ impl ProcessPool {
   fn free(&mut self, p: &Process) -> Result<(), Error> {
     if self.alloced.contains(p) {
       self.alloced.retain(|_p| _p.pid() != p.pid());
-      let mut map = PROCESS_MAP.lock();
+      let mut map = PROCESS_MAP.get().unwrap().lock();
       map.remove(&p.pid());
       drop(map);
       self.bitmap.clear((p.pid() - 1) as usize);
@@ -143,8 +143,12 @@ impl ProcessPool {
   }
 }
 
-lazy_static! {
-  static ref PROCESS_MAP: Mutex<BTreeMap<Pid, Arc<ControlBlock>>> = Mutex::new(BTreeMap::new());
+static PROCESS_MAP: spin::Once<Mutex<BTreeMap<Pid, Arc<ControlBlock>>>> = spin::Once::new();
+
+pub fn init() {
+  PROCESS_MAP.call_once(|| {
+    Mutex::new(BTreeMap::new())
+  });
 }
 
 static PROCESS_POOL: Mutex<ProcessPool> = Mutex::new(ProcessPool {
@@ -177,7 +181,7 @@ pub fn list() -> Vec<Process> {
 }
 
 pub fn lookup(pid: Pid) -> Option<Process> {
-  let map = PROCESS_MAP.lock();
+  let map = PROCESS_MAP.get().unwrap().lock();
   let r = match map.get(&pid) {
     Some(arc) => Some(Process(arc.clone())),
     None => None

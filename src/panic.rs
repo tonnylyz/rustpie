@@ -78,13 +78,13 @@ pub fn init_backtrace(elf_data: &'static [u8]) {
 
 pub fn init_backtrace_context() {
     ELF_BIN.call_once(|| {
-        let elf_data = ELF_DATA.r#try().expect("ELF_DATA was not initialized");
+        let elf_data = ELF_DATA.get().expect("ELF_DATA was not initialized");
         let elf_binary =
             elfloader::ElfBinary::new("kernel", &elf_data).expect("Can't parse kernel binary.");
         elf_binary
     });
 
-    let elf_binary = ELF_BIN.r#try().expect("ELF_BIN was not initialized");
+    let elf_binary = ELF_BIN.get().expect("ELF_BIN was not initialized");
     if let Some(context) = new_ctxt(&elf_binary) {
         unsafe {
             ELF_CONTEXT = Some(context);
