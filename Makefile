@@ -3,7 +3,7 @@
 all: aarch64.bin riscv64.bin
 
 user/aarch64.elf:
-	make -C user aarch64.elf
+	make -C user -B aarch64.elf
 
 aarch64.bin: user/aarch64.elf
 	RUSTFLAGS="-C llvm-args=-global-isel=false" \
@@ -12,7 +12,7 @@ aarch64.bin: user/aarch64.elf
 	rust-objdump -d target/aarch64/debug/rustpi > target/aarch64/debug/rustpi.asm
 
 user/riscv64.elf:
-	make -C user riscv64.elf
+	make -C user -B riscv64.elf
 
 riscv64.bin: user/riscv64.elf
 	RUSTFLAGS="-C llvm-args=-global-isel=false" \

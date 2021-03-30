@@ -15,6 +15,7 @@ use ipc::*;
 use page_fault::*;
 use arch::page_table::*;
 use syscall::*;
+use crate::config::PAGE_SIZE;
 
 #[macro_export]
 macro_rules! print {
@@ -42,12 +43,13 @@ mod heap;
 #[no_mangle]
 fn _start(arg: usize) -> ! {
   set_page_fault_handler(page_fault_handler as usize);
-  set_self_ipc(getpid());
+  // set_self_ipc(getpid());
   heap::init();
   match arg {
     0 => { fktest() }
     1 => { pingpong() }
     2 => { heap_test() }
+    3 => { main() }
     _ => unsafe { print(arg as u8 as char) }
   }
   match process_destroy(0) {
@@ -55,6 +57,18 @@ fn _start(arg: usize) -> ! {
     Err(_) => {},
   }
   loop {};
+}
+
+fn print2() { loop { print!("2") } }
+
+fn main() {
+  println!("je;;p");
+  mem_alloc(0, 0x7000_0000 - PAGE_SIZE, PTE_W);
+  println!("je;;p");
+  thread_alloc(0x12345678, 0x7000_0000, 0);
+
+  loop { print!("1") }
+
 }
 
 fn pingpong() {

@@ -33,7 +33,7 @@ impl SchedulerTrait for RoundRobinScheduler {
     // if no other runnable thread, run idle thread
     let core = current_core();
     let t = core.idle_thread();
-    println!("\ncore_{} run idle thread", crate::arch::Arch::core_id());
+    // println!("\ncore_{} run idle thread", crate::arch::Arch::core_id());
     assert!(t.run());
   }
 }

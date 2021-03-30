@@ -3,7 +3,7 @@ use crate::lib::core::Core;
 
 pub mod print;
 pub mod isr;
-pub mod process;
+pub mod address_space;
 pub mod elf;
 pub mod user_image;
 pub mod scheduler;
@@ -13,6 +13,7 @@ pub mod thread;
 pub mod bitmap;
 pub mod core;
 pub mod interrupt;
+pub mod itc;
 
 #[inline(always)]
 pub fn round_up(addr: usize, n: usize) -> usize {
@@ -35,9 +36,9 @@ pub fn current_thread() -> Option<self::thread::Thread> {
 }
 
 #[inline(always)]
-pub fn current_process() -> Option<self::process::Process> {
+pub fn current_process() -> Option<self::address_space::AddressSpace> {
   match current_thread() {
     None => { None }
-    Some(t) => { t.process() }
+    Some(t) => { t.address_space() }
   }
 }

@@ -11,30 +11,30 @@ use crate::lib::current_thread;
 use crate::lib::page_table::{EntryAttribute, PageTableEntryAttrTrait, PageTableTrait};
 use crate::lib::thread::Thread;
 
-pub type Pid = u16;
+pub type Asid = u16;
 
 #[derive(Debug)]
 pub struct ControlBlock {
-  pid: Pid,
+  asid: Asid,
   threads: Mutex<Vec<Thread>>,
-  parent: Option<Process>,
+  parent: Option<AddressSpace>,
   page_table: PageTable,
   exception_handler: Mutex<Option<(usize, usize)>>,
 }
 
 
 #[derive(Debug, Clone)]
-pub struct Process(Arc<ControlBlock>);
+pub struct AddressSpace(Arc<ControlBlock>);
 
-impl PartialEq for Process {
+impl PartialEq for AddressSpace {
   fn eq(&self, other: &Self) -> bool {
-    self.0.pid == other.0.pid
+    self.0.asid == other.0.asid
   }
 }
 
-impl Process {
-  pub fn pid(&self) -> Pid {
-    self.0.pid
+impl AddressSpace {
+  pub fn asid(&self) -> Asid {
+    self.0.asid
   }
 
   pub fn main_thread(&self) -> Thread {
@@ -68,7 +68,7 @@ impl Process {
     self.0.page_table
   }
 
-  pub fn parent(&self) -> Option<Process> {
+  pub fn parent(&self) -> Option<AddressSpace> {
     match &self.0.parent {
       None => { None }
       Some(p) => { Some(p.clone()) }
@@ -90,13 +90,13 @@ impl Process {
 }
 
 
-struct ProcessPool {
+struct Pool {
   bitmap: BitMap,
-  alloced: Vec<Process>,
+  alloced: Vec<AddressSpace>,
 }
 
 pub enum Error {
-  ProcessNotFoundError,
+  AddressSpaceNotFound,
 }
 
 fn make_user_page_table() -> PageTable {
@@ -107,64 +107,64 @@ fn make_user_page_table() -> PageTable {
   page_table
 }
 
-impl ProcessPool {
-  fn alloc(&mut self, parent: Option<Process>) -> Process {
-    let id = (self.bitmap.alloc() + 1) as Pid;
+impl Pool {
+  fn alloc(&mut self, parent: Option<AddressSpace>) -> AddressSpace {
+    let id = (self.bitmap.alloc() + 1) as Asid;
     let arc = Arc::new(ControlBlock {
-      pid: id,
+      asid: id,
       threads: Mutex::new(Vec::new()),
       parent,
       page_table: make_user_page_table(),
       exception_handler: Mutex::new(None),
     });
-    let mut map = PROCESS_MAP.get().unwrap().lock();
+    let mut map = ADDRESS_SPACE_MAP.get().unwrap().lock();
     map.insert(id, arc.clone());
     drop(map);
-    self.alloced.push(Process(arc.clone()));
-    Process(arc)
+    self.alloced.push(AddressSpace(arc.clone()));
+    AddressSpace(arc)
   }
 
-  fn free(&mut self, p: &Process) -> Result<(), Error> {
+  fn free(&mut self, p: &AddressSpace) -> Result<(), Error> {
     if self.alloced.contains(p) {
-      self.alloced.retain(|_p| _p.pid() != p.pid());
-      let mut map = PROCESS_MAP.get().unwrap().lock();
-      map.remove(&p.pid());
+      self.alloced.retain(|_p| _p.asid() != p.asid());
+      let mut map = ADDRESS_SPACE_MAP.get().unwrap().lock();
+      map.remove(&p.asid());
       drop(map);
-      self.bitmap.clear((p.pid() - 1) as usize);
+      self.bitmap.clear((p.asid() - 1) as usize);
       Ok(())
     } else {
-      Err(Error::ProcessNotFoundError)
+      Err(Error::AddressSpaceNotFound)
     }
   }
 
   #[allow(dead_code)]
-  fn list(&self) -> Vec<Process> {
+  fn list(&self) -> Vec<AddressSpace> {
     self.alloced.clone()
   }
 }
 
-static PROCESS_MAP: spin::Once<Mutex<BTreeMap<Pid, Arc<ControlBlock>>>> = spin::Once::new();
+static ADDRESS_SPACE_MAP: spin::Once<Mutex<BTreeMap<Asid, Arc<ControlBlock>>>> = spin::Once::new();
 
 pub fn init() {
-  PROCESS_MAP.call_once(|| {
+  ADDRESS_SPACE_MAP.call_once(|| {
     Mutex::new(BTreeMap::new())
   });
 }
 
-static PROCESS_POOL: Mutex<ProcessPool> = Mutex::new(ProcessPool {
+static POOL: Mutex<Pool> = Mutex::new(Pool {
   bitmap: BitMap::new(),
   alloced: Vec::new(),
 });
 
-pub fn alloc(parent: Option<Process>) -> Process {
-  let mut pool = PROCESS_POOL.lock();
+pub fn alloc(parent: Option<AddressSpace>) -> AddressSpace {
+  let mut pool = POOL.lock();
   let r = pool.alloc(parent);
   drop(pool);
   r
 }
 
-pub fn free(p: &Process) {
-  let mut pool = PROCESS_POOL.lock();
+pub fn free(p: &AddressSpace) {
+  let mut pool = POOL.lock();
   match pool.free(p) {
     Ok(_) => {}
     Err(_) => { println!("process_pool: free: process not found") }
@@ -173,17 +173,17 @@ pub fn free(p: &Process) {
 }
 
 #[allow(dead_code)]
-pub fn list() -> Vec<Process> {
-  let pool = PROCESS_POOL.lock();
+pub fn list() -> Vec<AddressSpace> {
+  let pool = POOL.lock();
   let r = pool.list();
   drop(pool);
   r
 }
 
-pub fn lookup(pid: Pid) -> Option<Process> {
-  let map = PROCESS_MAP.get().unwrap().lock();
+pub fn lookup(pid: Asid) -> Option<AddressSpace> {
+  let map = ADDRESS_SPACE_MAP.get().unwrap().lock();
   let r = match map.get(&pid) {
-    Some(arc) => Some(Process(arc.clone())),
+    Some(arc) => Some(AddressSpace(arc.clone())),
     None => None
   };
   drop(map);

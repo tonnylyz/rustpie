@@ -8,13 +8,13 @@ use crate::arch::{AddressSpaceId, ArchTrait, ContextFrame, ContextFrameTrait, Co
 use crate::lib::bitmap::BitMap;
 use crate::lib::current_thread;
 use crate::lib::page_table::PageTableTrait;
-use crate::lib::process::Process;
+use crate::lib::address_space::AddressSpace;
 
 pub type Tid = u16;
 
 #[derive(Debug)]
 pub enum Type {
-  User(Process),
+  User(AddressSpace),
   Kernel,
 }
 
@@ -27,11 +27,11 @@ pub enum Status {
 
 #[derive(Debug)]
 pub struct ControlBlock {
-  tid: u16,
+  tid: Tid,
   t: Type,
   status: Mutex<Status>,
-  context: Mutex<ContextFrame>,
-  core: Mutex<Option<CoreId>>,
+  context_frame: Mutex<ContextFrame>,
+  running_core: Mutex<Option<CoreId>>,
 }
 
 pub enum Error {
@@ -65,7 +65,7 @@ impl Thread {
     r
   }
 
-  pub fn process(&self) -> Option<Process> {
+  pub fn address_space(&self) -> Option<AddressSpace> {
     match &self.0.t {
       Type::User(p) => {
         Some(p.clone())
@@ -77,11 +77,11 @@ impl Thread {
   }
 
   pub fn context(&self) -> MutexGuard<ContextFrame> {
-    self.0.context.lock()
+    self.0.context_frame.lock()
   }
 
   pub fn run(&self) -> bool {
-    let mut core_lock = self.0.core.lock();
+    let mut core_lock = self.0.running_core.lock();
     match *core_lock {
       Some(core_id) => {
         if core_id != crate::arch::Arch::core_id() {
@@ -115,9 +115,9 @@ impl Thread {
       }
     }
     core.set_running_thread(Some(self.clone()));
-    if let Some(p) = self.process() {
-      println!("\ncore_{} switch to P{}/T{}", crate::arch::Arch::core_id(), p.pid(), self.tid());
-      crate::arch::PageTable::set_user_page_table(p.page_table(), p.pid() as AddressSpaceId);
+    if let Some(p) = self.address_space() {
+      // println!("\ncore_{} switch to P{}/T{}", crate::arch::Arch::core_id(), p.asid(), self.tid());
+      crate::arch::PageTable::set_user_page_table(p.page_table(), p.asid() as AddressSpaceId);
     }
     crate::arch::Arch::invalidate_tlb();
     true
@@ -139,14 +139,14 @@ struct ThreadPool {
 }
 
 impl ThreadPool {
-  fn alloc_user(&mut self, pc: usize, sp: usize, arg: usize, p: Process) -> Thread {
+  fn alloc_user(&mut self, pc: usize, sp: usize, arg: usize, p: AddressSpace) -> Thread {
     let id = self.bitmap.alloc() as Tid;
     let arc = Arc::new(ControlBlock {
       tid: id,
       t: Type::User(p),
       status: Mutex::new(Status::TsNotRunnable),
-      context: Mutex::new(ContextFrame::new(pc, sp, arg, false)),
-      core: Mutex::new(None),
+      context_frame: Mutex::new(ContextFrame::new(pc, sp, arg, false)),
+      running_core: Mutex::new(None),
     });
     let mut map = THREAD_MAP.get().unwrap().lock();
     map.insert(id, arc.clone());
@@ -161,8 +161,8 @@ impl ThreadPool {
       tid: id,
       t: Type::Kernel,
       status: Mutex::new(Status::TsNotRunnable),
-      context: Mutex::new(ContextFrame::new(pc, sp, arg, true)),
-      core: Mutex::new(None),
+      context_frame: Mutex::new(ContextFrame::new(pc, sp, arg, true)),
+      running_core: Mutex::new(None),
     });
     let mut map = THREAD_MAP.get().unwrap().lock();
     map.insert(id, arc.clone());
@@ -202,7 +202,7 @@ static THREAD_POOL: Mutex<ThreadPool> = Mutex::new(ThreadPool {
   alloced: Vec::new(),
 });
 
-pub fn alloc_user(pc: usize, sp: usize, arg: usize, p: Process) -> Thread {
+pub fn alloc_user(pc: usize, sp: usize, arg: usize, p: AddressSpace) -> Thread {
   let mut pool = THREAD_POOL.lock();
   let r = pool.alloc_user(pc, sp, arg, p);
   drop(pool);

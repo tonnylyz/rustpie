@@ -87,7 +87,7 @@ pub unsafe fn main(core_id: CoreId) -> ! {
     println!("heap init ok");
     mm::page_pool::init();
     println!("page pool init ok");
-    lib::process::init();
+    lib::address_space::init();
     println!("process pool init ok");
     lib::thread::init();
     println!("thread pool init ok");
@@ -98,22 +98,6 @@ pub unsafe fn main(core_id: CoreId) -> ! {
   board::init_per_core();
   println!("init core {}", core_id);
   if core_id == 0 {
-    // let mut buf = [0u8; 4096];
-    // let req = crate::driver::common::virtio_blk::read(0, 8, &mut buf);
-
-
-    // use crate::driver::common::virtio_blk::Operation::Read;
-    // let (hdr, status) = crate::driver::common::virtio_blk::io(0, 8, &BUF as *const u8, Read);
-    // use cortex_a::regs::*;
-    // DAIF.write(DAIF::I::Unmasked);
-    // loop {}
-    // for i in 0..PAGE_SIZE {
-    //   print!("{:02x} ", buf[i]);
-    //   if (i + 1) % 32 == 0 {
-    //     println!();
-    //   }
-    // }
-
     // extern "C" {
     //   static KERNEL_ELF: [u8; 0x40000000];
     // }
@@ -129,9 +113,9 @@ pub unsafe fn main(core_id: CoreId) -> ! {
     //    1 - pingpong: an IPC test
     //    2 - heap_test: test copy on write of heap
     #[cfg(target_arch = "aarch64")]
-      lib::process::create(&lib::user_image::_binary_user_aarch64_elf_start, 0);
+      lib::address_space::create(&lib::user_image::_binary_user_aarch64_elf_start, 3);
     #[cfg(target_arch = "riscv64")]
-      lib::process::create(&lib::user_image::_binary_user_riscv64_elf_start, 0);
+      lib::address_space::create(&lib::user_image::_binary_user_riscv64_elf_start, 3);
   }
   barrier();
   lib::scheduler::schedule();

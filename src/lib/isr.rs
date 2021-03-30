@@ -4,7 +4,7 @@ use crate::arch::{Arch, ArchTrait, ContextFrame, ContextFrameTrait, CoreTrait, P
 use crate::config::CONFIG_USER_LIMIT;
 use crate::lib::{current_core, current_process, current_thread, round_down};
 use crate::lib::page_table::PageTableTrait;
-use crate::lib::process::Pid;
+use crate::lib::address_space::Asid;
 use crate::lib::syscall::{SystemCall, SystemCallTrait};
 use crate::mm::PageFrame;
 
@@ -21,7 +21,7 @@ pub struct Isr;
 #[derive(Debug)]
 pub enum SystemCallResult {
   Void,
-  Pid(Pid),
+  Pid(Asid),
   R(Option<isize>),
 }
 
@@ -41,8 +41,8 @@ impl SystemCallResultOk for u16 {
   }
 }
 
-impl core::convert::From<Pid> for SystemCallResult {
-  fn from(pid: Pid) -> Self {
+impl core::convert::From<Asid> for SystemCallResult {
+  fn from(pid: Asid) -> Self {
     SystemCallResult::Pid(pid)
   }
 }
@@ -70,10 +70,10 @@ impl InterruptServiceRoutine for Isr {
     let arg = |i: usize| { ctx.syscall_argument(i) };
     let scr = match ctx.syscall_number() {
       1 => {
-        //print!("core_{}: putc({})", crate::arch::Arch::core_id(), arg(0) as u8 as char);
-        //println!();
-        //().into()
-        SystemCall::putc(arg(0) as u8 as char).into()
+        print!("core_{}: putc({:02x})", crate::arch::Arch::core_id(), arg(0) as u8);
+        println!();
+        ().into()
+        // SystemCall::putc(arg(0) as u8 as char).into()
       }
       2 => {
         SystemCall::get_pid().into()
@@ -97,7 +97,7 @@ impl InterruptServiceRoutine for Isr {
         SystemCall::mem_unmap(arg(0) as u16, arg(1)).into()
       }
       9 => {
-        SystemCall::process_alloc().into()
+        SystemCall::address_space_alloc().into()
       }
       10 => {
         use crate::lib::thread::Status::{TsNotRunnable, TsRunnable};
@@ -113,16 +113,20 @@ impl InterruptServiceRoutine for Isr {
       12 => {
         SystemCall::ipc_can_send(arg(0) as u16, arg(1), arg(2), arg(3)).into()
       }
+      13 => {
+        panic!();
+        SystemCall::thread_alloc(arg(0), arg(1), arg(2)).into()
+      }
       _ => { println!("system call: unrecognized system call number").into() }
     };
     match scr {
       SystemCallResult::Void => {}
       SystemCallResult::Pid(pid) => {
-        //println!("{}:{:?}", (*ctx).syscall_number(), scr);
+        println!("syscall {}:{:?}", (*ctx).syscall_number(), scr);
         ctx.set_syscall_return_value(pid as usize);
       }
       SystemCallResult::R(o) => {
-        //println!("{}:{:?}", (*ctx).syscall_number(), scr);
+        println!("syscall {}:{:?}", (*ctx).syscall_number(), scr);
         match o {
           None => { ctx.set_syscall_return_value(0); }
           Some(i) => { ctx.set_syscall_return_value(i as usize); }
@@ -200,7 +204,7 @@ impl InterruptServiceRoutine for Isr {
     match current_thread() {
       None => { panic!("isr: default: no running thread") }
       Some(t) => {
-        match t.process() {
+        match t.address_space() {
           None => { panic!("isr: default: no running process") }
           Some(p) => {
             println!("isr: default: process killed");
