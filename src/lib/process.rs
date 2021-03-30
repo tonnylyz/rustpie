@@ -109,7 +109,7 @@ fn make_user_page_table() -> PageTable {
 
 impl ProcessPool {
   fn alloc(&mut self, parent: Option<Process>) -> Process {
-    let id = self.bitmap.alloc() as Pid;
+    let id = (self.bitmap.alloc() + 1) as Pid;
     let arc = Arc::new(ControlBlock {
       pid: id,
       threads: Mutex::new(Vec::new()),
@@ -130,7 +130,7 @@ impl ProcessPool {
       let mut map = PROCESS_MAP.lock();
       map.remove(&p.pid());
       drop(map);
-      self.bitmap.clear(p.pid() as usize);
+      self.bitmap.clear((p.pid() - 1) as usize);
       Ok(())
     } else {
       Err(Error::ProcessNotFoundError)
