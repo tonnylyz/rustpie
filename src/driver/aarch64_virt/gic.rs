@@ -1,5 +1,7 @@
-use crate::arch::{Address, ArchTrait};
-use crate::lib::interrupt::{InterruptController, InterruptNo};
+use crate::arch::{ArchTrait};
+use crate::lib::interrupt::InterruptController;
+use register::*;
+use register::mmio::*;
 
 const GIC_INTERRUPT_NUM: usize = 1024;
 const GIC_SGI_NUM: usize = 16;
@@ -10,181 +12,213 @@ const GIC_2_BIT_NUM: usize = GIC_INTERRUPT_NUM * 2 / 32;
 const GICD_BASE: usize = 0x08000000;
 const GICC_BASE: usize = 0x08010000;
 
-#[repr(packed)]
-struct GicDistributor {
-  control: u32,
-  typer: u32,
-  iid: u32,
-  _reserved_0: [u8; 0x80 - 0x0c],
-  group: [u32; GIC_1_BIT_NUM],
-  set_enable: [u32; GIC_1_BIT_NUM],
-  clear_enable: [u32; GIC_1_BIT_NUM],
-  set_pend: [u32; GIC_1_BIT_NUM],
-  clear_pend: [u32; GIC_1_BIT_NUM],
-  set_active: [u32; GIC_1_BIT_NUM],
-  clear_active: [u32; GIC_1_BIT_NUM],
-  priority: [u32; GIC_8_BIT_NUM],
-  target: [u32; GIC_8_BIT_NUM],
-  config: [u32; GIC_2_BIT_NUM],
-  _reserved_1: [u8; 0xe00 - 0xd00],
-  nsac: [u32; GIC_2_BIT_NUM],
-  sgi: u32,
-  _reserved_2: [u8; 0xf10 - 0xf04],
-  clear_pend_sgi: [u32; GIC_SGI_NUM * 8 / 32],
-  set_pend_sgi: [u32; GIC_SGI_NUM * 8 / 32],
+register_structs! {
+  #[allow(non_snake_case)]
+  GicDistributorBlock {
+    (0x0000 => CTLR: ReadWrite<u32>),
+    (0x0004 => TYPER: ReadOnly<u32>),
+    (0x0008 => IIDR: ReadOnly<u32>),
+    (0x000c => _reserved_0),
+    (0x0080 => IGROUPR: [ReadWrite<u32>; GIC_1_BIT_NUM]),
+    (0x0100 => ISENABLER: [ReadWrite<u32>; GIC_1_BIT_NUM]),
+    (0x0180 => ICENABLER: [ReadWrite<u32>; GIC_1_BIT_NUM]),
+    (0x0200 => ISPENDR: [ReadWrite<u32>; GIC_1_BIT_NUM]),
+    (0x0280 => ICPENDR: [ReadWrite<u32>; GIC_1_BIT_NUM]),
+    (0x0300 => ISACTIVER: [ReadWrite<u32>; GIC_1_BIT_NUM]),
+    (0x0380 => ICACTIVER: [ReadWrite<u32>; GIC_1_BIT_NUM]),
+    (0x0400 => IPRIORITYR: [ReadWrite<u32>; GIC_8_BIT_NUM]),
+    (0x0800 => ITARGETSR: [ReadWrite<u32>; GIC_8_BIT_NUM]),
+    (0x0c00 => ICFGR: [ReadWrite<u32>; GIC_2_BIT_NUM]),
+    (0x0d00 => _reserved_1),
+    (0x0e00 => NSACR: [ReadWrite<u32>; GIC_2_BIT_NUM]),
+    (0x0f00 => SGIR: WriteOnly<u32>),
+    (0x0f04 => _reserved_2),
+    (0x0f10 => CPENDSGIR: [ReadWrite<u32>; GIC_SGI_NUM * 8 / 32]),
+    (0x0f20 => SPENDSGIR: [ReadWrite<u32>; GIC_SGI_NUM * 8 / 32]),
+    (0x0f30 => _reserved_3),
+    (0x1000 => @END),
+  }
 }
 
-#[repr(packed)]
+struct GicDistributor {
+  base_addr: usize,
+}
+
+impl core::ops::Deref for GicDistributor {
+  type Target = GicDistributorBlock;
+
+  fn deref(&self) -> &Self::Target {
+    unsafe { &*self.ptr() }
+  }
+}
+
+register_structs! {
+  #[allow(non_snake_case)]
+  GicCpuInterfaceBlock {
+    (0x0000 => CTLR: ReadWrite<u32>),   // CPU Interface Control Register
+    (0x0004 => PMR: ReadWrite<u32>),    // Interrupt Priority Mask Register
+    (0x0008 => BPR: ReadWrite<u32>),    // Binary Point Register
+    (0x000c => IAR: ReadOnly<u32>),     // Interrupt Acknowledge Register
+    (0x0010 => EOIR: WriteOnly<u32>),   // End of Interrupt Register
+    (0x0014 => RPR: ReadOnly<u32>),     // Running Priority Register
+    (0x0018 => HPPIR: ReadOnly<u32>),   // Highest Priority Pending Interrupt Register
+    (0x001c => ABPR: ReadWrite<u32>),   // Aliased Binary Point Register
+    (0x0020 => AIAR: ReadOnly<u32>),    // Aliased Interrupt Acknowledge Register
+    (0x0024 => AEOIR: WriteOnly<u32>),  // Aliased End of Interrupt Register
+    (0x0028 => AHPPIR: ReadOnly<u32>),  // Aliased Highest Priority Pending Interrupt Register
+    (0x002c => _reserved_0),
+    (0x00d0 => APR: [ReadWrite<u32>; 4]),    // Active Priorities Register
+    (0x00e0 => NSAPR: [ReadWrite<u32>; 4]),  // Non-secure Active Priorities Register
+    (0x00ed => _reserved_1),
+    (0x00fc => IIDR: ReadOnly<u32>),    // CPU Interface Identification Register
+    (0x00fd => _reserved_2),
+    (0x1000 => DIR: WriteOnly<u32>),    // Deactivate Interrupt Register
+    (0x1004 => _reserved_3),
+    (0x2000 => @END),
+  }
+}
+
 struct GicCpuInterface {
-  control: u32,
-  pmr: u32,
-  bpr: u32,
-  int_ack: u32,
-  end_of_int: u32,
-  running_priority: u32,
-  highest_pending_priority_int: u32,
-  abpr: u32,
-  aiar: u32,
-  aeoir: u32,
-  ahppir: u32,
-  _reserved_0: [u8; 0xd0 - 0x2c],
-  apr: [u32; 4],
-  nsapr: [u32; 4],
-  _reserved_1: [u8; 0xfc - 0xf0],
-  iid: u32,
-  _reserved_2: [u8; 0x1000 - 0x100],
-  dir: u32,
+  base_addr: usize,
+}
+
+impl core::ops::Deref for GicCpuInterface {
+  type Target = GicCpuInterfaceBlock;
+  
+  fn deref(&self) -> &Self::Target {
+    unsafe { &*self.ptr() }
+  }
 }
 
 impl GicCpuInterface {
-  fn init(&mut self) {
-    self.pmr = u32::MAX;
-    self.control |= 1 | (1 << 9);
+  
+  const fn new(base_addr: usize) -> Self {
+    GicCpuInterface { base_addr }
   }
+
+  fn ptr(&self) -> *const GicCpuInterfaceBlock {
+    self.base_addr as *const _
+  }
+
+  fn init(&self) {
+    self.PMR.set(u32::MAX);
+    self.CTLR.set(1 | (1 << 9));
+  }
+  
 }
 
 impl GicDistributor {
-  fn init(&mut self) {
-    let max_spi = (self.typer & 0b11111) * 32 + 1;
+  const fn new(base_addr: usize) -> Self {
+    GicDistributor { base_addr }
+  }
+
+  fn ptr(&self) -> *const GicDistributorBlock {
+    self.base_addr as *const _
+  }
+
+  fn init(&self) {
+    let max_spi = (self.TYPER.get() & 0b11111) * 32 + 1;
     for i in 1usize..(max_spi as usize / 32) {
-      self.clear_enable[i] = u32::MAX;
-      self.clear_pend[i] = u32::MAX;
-      self.clear_active[i] = u32::MAX;
+      self.ICENABLER[i].set(u32::MAX);
+      self.ICPENDR[i].set(u32::MAX);
+      self.ICACTIVER[i].set(u32::MAX);
     }
     for i in 8usize..(max_spi as usize * 8 / 32) {
-      self.priority[i] = u32::MAX;
-      self.target[i] = u32::MAX;
+      self.IPRIORITYR[i].set(u32::MAX);
+      self.ITARGETSR[i].set(u32::MAX);
     }
-    self.control |= 1;
+    self.CTLR.set(0b1);
   }
 
-  fn init_per_core(&mut self) {
-    self.clear_enable[0] = u32::MAX;
-    self.clear_pend[0] = u32::MAX;
-    self.clear_active[0] = u32::MAX;
+  fn init_per_core(&self) {
+    self.ICENABLER[0].set(u32::MAX);
+    self.ICPENDR[0].set(u32::MAX);
+    self.ICACTIVER[0].set(u32::MAX);
     for i in 0..4 {
-      self.clear_pend_sgi[i] = u32::MAX;
+      self.CPENDSGIR[i].set(u32::MAX);
     }
     for i in 0..8 {
-      self.priority[i] = u32::MAX;
+      self.IPRIORITYR[i].set(u32::MAX);
     }
   }
 
-  fn set_enable(&mut self, int: usize) {
-    let enable_index = int / 32;
+  fn set_enable(&self, int: usize) {
+    let idx = int / 32;
     let bit = 1u32 << (int % 32);
-    self.set_enable[enable_index] = bit;
+    self.ISENABLER[idx].set(bit);
   }
 
-  fn clear_enable(&mut self, int: usize) {
-    let enable_index = int / 32;
+  fn clear_enable(&self, int: usize) {
+    let idx = int / 32;
     let bit = 1u32 << (int % 32);
-    self.clear_enable[enable_index] = bit;
+    self.ICENABLER[idx].set(bit);
   }
 
-  fn set_target(&mut self, int: usize, target: u8) {
-    let target_index = (int * 8) / 32;
+  fn set_target(&self, int: usize, target: u8) {
+    let idx = (int * 8) / 32;
     let offset = (int * 8) % 32;
     let mask: u32 = 0b11111111 << offset;
-    self.target[target_index] =
-        (self.target[target_index] & (!mask)) | (((target as u32) << offset) & mask);
+    let prev = self.ITARGETSR[idx].get();
+    self.ITARGETSR[idx].set((prev & (!mask)) | (((target as u32) << offset) & mask));
   }
 
-  fn set_priority(&mut self, int: usize, priority: u8) {
-    let priority_index = (int * 8) / 32;
+  fn set_priority(&self, int: usize, priority: u8) {
+    let idx = (int * 8) / 32;
     let offset = (int * 8) % 32;
     let mask: u32 = 0b11111111 << offset;
-    self.priority[priority_index] =
-        (self.priority[priority_index] & (!mask)) | (((priority as u32) << offset) & mask);
+    let prev = self.IPRIORITYR[idx].get();
+    self.IPRIORITYR[idx].set((prev & (!mask)) | (((priority as u32) << offset) & mask));
   }
 }
 
-fn gicd() -> &'static mut GicDistributor {
-  unsafe { (GICD_BASE.pa2kva() as *mut GicDistributor).as_mut().unwrap() }
-}
-
-fn gicc() -> &'static mut GicCpuInterface {
-  unsafe { (GICC_BASE.pa2kva() as *mut GicCpuInterface).as_mut().unwrap() }
-}
+static GICD: GicDistributor = GicDistributor::new(GICD_BASE | 0xFFFF_FF80_0000_0000);
+static GICC: GicCpuInterface = GicCpuInterface::new(GICC_BASE | 0xFFFF_FF80_0000_0000);
 
 pub struct Gic;
 
 impl InterruptController for Gic {
   fn init(&self) {
     let core_id = crate::arch::Arch::core_id();
-    let gicd = gicd();
+    let gicd = &GICD;
     if core_id == 0 {
       gicd.init();
     }
-    let gicc = gicc();
+    let gicc = &GICC;
     gicd.init_per_core();
     gicc.init();
   }
 
-  fn enable(&self, int: InterruptNo) {
-    match int {
-      InterruptNo::Timer => {panic!("GIC use numbered timer irq");}
-      InterruptNo::Numbered(int) => {
-        let core_id = crate::arch::Arch::core_id();
-        let gicd = gicd();
-        gicd.set_enable(int);
-        gicd.set_priority(int, 0x7f);
-        gicd.set_target(int, (1 << core_id) as u8);
-      }
-    }
+  fn enable(&self, int: Interrupt) {
+    let core_id = crate::arch::Arch::core_id();
+    let gicd = &GICD;
+    gicd.set_enable(int);
+    gicd.set_priority(int, 0x7f);
+    gicd.set_target(int, (1 << core_id) as u8);
   }
 
-  fn disable(&self, int: InterruptNo) {
-    match int {
-      InterruptNo::Timer => {panic!("GIC use numbered timer irq");}
-      InterruptNo::Numbered(int) => {
-        let gicd = gicd();
-        gicd.clear_enable(int);
-      }
-    }
+  fn disable(&self, int: Interrupt) {
+    let gicd = &GICD;
+    gicd.clear_enable(int);
   }
 
-  fn fetch(&self) -> Option<InterruptNo> {
-    let gicc = gicc();
-    let i = gicc.int_ack;
+  fn fetch(&self) -> Option<Interrupt> {
+    let gicc = &GICC;
+    let i = gicc.IAR.get();
     if i >= 1022 {
       None
     } else {
-      Some(InterruptNo::Numbered(i as usize))
+      Some(i as Interrupt)
     }
   }
 
-  fn finish(&self, int: InterruptNo) {
-    match int {
-      InterruptNo::Timer => {panic!("GIC use numbered timer irq");}
-      InterruptNo::Numbered(int) => {
-        let gicc = gicc();
-        gicc.end_of_int = int as u32;
-      }
-    }
+  fn finish(&self, int: Interrupt) {
+    let gicc = &GICC;
+    gicc.EOIR.set(int as u32);
   }
 }
 
-pub const INT_TIMER: InterruptNo = InterruptNo::Numbered(27);
+pub const INT_TIMER: Interrupt = 27; // virtual timer
 
 pub static INTERRUPT_CONTROLLER: Gic = Gic{};
+
+pub type Interrupt = usize;
