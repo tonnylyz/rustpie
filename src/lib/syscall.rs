@@ -2,9 +2,11 @@ use crate::arch::{ArchPageTableEntry, ArchPageTableEntryTrait, ContextFrameTrait
 use crate::config::CONFIG_USER_LIMIT;
 use crate::lib::{current_process, current_thread, round_down};
 use crate::lib::page_table::{Entry, PageTableEntryAttrTrait, PageTableTrait};
-use crate::lib::process::{Pid, Process};
+use crate::lib::address_space::{Asid, AddressSpace};
 
 use self::Error::*;
+use crate::lib::itc::InterThreadMessage;
+use crate::lib::thread::Tid;
 
 pub enum Error {
   InvalidArgumentError = 1,
@@ -34,8 +36,8 @@ impl core::convert::From<crate::lib::page_table::Error> for Error {
   }
 }
 
-impl core::convert::From<crate::lib::process::Error> for Error {
-  fn from(e: crate::lib::process::Error) -> Self {
+impl core::convert::From<crate::lib::address_space::Error> for Error {
+  fn from(e: crate::lib::address_space::Error) -> Self {
     match e {
       _ => { InternalError }
     }
@@ -52,29 +54,31 @@ pub trait SystemCallTrait {
   fn mem_alloc(pid: u16, va: usize, perm: usize) -> Result<(), Error>;
   fn mem_map(src_pid: u16, src_va: usize, dst_pid: u16, dst_va: usize, perm: usize) -> Result<(), Error>;
   fn mem_unmap(pid: u16, va: usize) -> Result<(), Error>;
-  fn process_alloc() -> Result<u16, Error>;
-  fn thread_alloc() -> Result<u16, Error>;
+  fn address_space_alloc() -> Result<u16, Error>;
+  fn thread_alloc(entry: usize, sp: usize, arg: usize) -> Result<u16, Error>;
   fn thread_set_status(pid: u16, status: crate::lib::thread::Status) -> Result<(), Error>;
   fn ipc_receive(dst_va: usize);
   fn ipc_can_send(pid: u16, value: usize, src_va: usize, perm: usize) -> Result<(), Error>;
+  fn itc_receive(msg_ptr: usize);
+  fn itc_can_send(tid: u16, a: usize, b: usize, c: usize, d: usize) -> Result<(), Error>;
 }
 
 pub struct SystemCall;
 
-fn lookup_pid(pid: u16, check_parent: bool) -> Result<Process, Error> {
+fn lookup_pid(pid: u16, check_parent: bool) -> Result<AddressSpace, Error> {
   if pid == 0 {
     match current_process() {
       None => { Err(InternalError) }
       Some(p) => { Ok(p) }
     }
   } else {
-    if let Some(p) = crate::lib::process::lookup(pid) {
+    if let Some(p) = crate::lib::address_space::lookup(pid) {
       if check_parent {
         if let Some(parent) = p.parent() {
           match current_process() {
             None => { Err(InternalError) }
             Some(current) => {
-              if current.pid() == parent.pid() {
+              if current.asid() == parent.asid() {
                 Ok(p)
               } else {
                 Err(ProcessParentMismatchedError)
@@ -101,7 +105,7 @@ impl SystemCallTrait for SystemCall {
   fn get_pid() -> u16 {
     match current_process() {
       None => { 0 }
-      Some(p) => { p.pid() }
+      Some(p) => { p.asid() }
     }
   }
 
@@ -176,21 +180,25 @@ impl SystemCallTrait for SystemCall {
     Ok(())
   }
 
-  fn process_alloc() -> Result<Pid, Error> {
+  fn address_space_alloc() -> Result<Asid, Error> {
     let t = current_thread().unwrap();
-    let p = t.process().unwrap();
-    let child = crate::lib::process::alloc(Some(p));
+    let p = t.address_space().unwrap();
+    let child = crate::lib::address_space::alloc(Some(p));
     let mut ctx = *crate::lib::current_core().context();
     ctx.set_syscall_return_value(0);
     let child_thread = crate::lib::thread::alloc_user(0, 0, 0, child.clone());
     *child_thread.context() = ctx;
     child_thread.set_status(crate::lib::thread::Status::TsNotRunnable);
     child.set_main_thread(child_thread);
-    Ok(child.pid())
+    Ok(child.asid())
   }
 
-  fn thread_alloc() -> Result<u16, Error> {
-    unimplemented!()
+  fn thread_alloc(entry: usize, sp: usize, arg: usize) -> Result<Tid, Error> {
+    let t = current_thread().unwrap();
+    let p = t.address_space().unwrap();
+    let child_thread = crate::lib::thread::alloc_user(entry, sp, arg, p.clone());
+    child_thread.set_status(crate::lib::thread::Status::TsRunnable);
+    Ok(child_thread.tid())
   }
 
   fn thread_set_status(pid: u16, status: crate::lib::thread::Status) -> Result<(), Error> {
@@ -210,6 +218,14 @@ impl SystemCallTrait for SystemCall {
 
   #[allow(unused_variables)]
   fn ipc_can_send(pid: u16, value: usize, src_va: usize, attr: usize) -> Result<(), Error> {
+    unimplemented!()
+  }
+
+  fn itc_receive(msg_ptr: usize) {
+    unimplemented!()
+  }
+
+  fn itc_can_send(tid: u16, a: usize, b: usize, c: usize, d: usize) -> Result<(), Error> {
     unimplemented!()
   }
 }

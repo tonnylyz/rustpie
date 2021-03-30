@@ -35,6 +35,7 @@ extern "C" {
   fn syscall_10(pid: u16, status: usize) -> isize;
   fn syscall_11(dst_va: usize);
   fn syscall_12(pid: u16, value: usize, src_va: usize, attr: usize) -> isize;
+  fn syscall_13(entry: usize, sp: usize, arg: usize) -> isize;
 }
 
 trait SystemCallResult {
@@ -130,4 +131,10 @@ pub fn ipc_receive(dst_va: usize) {
 pub fn ipc_can_send(pid: u16, value: usize, src_va: usize, attr: EntryAttribute) -> Result<(), Error> {
   let attr = ArchEntryAttribute::from(attr).to_usize();
   unsafe { syscall_12(pid, value, src_va, attr).to_result() }
+}
+
+pub fn thread_alloc(entry: usize, sp: usize, arg: usize) -> Result<u16, Error> {
+  unsafe {
+    syscall_13(entry, sp, arg).to_result_with::<u16>()
+  }
 }
