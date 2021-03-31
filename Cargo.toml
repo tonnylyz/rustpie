@@ -11,6 +11,8 @@ register = "1.0.2"
 buddy_system_allocator = "0.7.0"
 spin = "0.9.0"
 xmas-elf = "0.7.0"
+fatfs = { version = "0.3.5", features = ["core_io", "alloc"], default-features = false }
+core_io = "0.1"
 
 elfloader = "0.11.0"
 backtracer = { path = "../backtracer" }
@@ -21,6 +23,11 @@ cortex-a = { path = "../cortex-a" }
 
 [target.'cfg(target_arch = "riscv64")'.dependencies]
 riscv = { git = "https://github.com/tonnylyz/riscv" }
+
+# ide only
+#[target.'cfg(target_arch = "x86_64")'.dependencies]
+#fatfs = { version = "0.3.5" }
+
 
 [features]
 default = []

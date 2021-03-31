@@ -35,4 +35,10 @@ impl PageFrame {
       core::intrinsics::volatile_copy_memory(self.kva() as *mut u8, src.kva() as *mut u8, PAGE_SIZE);
     }
   }
+  pub fn as_slice(&self) -> &'static [u8] {
+    unsafe { core::slice::from_raw_parts(self.kva() as *const u8, 4096) }
+  }
+  pub fn as_mut_slice(&self) -> &'static mut [u8] {
+    unsafe { core::slice::from_raw_parts_mut(self.kva() as *mut u8, 4096) }
+  }
 }

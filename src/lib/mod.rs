@@ -1,4 +1,5 @@
 pub use utils::*;
+mod utils;
 
 pub mod print;
 pub mod isr;
@@ -15,6 +16,6 @@ pub mod interrupt;
 pub mod itc;
 pub mod barrier;
 pub mod stack;
+pub mod fatfs;
 
-mod utils;
 
