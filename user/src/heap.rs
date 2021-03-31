@@ -1,8 +1,8 @@
 // rCore buddy system allocator
 use buddy_system_allocator::LockedHeap;
 
-use crate::config::{HEAP_BTM, PAGE_SIZE};
 use crate::arch::page_table::PTE_DEFAULT;
+use crate::config::{HEAP_BTM, PAGE_SIZE};
 use crate::syscall::mem_alloc;
 
 #[global_allocator]

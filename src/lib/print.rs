@@ -19,5 +19,4 @@ impl fmt::Write for Writer {
 pub fn print_arg(args: fmt::Arguments) {
   let mut lock = WRITER.lock();
   lock.write_fmt(args).unwrap();
-  drop(lock);
 }

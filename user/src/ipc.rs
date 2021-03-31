@@ -1,5 +1,5 @@
-use crate::config::*;
 use crate::arch::page_table::*;
+use crate::config::*;
 use crate::syscall::*;
 
 #[repr(C, align(32))]

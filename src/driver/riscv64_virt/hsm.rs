@@ -23,7 +23,7 @@ impl From<isize> for HartStatus {
 pub fn hart_start(hartid: usize, start_addr: usize, opaque: usize) -> Result<(), super::sbi::Error> {
   let r = sbi_call(SBI_EID_HSM, SBI_FID_HART_START, hartid, start_addr, opaque);
   match r {
-    Ok(_) => {Ok(())}
+    Ok(_) => { Ok(()) }
     Err(e) => {
       Err(e)
     }

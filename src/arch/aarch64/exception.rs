@@ -6,7 +6,8 @@
 
 use cortex_a::{barrier, regs::*};
 
-use crate::arch::{ContextFrame, CoreTrait};
+use crate::arch::ContextFrame;
+use crate::lib::core::CoreTrait;
 
 global_asm!(include_str!("exception.S"));
 
@@ -37,7 +38,7 @@ unsafe extern "C" fn current_el_sp0_serror() {
 #[no_mangle]
 #[inline(never)]
 unsafe extern "C" fn current_el_spx_synchronous() {
-  panic!("current_elx_synchronous {:016x}",cortex_a::regs::ELR_EL1.get());
+  panic!("current_elx_synchronous {:016x}", cortex_a::regs::ELR_EL1.get());
 }
 
 #[no_mangle]

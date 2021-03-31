@@ -1,6 +1,6 @@
+use crate::arch::page_table::*;
 use crate::config::*;
 use crate::ipc::set_self_ipc;
-use crate::arch::page_table::*;
 use crate::syscall::*;
 
 fn duplicate_page(pid: u16, va: usize, pte: EntryAttribute) {

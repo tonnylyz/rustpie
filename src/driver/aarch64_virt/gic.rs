@@ -1,7 +1,7 @@
-use crate::arch::{ArchTrait};
-use crate::lib::interrupt::InterruptController;
 use register::*;
 use register::mmio::*;
+
+use crate::lib::interrupt::InterruptController;
 
 const GIC_INTERRUPT_NUM: usize = 1024;
 const GIC_SGI_NUM: usize = 16;
@@ -84,14 +84,13 @@ struct GicCpuInterface {
 
 impl core::ops::Deref for GicCpuInterface {
   type Target = GicCpuInterfaceBlock;
-  
+
   fn deref(&self) -> &Self::Target {
     unsafe { &*self.ptr() }
   }
 }
 
 impl GicCpuInterface {
-  
   const fn new(base_addr: usize) -> Self {
     GicCpuInterface { base_addr }
   }
@@ -104,7 +103,6 @@ impl GicCpuInterface {
     self.PMR.set(u32::MAX);
     self.CTLR.set(1);
   }
-  
 }
 
 impl GicDistributor {
@@ -178,7 +176,7 @@ pub struct Gic;
 
 impl InterruptController for Gic {
   fn init(&self) {
-    let core_id = crate::arch::Arch::core_id();
+    let core_id = crate::core_id();
     let gicd = &GICD;
     if core_id == 0 {
       gicd.init();
@@ -189,7 +187,7 @@ impl InterruptController for Gic {
   }
 
   fn enable(&self, int: Interrupt) {
-    let core_id = crate::arch::Arch::core_id();
+    let core_id = crate::core_id();
     let gicd = &GICD;
     gicd.set_enable(int);
     gicd.set_priority(int, 0x7f);
@@ -219,6 +217,6 @@ impl InterruptController for Gic {
 
 pub const INT_TIMER: Interrupt = 27; // virtual timer
 
-pub static INTERRUPT_CONTROLLER: Gic = Gic{};
+pub static INTERRUPT_CONTROLLER: Gic = Gic {};
 
 pub type Interrupt = usize;

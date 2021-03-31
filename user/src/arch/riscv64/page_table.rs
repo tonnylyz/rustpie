@@ -1,9 +1,13 @@
 use crate::config::*;
+
 use super::vm_descriptor::*;
 
-const CONFIG_READ_ONLY_LEVEL_3_PAGE_TABLE_TOP: usize = 0x40_0000_0000; // 1 GB
-const CONFIG_READ_ONLY_LEVEL_3_PAGE_TABLE_BTM: usize = 0x3f_c000_0000; // 1 GB
-const CONFIG_READ_ONLY_LEVEL_2_PAGE_TABLE_BTM: usize = 0x3f_c000_0000 - 0x20_0000; // 2 MB
+const CONFIG_READ_ONLY_LEVEL_3_PAGE_TABLE_TOP: usize = 0x40_0000_0000;
+// 1 GB
+const CONFIG_READ_ONLY_LEVEL_3_PAGE_TABLE_BTM: usize = 0x3f_c000_0000;
+// 1 GB
+const CONFIG_READ_ONLY_LEVEL_2_PAGE_TABLE_BTM: usize = 0x3f_c000_0000 - 0x20_0000;
+// 2 MB
 const CONFIG_READ_ONLY_LEVEL_1_PAGE_TABLE_BTM: usize = 0x3f_c000_0000 - 0x20_0000 - 0x1000; // 4 KB
 
 fn read_directory_entry(l1_index: usize) -> u64 {

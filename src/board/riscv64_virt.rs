@@ -1,9 +1,9 @@
 use core::ops::Range;
 use core::sync::atomic::{AtomicBool, Ordering};
 
-use crate::arch::{ArchTrait, CoreTrait};
-use crate::lib::current_core;
 use spin::Mutex;
+
+use crate::arch::ArchTrait;
 use crate::lib::interrupt::InterruptController;
 
 #[allow(dead_code)]
@@ -21,9 +21,8 @@ pub fn init() {
 
 pub fn init_per_core() {
   crate::driver::timer::init();
-  crate::driver::INTERRUPT_CONTROLLER.init();
   crate::arch::Arch::exception_init();
-  current_core().create_idle_thread();
+  crate::driver::INTERRUPT_CONTROLLER.init();
 }
 
 pub fn launch_other_cores() {
@@ -32,6 +31,7 @@ pub fn launch_other_cores() {
 
 static HART_SPIN: AtomicBool = AtomicBool::new(false);
 static HART_BOOT: Mutex<Option<usize>> = Mutex::new(None);
+
 #[no_mangle]
 pub unsafe extern "C" fn hart_spin(core_id: usize) {
   let mut hart_boot = HART_BOOT.lock();
@@ -43,7 +43,6 @@ pub unsafe extern "C" fn hart_spin(core_id: usize) {
       }
     }
   }
-  drop(hart_boot);
 
   if core_id == 0 {
     crate::main(core_id);

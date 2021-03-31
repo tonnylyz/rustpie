@@ -1,5 +1,4 @@
-use crate::arch::{ArchTrait, CoreTrait};
-use crate::lib::current_core;
+use crate::lib::thread::Thread;
 
 #[derive(Copy, Clone)]
 pub struct RoundRobinScheduler {
@@ -7,34 +6,31 @@ pub struct RoundRobinScheduler {
 }
 
 pub trait SchedulerTrait {
-  fn schedule(&mut self);
+  fn schedule(&mut self) -> Option<Thread>;
 }
 
 impl SchedulerTrait for RoundRobinScheduler {
-  fn schedule(&mut self) {
+  fn schedule(&mut self) -> Option<Thread> {
     self.counter += 1;
     let list = crate::lib::thread::list();
+    // println!("list {:#x?}", list);
     for i in (self.counter % list.len())..list.len() {
       let t = list[i].clone();
       if t.runnable() {
-        if t.run() {
-          return;
+        if t.assign_to_current_core() {
+          return Some(t.clone());
         }
       }
     }
     for i in 0..list.len() {
       let t = list[i].clone();
       if t.runnable() {
-        if t.run() {
-          return;
+        if t.assign_to_current_core() {
+          return Some(t.clone());
         }
       }
     }
-    // if no other runnable thread, run idle thread
-    let core = current_core();
-    let t = core.idle_thread();
-    // println!("\ncore_{} run idle thread", crate::arch::Arch::core_id());
-    assert!(t.run());
+    None
   }
 }
 
@@ -44,8 +40,4 @@ impl RoundRobinScheduler {
       counter: 0
     }
   }
-}
-
-pub fn schedule() {
-  current_core().schedule();
 }

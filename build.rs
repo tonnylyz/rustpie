@@ -1,6 +1,6 @@
+use std::env;
 use std::path::Path;
 use std::process::Command;
-use std::env;
 
 const RISCV_USER_IMAGE: &'static str = "user/riscv64.elf";
 const AARCH64_USER_IMAGE: &'static str = "user/aarch64.elf";

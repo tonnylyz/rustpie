@@ -13,8 +13,8 @@ spin = "0.9.0"
 xmas-elf = "0.7.0"
 
 elfloader = "0.11.0"
-backtracer = { path="../backtracer" }
-addr2line = { path="../addr2line", default-features = false, features = ["alloc", "rustc-demangle"] }
+backtracer = { path = "../backtracer" }
+addr2line = { path = "../addr2line", default-features = false, features = ["alloc", "rustc-demangle"] }
 #addr2line =  { version = "0.14.1", default-features = false, features = ["alloc", "rustc-demangle"] }
 [target.'cfg(target_arch = "aarch64")'.dependencies]
 cortex-a = { path = "../cortex-a" }

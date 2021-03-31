@@ -1,7 +1,8 @@
 use riscv::regs::*;
 
-use crate::arch::{ContextFrame, ContextFrameTrait, CoreTrait};
+use crate::arch::{ContextFrame, ContextFrameTrait};
 use crate::lib::isr::{InterruptServiceRoutine, Isr};
+use crate::lib::core::CoreTrait;
 
 global_asm!(include_str!("exception.S"));
 

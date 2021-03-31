@@ -93,11 +93,11 @@ impl PagePoolTrait for PagePool {
       return Err(UnmanagedFrameError);
     }
     let ppn = self.ppn(frame);
-    self.rc[ppn] -= 1;
     if self.rc[ppn] == 0 {
       self.free(frame)?;
       return Ok(0);
     }
+    self.rc[ppn] -= 1;
     Ok(self.rc[ppn])
   }
 
@@ -143,13 +143,11 @@ pub fn init() {
   let range = super::config::paged_range();
   let mut pool = PAGE_POOL.lock();
   pool.init(range);
-  drop(pool);
 }
 
 pub fn alloc() -> PageFrame {
   let mut pool = PAGE_POOL.lock();
   if let Ok(frame) = pool.allocate() {
-    drop(pool);
     frame
   } else {
     panic!("page_pool: alloc failed")
@@ -159,25 +157,21 @@ pub fn alloc() -> PageFrame {
 pub fn try_alloc() -> Result<PageFrame, Error> {
   let mut pool = PAGE_POOL.lock();
   let r = pool.allocate();
-  drop(pool);
   r
 }
 
 pub fn increase_rc(frame: PageFrame) {
   let mut pool = PAGE_POOL.lock();
   let _r = pool.increase_rc(frame);
-  drop(pool);
 }
 
 pub fn decrease_rc(frame: PageFrame) {
   let mut pool = PAGE_POOL.lock();
   let _r = pool.decrease_rc(frame);
-  drop(pool);
 }
 
 #[allow(dead_code)]
 pub fn report() {
   let pool = PAGE_POOL.lock();
   pool.report();
-  drop(pool);
 }

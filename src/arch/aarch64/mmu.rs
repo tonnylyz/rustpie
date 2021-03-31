@@ -10,17 +10,17 @@ type PageDirectoryEntry = u64;
 fn block_entry(output_addr: usize, device: bool) -> PageDirectoryEntry {
   (
     PAGE_DESCRIPTOR::PXN::False
-        + PAGE_DESCRIPTOR::OUTPUT_PPN.val((output_addr >> PAGE_SHIFT) as u64)
-        + PAGE_DESCRIPTOR::AF::True
-        + PAGE_DESCRIPTOR::AP::RW_EL1
-        + PAGE_DESCRIPTOR::TYPE::Block
-        + PAGE_DESCRIPTOR::VALID::True
-        +
-        if device {
-          PAGE_DESCRIPTOR::AttrIndx::DEVICE + PAGE_DESCRIPTOR::SH::OuterShareable
-        } else {
-          PAGE_DESCRIPTOR::AttrIndx::NORMAL + PAGE_DESCRIPTOR::SH::InnerShareable
-        }
+      + PAGE_DESCRIPTOR::OUTPUT_PPN.val((output_addr >> PAGE_SHIFT) as u64)
+      + PAGE_DESCRIPTOR::AF::True
+      + PAGE_DESCRIPTOR::AP::RW_EL1
+      + PAGE_DESCRIPTOR::TYPE::Block
+      + PAGE_DESCRIPTOR::VALID::True
+      +
+      if device {
+        PAGE_DESCRIPTOR::AttrIndx::DEVICE + PAGE_DESCRIPTOR::SH::OuterShareable
+      } else {
+        PAGE_DESCRIPTOR::AttrIndx::NORMAL + PAGE_DESCRIPTOR::SH::InnerShareable
+      }
   ).value
 }
 
@@ -57,27 +57,27 @@ pub unsafe extern "C" fn mmu_init(pt: &PageDirectory) {
   use cortex_a::*;
   MAIR_EL1.write(
     MAIR_EL1::Attr0_Normal_Outer::WriteBack_NonTransient_ReadWriteAlloc
-        + MAIR_EL1::Attr0_Normal_Inner::WriteBack_NonTransient_ReadWriteAlloc
-        + MAIR_EL1::Attr1_Device::nonGathering_nonReordering_noEarlyWriteAck
+      + MAIR_EL1::Attr0_Normal_Inner::WriteBack_NonTransient_ReadWriteAlloc
+      + MAIR_EL1::Attr1_Device::nonGathering_nonReordering_noEarlyWriteAck
   );
   TTBR0_EL1.set(&pt.0 as *const _ as u64);
   TTBR1_EL1.set(&pt.0 as *const _ as u64);
 
   TCR_EL1.write(TCR_EL1::TBI0::Ignored
-      + TCR_EL1::TBI1::Ignored
-      + TCR_EL1::IPS.val(0b001) // 64GB
-      + TCR_EL1::TG0::KiB_4
-      + TCR_EL1::TG1::KiB_4
-      + TCR_EL1::SH0::Inner
-      + TCR_EL1::SH1::Inner
-      + TCR_EL1::ORGN0::WriteBack_ReadAlloc_WriteAlloc_Cacheable
-      + TCR_EL1::ORGN1::WriteBack_ReadAlloc_WriteAlloc_Cacheable
-      + TCR_EL1::IRGN0::WriteBack_ReadAlloc_WriteAlloc_Cacheable
-      + TCR_EL1::IRGN1::WriteBack_ReadAlloc_WriteAlloc_Cacheable
-      + TCR_EL1::EPD0::EnableTTBR0Walks
-      + TCR_EL1::EPD1::EnableTTBR1Walks
-      + TCR_EL1::T0SZ.val(64 - 39)
-      + TCR_EL1::T1SZ.val(64 - 39));
+    + TCR_EL1::TBI1::Ignored
+    + TCR_EL1::IPS.val(0b001) // 64GB
+    + TCR_EL1::TG0::KiB_4
+    + TCR_EL1::TG1::KiB_4
+    + TCR_EL1::SH0::Inner
+    + TCR_EL1::SH1::Inner
+    + TCR_EL1::ORGN0::WriteBack_ReadAlloc_WriteAlloc_Cacheable
+    + TCR_EL1::ORGN1::WriteBack_ReadAlloc_WriteAlloc_Cacheable
+    + TCR_EL1::IRGN0::WriteBack_ReadAlloc_WriteAlloc_Cacheable
+    + TCR_EL1::IRGN1::WriteBack_ReadAlloc_WriteAlloc_Cacheable
+    + TCR_EL1::EPD0::EnableTTBR0Walks
+    + TCR_EL1::EPD1::EnableTTBR1Walks
+    + TCR_EL1::T0SZ.val(64 - 39)
+    + TCR_EL1::T1SZ.val(64 - 39));
 
   barrier::isb(barrier::SY);
   SCTLR_EL1.modify(SCTLR_EL1::M::Enable + SCTLR_EL1::C::Cacheable + SCTLR_EL1::I::Cacheable);

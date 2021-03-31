@@ -1,10 +1,12 @@
-use crate::arch::{Address};
-use core::mem::size_of;
 use alloc::boxed::Box;
-use spin::Mutex;
-use crate::driver::common::virtio_blk::Operation::{Read, Write};
+use core::mem::size_of;
+
 use register::*;
 use register::mmio::*;
+use spin::Mutex;
+
+use crate::arch::Address;
+use crate::driver::common::virtio_blk::Operation::{Read, Write};
 
 const VIRTIO_MMIO_BASE: usize = 0x0a000000;
 
@@ -63,7 +65,6 @@ impl core::ops::Deref for VirtioMmio {
 }
 
 impl VirtioMmio {
-
   const fn new(base_addr: usize) -> Self {
     VirtioMmio { base_addr }
   }
@@ -71,7 +72,6 @@ impl VirtioMmio {
   fn ptr(&self) -> *const VirtioMmioBlock {
     self.base_addr as *const _
   }
-
 }
 
 /* We have seen device and processed generic fields (VIRTIO_CONFIG_F_VIRTIO) */
@@ -83,30 +83,30 @@ const VIRTIO_CONFIG_S_DRIVER_OK: u32 = 4;
 /* Driver has finished configuring features */
 const VIRTIO_CONFIG_S_FEATURES_OK: u32 = 8;
 /* Device entered invalid state, driver must reset it */
-const VIRTIO_CONFIG_S_NEEDS_RESET: u32 = 0x40;
+// const VIRTIO_CONFIG_S_NEEDS_RESET: u32 = 0x40;
 /* We've given up on this device */
-const VIRTIO_CONFIG_S_FAILED: u32 = 0x80;
+// const VIRTIO_CONFIG_S_FAILED: u32 = 0x80;
 
 /* v1.0 compliant */
 const VIRTIO_F_VERSION_1: u32 = 32;
 
 /* Feature bits */
-const VIRTIO_BLK_F_SIZE_MAX: u32 = 1;  /* Indicates maximum segment size */
-const VIRTIO_BLK_F_SEG_MAX: u32 = 2;   /* Indicates maximum # of segments */
-const VIRTIO_BLK_F_GEOMETRY: u32 = 4;  /* Legacy geometry available */
-const VIRTIO_BLK_F_RO: u32 = 5;        /* Disk is read-only */
-const VIRTIO_BLK_F_BLK_SIZE: u32 = 6;  /* Block size of disk is available */
-const VIRTIO_BLK_F_TOPOLOGY: u32 = 10; /* Topology information is available */
-const VIRTIO_BLK_F_MQ: u32 = 12;       /* Support more than one vq */
+// const VIRTIO_BLK_F_SIZE_MAX: u32 = 1;  /* Indicates maximum segment size */
+// const VIRTIO_BLK_F_SEG_MAX: u32 = 2;   /* Indicates maximum # of segments */
+// const VIRTIO_BLK_F_GEOMETRY: u32 = 4;  /* Legacy geometry available */
+// const VIRTIO_BLK_F_RO: u32 = 5;        /* Disk is read-only */
+// const VIRTIO_BLK_F_BLK_SIZE: u32 = 6;  /* Block size of disk is available */
+// const VIRTIO_BLK_F_TOPOLOGY: u32 = 10; /* Topology information is available */
+// const VIRTIO_BLK_F_MQ: u32 = 12;       /* Support more than one vq */
 
 /* Legacy feature bits */
-const VIRTIO_BLK_F_BARRIER: u32 = 0;    /* Does host support barriers? */
-const VIRTIO_BLK_F_SCSI: u32 = 7;        /* Supports scsi command passthru */
-const VIRTIO_BLK_F_FLUSH: u32 = 9;      /* Flush command supported */
-const VIRTIO_BLK_F_CONFIG_WCE: u32 = 11; /* Writeback mode available in config */
+// const VIRTIO_BLK_F_BARRIER: u32 = 0;    /* Does host support barriers? */
+// const VIRTIO_BLK_F_SCSI: u32 = 7;        /* Supports scsi command passthru */
+// const VIRTIO_BLK_F_FLUSH: u32 = 9;      /* Flush command supported */
+// const VIRTIO_BLK_F_CONFIG_WCE: u32 = 11; /* Writeback mode available in config */
 
 /* Can the device handle any descriptor layout? */
-const VIRTIO_F_ANY_LAYOUT: u32 = 27;
+// const VIRTIO_F_ANY_LAYOUT: u32 = 27;
 /*
  * The Guest publishes the used index for which it expects an interrupt
  * at the end of the avail ring. Host should ignore the avail->flags field.
@@ -114,9 +114,9 @@ const VIRTIO_F_ANY_LAYOUT: u32 = 27;
  * The Host publishes the avail index for which it expects a kick
  * at the end of the used ring. Guest should ignore the used->flags field.
  */
-const VIRTIO_RING_F_EVENT_IDX: u32 = 29;
+// const VIRTIO_RING_F_EVENT_IDX: u32 = 29;
 /* We support indirect buffer descriptors */
-const VIRTIO_RING_F_INDIRECT_DESC: u32 = 28;
+// const VIRTIO_RING_F_INDIRECT_DESC: u32 = 28;
 
 static VIRTIO_MMIO: VirtioMmio = VirtioMmio::new(VIRTIO_MMIO_BASE | 0xFFFF_FF80_0000_0000);
 
@@ -278,7 +278,7 @@ const VRING_DESC_F_WRITE: u16 = 2;
 const VRING_DESC_F_INDIRECT: u16 = 4;
 
 pub enum DiskRequestData<'a> {
-  Read(&'a mut[u8]),
+  Read(&'a mut [u8]),
   Write(&'a [u8]),
 }
 

@@ -12,38 +12,11 @@
 extern crate alloc;
 extern crate rlibc;
 
-use arch::*;
+pub use crate::arch::CoreId;
+use crate::lib::core::CoreTrait;
 
-use crate::lib::current_thread;
-use crate::lib::core::barrier;
-use crate::panic::{init_backtrace, init_backtrace_context};
-
-#[macro_export]
-macro_rules! print {
-    ($($arg:tt)*) => ($crate::lib::print::print_arg(format_args!($($arg)*)));
-}
-
-#[macro_export]
-macro_rules! println {
-    () => ($crate::print!("\n"));
-    ($($arg:tt)*) => ({
-        $crate::lib::print::print_arg(format_args_nl!($($arg)*));
-    })
-}
-
-#[lang = "eh_personality"]
-#[no_mangle]
-pub extern fn rust_eh_personality() {
-  println!("rust_eh_personality called");
-  loop {}
-}
-
-#[allow(non_snake_case)]
-#[no_mangle]
-pub extern fn _Unwind_Resume() {
-  println!("_Unwind_Resume called");
-  loop {}
-}
+#[macro_use]
+mod misc;
 
 mod arch;
 mod board;
@@ -53,7 +26,13 @@ mod mm;
 mod config;
 mod panic;
 
+pub fn core_id() -> CoreId {
+  use crate::arch::ArchTrait;
+  crate::arch::Arch::core_id()
+}
+
 fn clear_bss() {
+  use arch::Address;
   extern "C" {
     fn BSS_START();
     fn BSS_END();
@@ -64,6 +43,7 @@ fn clear_bss() {
 }
 
 fn static_check() {
+  use arch::ContextFrame;
   use core::mem::size_of;
   // Note: size of ContextFrame needs to be synced with `arch/*/exception.S`
   if cfg!(target_arch = "aarch64") {
@@ -76,7 +56,7 @@ fn static_check() {
 }
 
 #[no_mangle]
-pub unsafe fn main(core_id: CoreId) -> ! {
+pub unsafe fn main(core_id: arch::CoreId) -> ! {
   if core_id == 0 {
     println!("RUSTPI");
     clear_bss();
@@ -96,15 +76,17 @@ pub unsafe fn main(core_id: CoreId) -> ! {
     println!("launched other cores");
   }
   board::init_per_core();
+
+  crate::lib::core::current().create_idle_thread();
   println!("init core {}", core_id);
   if core_id == 0 {
-    // extern "C" {
-    //   static KERNEL_ELF: [u8; 0x40000000];
-    // }
-    // init_backtrace(&KERNEL_ELF);
-    // println!("init_backtrace ok");
-    // init_backtrace_context();
-    // println!("init_backtrace_context ok");
+    extern "C" {
+      static KERNEL_ELF: [u8; 0x40000000];
+    }
+    panic::init_backtrace(&KERNEL_ELF);
+    println!("init_backtrace ok");
+    panic::init_backtrace_context();
+    println!("init_backtrace_context ok");
   }
 
   if core_id == 0 {
@@ -113,24 +95,31 @@ pub unsafe fn main(core_id: CoreId) -> ! {
     //    1 - pingpong: an IPC test
     //    2 - heap_test: test copy on write of heap
     #[cfg(target_arch = "aarch64")]
-      lib::address_space::create(&lib::user_image::_binary_user_aarch64_elf_start, 3);
+      let (a, entry) = lib::address_space::load_image(&lib::user_image::_binary_user_aarch64_elf_start);
     #[cfg(target_arch = "riscv64")]
-      lib::address_space::create(&lib::user_image::_binary_user_riscv64_elf_start, 3);
-  }
-  barrier();
-  lib::scheduler::schedule();
-  start_first_thread(core_id)
-}
+      let (a, entry) = lib::address_space::load_image(&lib::user_image::_binary_user_riscv64_elf_start);
 
-fn start_first_thread(core_id: CoreId) -> ! {
+    let page_table = a.page_table();
+
+    use lib::page_table::PageTableTrait;
+    use lib::page_table::PageTableEntryAttrTrait;
+    match page_table.insert_page(config::CONFIG_USER_STACK_TOP - arch::PAGE_SIZE,
+                                 mm::page_pool::alloc(),
+                                 lib::page_table::EntryAttribute::user_default()) {
+      Ok(_) => {}
+      Err(_) => { panic!("process: create: page_table.insert_page failed") }
+    }
+    let t = crate::lib::thread::new_user(entry, config::CONFIG_USER_STACK_TOP, 0, a.clone(), None);
+    t.set_status(crate::lib::thread::Status::TsRunnable);
+  }
+
+  lib::barrier::barrier();
+  crate::lib::core::current().schedule();
+
   extern {
     fn pop_context_first(ctx: usize, core_id: usize) -> !;
   }
-  let t = current_thread().unwrap();
-  let lock = t.context();
-  let ctx_on_stack = *lock;
-  drop(lock);
-  unsafe {
-    pop_context_first(&ctx_on_stack as *const _ as usize, core_id);
-  }
+  let t = crate::lib::core::current().running_thread().unwrap();
+  let ctx = t.context();
+  pop_context_first(&ctx as *const _ as usize, core_id);
 }

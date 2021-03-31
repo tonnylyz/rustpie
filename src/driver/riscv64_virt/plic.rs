@@ -1,7 +1,5 @@
-use crate::arch::ArchTrait;
 use crate::driver::mmio::*;
 use crate::lib::interrupt::InterruptController;
-
 
 // platform level interrupt controller
 // https://github.com/riscv/riscv-plic-spec/blob/master/riscv-plic.adoc
@@ -22,14 +20,14 @@ pub struct Plic;
 impl InterruptController for Plic {
   fn init(&self) {
     unsafe {
-      let core_id = crate::arch::Arch::core_id();
+      let core_id = crate::core_id();
       // set priority threshold
       write_word(PLIC_SUPERVISOR_PRIORITY_ADDR + core_id * 0x2000, 0);
     }
   }
 
   fn enable(&self, i: Interrupt) {
-    let core_id = crate::arch::Arch::core_id();
+    let core_id = crate::core_id();
     let reg = PLIC_SUPERVISOR_ENABLE_ADDR + core_id * 100 + (i / 32 * 4);
     unsafe {
       let val = read_word(reg);
@@ -40,7 +38,7 @@ impl InterruptController for Plic {
   }
 
   fn disable(&self, i: Interrupt) {
-    let core_id = crate::arch::Arch::core_id();
+    let core_id = crate::core_id();
     let reg = PLIC_SUPERVISOR_ENABLE_ADDR + core_id * 100 + (i / 32 * 4);
     unsafe {
       let val = read_word(reg);
@@ -49,7 +47,7 @@ impl InterruptController for Plic {
   }
 
   fn fetch(&self) -> Option<Interrupt> {
-    let core_id = crate::arch::Arch::core_id();
+    let core_id = crate::core_id();
     let reg = PLIC_SUPERVISOR_CLAIM_ADDR + core_id * 0x2000;
     let int = unsafe {
       read_word(reg) as usize
@@ -62,12 +60,12 @@ impl InterruptController for Plic {
   }
 
   fn finish(&self, int: Interrupt) {
-    let core_id = crate::arch::Arch::core_id();
+    let core_id = crate::core_id();
     let reg = PLIC_SUPERVISOR_CLAIM_ADDR + core_id * 0x2000;
     unsafe { write_word(reg, int as u32); }
   }
 }
 
-pub static INTERRUPT_CONTROLLER: Plic = Plic{};
+pub static INTERRUPT_CONTROLLER: Plic = Plic {};
 
 pub type Interrupt = usize;

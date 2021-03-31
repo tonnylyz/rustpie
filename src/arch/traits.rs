@@ -1,8 +1,3 @@
-use crate::{
-  arch::ContextFrame,
-};
-use crate::lib::thread::Thread;
-
 pub trait Address {
   fn pa2kva(&self) -> usize;
   fn kva2pa(&self) -> usize;
@@ -21,19 +16,6 @@ pub trait ArchTrait {
   fn nop();
   fn fault_address() -> usize;
   fn core_id() -> usize;
-}
-
-pub trait CoreTrait {
-  fn context(&self) -> &ContextFrame;
-  fn context_mut(&self) -> &mut ContextFrame;
-  fn set_context(&self, ctx: *mut ContextFrame);
-  fn clear_context(&self);
-  fn has_context(&self) -> bool;
-  fn running_thread(&self) -> Option<Thread>;
-  fn set_running_thread(&self, p: Option<Thread>);
-  fn schedule(&self);
-  fn create_idle_thread(&self);
-  fn idle_thread(&self) -> Thread;
 }
 
 pub trait ContextFrameTrait {

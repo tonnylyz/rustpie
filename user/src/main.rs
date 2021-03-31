@@ -7,14 +7,15 @@
 #![no_std]
 #![no_main]
 
-extern crate rlibc;
 extern crate alloc;
+extern crate rlibc;
 
+use arch::page_table::*;
 use fork::*;
 use ipc::*;
 use page_fault::*;
-use arch::page_table::*;
 use syscall::*;
+
 use crate::config::PAGE_SIZE;
 
 #[macro_export]
@@ -42,7 +43,7 @@ mod heap;
 
 #[no_mangle]
 fn _start(arg: usize) -> ! {
-  set_page_fault_handler(page_fault_handler as usize);
+  // set_page_fault_handler(page_fault_handler as usize);
   // set_self_ipc(getpid());
   heap::init();
   match arg {
@@ -53,22 +54,14 @@ fn _start(arg: usize) -> ! {
     _ => unsafe { print(arg as u8 as char) }
   }
   match process_destroy(0) {
-    Ok(_) => {},
-    Err(_) => {},
+    Ok(_) => {}
+    Err(_) => {}
   }
   loop {};
 }
 
-fn print2() { loop { print!("2") } }
-
 fn main() {
-  println!("je;;p");
-  mem_alloc(0, 0x7000_0000 - PAGE_SIZE, PTE_W);
-  println!("je;;p");
-  thread_alloc(0x12345678, 0x7000_0000, 0);
-
   loop { print!("1") }
-
 }
 
 fn pingpong() {

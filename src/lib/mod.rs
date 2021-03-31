@@ -1,5 +1,4 @@
-use crate::arch::CoreTrait;
-use crate::lib::core::Core;
+pub use utils::*;
 
 pub mod print;
 pub mod isr;
@@ -14,31 +13,8 @@ pub mod bitmap;
 pub mod core;
 pub mod interrupt;
 pub mod itc;
+pub mod barrier;
+pub mod stack;
 
-#[inline(always)]
-pub fn round_up(addr: usize, n: usize) -> usize {
-  (addr + n - 1) & !(n - 1)
-}
+mod utils;
 
-#[inline(always)]
-pub fn round_down(addr: usize, n: usize) -> usize {
-  addr & !(n - 1)
-}
-
-pub fn current_core() -> &'static Core {
-  crate::lib::core::current()
-}
-
-#[inline(always)]
-pub fn current_thread() -> Option<self::thread::Thread> {
-  let core = crate::lib::core::current();
-  core.running_thread()
-}
-
-#[inline(always)]
-pub fn current_process() -> Option<self::address_space::AddressSpace> {
-  match current_thread() {
-    None => { None }
-    Some(t) => { t.address_space() }
-  }
-}

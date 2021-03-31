@@ -1,4 +1,3 @@
-
 #[no_mangle]
 pub fn smc_call(x0: u64, x1: u64, x2: u64, x3: u64) -> u64 {
   let r;

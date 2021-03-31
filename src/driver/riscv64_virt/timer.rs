@@ -1,6 +1,6 @@
 use riscv::regs::*;
 
-use super::sbi::{SBI_EID_TIMER, SBI_FID_SET_TIMER, sbi_call};
+use super::sbi::{sbi_call, SBI_EID_TIMER, SBI_FID_SET_TIMER};
 
 const TIMER_DEFAULT_COUNT: usize = 250000;
 
