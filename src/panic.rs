@@ -213,7 +213,7 @@ pub fn panic_impl(info: &PanicInfo) -> ! {
     println!();
   }
 
-  backtrace();
+  // backtrace();
 
   loop {}
 }

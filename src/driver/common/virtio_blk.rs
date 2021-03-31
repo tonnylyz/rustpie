@@ -267,7 +267,7 @@ pub struct VirtioBlkOutHdr {
   t: u32,
   priority: u32,
   sector: u64,
-  status: u8,
+  // status: u8,
 }
 
 /* This marks a buffer as continuing via the next field */
@@ -293,27 +293,29 @@ pub struct Disk {
   last_used: u16,
 }
 
-pub fn read(sector: usize, count: usize, buf: &mut [u8]) -> Box<DiskRequest> {
-  let addr = buf.base_addr_usize();
-  Box::new(DiskRequest {
-    sector,
-    count,
-    data: DiskRequestData::Read(buf),
-    imp: io(sector, count, addr, Read),
-  })
+pub fn read(sector: usize, count: usize, buf: usize)/* -> Box<DiskRequest>*/ {
+  io(sector, count, buf, Read);
+  // let addr = buf.base_addr_usize();
+  // Box::new(DiskRequest {
+  //   sector,
+  //   count,
+  //   data: DiskRequestData::Read(buf),
+  //   imp: io(sector, count, addr, Read),
+  // })
 }
 
-pub fn write(sector: usize, count: usize, buf: &[u8]) -> Box<DiskRequest> {
-  let addr = buf.base_addr_usize();
-  Box::new(DiskRequest {
-    sector,
-    count,
-    data: DiskRequestData::Write(buf),
-    imp: io(sector, count, addr, Write),
-  })
+pub fn write(sector: usize, count: usize, buf: usize)/* -> Box<DiskRequest>*/ {
+  io(sector, count, buf, Write);
+  // let addr = buf.base_addr_usize();
+  // Box::new(DiskRequest {
+  //   sector,
+  //   count,
+  //   data: DiskRequestData::Write(buf),
+  //   imp: io(sector, count, addr, Write),
+  // })
 }
 
-fn io(sector: usize, count: usize, buf: usize, op: Operation) -> Box<VirtioBlkOutHdr> {
+fn io(sector: usize, count: usize, buf: usize, op: Operation) /*-> Box<VirtioBlkOutHdr>*/ {
   let hdr = Box::new(VirtioBlkOutHdr {
     t: match op {
       Operation::Read => 0,
@@ -321,8 +323,9 @@ fn io(sector: usize, count: usize, buf: usize, op: Operation) -> Box<VirtioBlkOu
     },
     priority: 0,
     sector: sector as u64,
-    status: 255,
+    // status: 255,
   });
+  let status = Box::new(255u8);
   let mut ring = VIRTIO_RING.lock();
 
   let desc = ring.desc.get_mut(0).unwrap();
@@ -341,7 +344,7 @@ fn io(sector: usize, count: usize, buf: usize, op: Operation) -> Box<VirtioBlkOu
   desc.next = 2;
 
   let desc = ring.desc.get_mut(2).unwrap();
-  desc.addr = (&hdr.status as *const u8 as usize).kva2pa() as u64;
+  desc.addr = (status.as_ref() as *const u8 as usize).kva2pa() as u64;
   desc.len = 1;
   desc.flags = VRING_DESC_F_WRITE;
   desc.next = 0;
@@ -355,12 +358,11 @@ fn io(sector: usize, count: usize, buf: usize, op: Operation) -> Box<VirtioBlkOu
 
   mmio.QueueNotify.set(0); // queue num
 
-  // loop {
-  //     if mmio.interrupt_status == 1 {
-  //         println!("status {}", *status);
-  //         break;
-  //     }
-  // }
-
-  hdr
+  loop {
+    if mmio.InterruptStatus.get() == 1 {
+      mmio.InterruptACK.set(1);
+      break;
+    }
+  }
+  // hdr
 }

@@ -36,13 +36,13 @@ vectors:
 
 // Current exception level with SP_EL0.
 .org 0x000
-    VECTOR current_el_sp0_synchronous
+    VECTOR_DISABLED
 .org 0x080
-    VECTOR current_el_sp0_irq
+    VECTOR_DISABLED
 .org 0x100
     VECTOR_DISABLED
 .org 0x180
-    VECTOR current_el_sp0_serror
+    VECTOR_DISABLED
 
 // Current exception level with SP_ELx, x > 0.
 .org 0x200

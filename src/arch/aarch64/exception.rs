@@ -11,49 +11,20 @@ use crate::lib::core::CoreTrait;
 
 global_asm!(include_str!("exception.S"));
 
-//--------------------------------------------------------------------------------------------------
-// Current, EL0
-//--------------------------------------------------------------------------------------------------
-
 #[no_mangle]
-unsafe extern "C" fn current_el_sp0_synchronous() {
-  panic!("current_el0_synchronous");
+unsafe extern "C" fn current_el_spx_synchronous(ctx: *mut ContextFrame) {
+  panic!("current_el_spx_synchronous\n{}", ctx.read());
 }
 
 #[no_mangle]
-unsafe extern "C" fn current_el_sp0_irq(ctx: *mut ContextFrame) {
-  lower_aarch64_irq(ctx);
+unsafe extern "C" fn current_el_spx_irq(ctx: *mut ContextFrame) {
+  panic!("current_el_spx_irq\n{}", ctx.read());
 }
 
 #[no_mangle]
-unsafe extern "C" fn current_el_sp0_serror() {
-  panic!("current_el0_serror");
+unsafe extern "C" fn current_el_spx_serror(ctx: *mut ContextFrame) {
+  panic!("current_el_spx_serror\n{}", ctx.read());
 }
-
-//--------------------------------------------------------------------------------------------------
-// Current, ELx
-//--------------------------------------------------------------------------------------------------
-
-/// Asynchronous exception taken from the current EL, using SP of the current EL.
-#[no_mangle]
-#[inline(never)]
-unsafe extern "C" fn current_el_spx_synchronous() {
-  panic!("current_elx_synchronous {:016x}", cortex_a::regs::ELR_EL1.get());
-}
-
-#[no_mangle]
-unsafe extern "C" fn current_el_spx_irq() {
-  panic!("current_elx_irq");
-}
-
-#[no_mangle]
-unsafe extern "C" fn current_el_spx_serror() {
-  panic!("current_elx_serror");
-}
-
-//--------------------------------------------------------------------------------------------------
-// Lower, AArch64
-//--------------------------------------------------------------------------------------------------
 
 #[no_mangle]
 unsafe extern "C" fn lower_aarch64_synchronous(ctx: *mut ContextFrame) {

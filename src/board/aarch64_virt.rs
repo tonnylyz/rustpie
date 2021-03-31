@@ -18,7 +18,7 @@ pub const INT_VIRTIO_MMIO_0: Interrupt = 0x10 + 32;
 pub fn init() {
   crate::driver::uart::init();
   crate::driver::common::virtio_blk::init();
-  crate::driver::INTERRUPT_CONTROLLER.enable(INT_VIRTIO_MMIO_0);
+  // crate::driver::INTERRUPT_CONTROLLER.enable(INT_VIRTIO_MMIO_0);
 }
 
 pub fn init_per_core() {

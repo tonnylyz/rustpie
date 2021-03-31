@@ -4,13 +4,16 @@
 #![feature(alloc_error_handler)]
 #![feature(panic_info_message)]
 #![feature(core_intrinsics)]
-#![feature(core_panic)]
 #![feature(format_args_nl)]
 #![feature(llvm_asm)]
 #![feature(lang_items)]
+#![feature(array_map)]
 
+#[macro_use]
 extern crate alloc;
 extern crate rlibc;
+extern crate fatfs;
+extern crate core_io;
 
 pub use crate::arch::CoreId;
 use crate::lib::core::CoreTrait;
@@ -80,6 +83,7 @@ pub unsafe fn main(core_id: arch::CoreId) -> ! {
   crate::lib::core::current().create_idle_thread();
   println!("init core {}", core_id);
   if core_id == 0 {
+    // lib::fatfs::init();
     extern "C" {
       static KERNEL_ELF: [u8; 0x40000000];
     }
