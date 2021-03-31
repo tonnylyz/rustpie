@@ -4,10 +4,11 @@ use crate::lib::{round_down};
 use crate::lib::address_space::{AddressSpace, Asid};
 use crate::lib::core::{CoreTrait, current};
 use crate::lib::page_table::{Entry, PageTableEntryAttrTrait, PageTableTrait};
-use crate::lib::thread::Tid;
+use crate::lib::thread::{Tid, Thread};
 
 use self::Error::*;
 
+#[derive(Debug)]
 pub enum Error {
   InvalidArgumentError = 1,
   _OutOfProcessError,
@@ -41,23 +42,42 @@ impl core::convert::From<crate::lib::address_space::Error> for Error {
   }
 }
 
+impl Into<SyscallResult> for SystemCallValue {
+  fn into(self) -> SyscallResult {
+    Ok(self)
+  }
+}
+
+#[derive(Debug)]
+pub enum SystemCallValue {
+  Unit,
+  U32(u32),
+  U16(u16),
+  ISize(isize),
+  USize(usize),
+}
+use SystemCallValue::*;
+
+pub type SyscallResult = Result<SystemCallValue, Error>;
+
 pub trait SystemCallTrait {
-  fn putc(c: char);
-  fn get_asid() -> u16;
-  fn get_tid() -> u16;
-  fn thread_yield();
-  fn address_space_destroy(pid: u16) -> Result<(), Error>;
-  fn process_set_exception_handler(pid: u16, value: usize, sp: usize) -> Result<(), Error>;
-  fn mem_alloc(pid: u16, va: usize, perm: usize) -> Result<(), Error>;
-  fn mem_map(src_pid: u16, src_va: usize, dst_pid: u16, dst_va: usize, perm: usize) -> Result<(), Error>;
-  fn mem_unmap(pid: u16, va: usize) -> Result<(), Error>;
-  fn address_space_alloc() -> Result<u16, Error>;
-  fn thread_alloc(entry: usize, sp: usize, arg: usize) -> Result<u16, Error>;
-  fn thread_set_status(pid: u16, status: crate::lib::thread::Status) -> Result<(), Error>;
-  fn ipc_receive(dst_va: usize);
-  fn ipc_can_send(pid: u16, value: usize, src_va: usize, perm: usize) -> Result<(), Error>;
-  fn itc_receive(msg_ptr: usize);
-  fn itc_can_send(tid: u16, a: usize, b: usize, c: usize, d: usize) -> Result<(), Error>;
+  fn null() -> SyscallResult;
+  fn putc(c: char) -> SyscallResult;
+  fn get_asid(tid: u16) -> SyscallResult;
+  fn get_tid() -> SyscallResult;
+  fn thread_yield() -> SyscallResult;
+  fn address_space_destroy(asid: u16) -> SyscallResult;
+  fn process_set_exception_handler(asid: u16, value: usize, sp: usize) -> SyscallResult;
+  fn mem_alloc(asid: u16, va: usize, perm: usize) -> SyscallResult;
+  fn mem_map(src_asid: u16, src_va: usize, dst_asid: u16, dst_va: usize, perm: usize) -> SyscallResult;
+  fn mem_unmap(asid: u16, va: usize) -> SyscallResult;
+  fn address_space_alloc() -> SyscallResult;
+  fn thread_alloc(entry: usize, sp: usize, arg: usize) -> SyscallResult;
+  fn thread_set_status(pid: u16, status: crate::lib::thread::Status) -> SyscallResult;
+  fn ipc_receive(dst_va: usize) -> SyscallResult;
+  fn ipc_can_send(pid: u16, value: usize, src_va: usize, perm: usize) -> SyscallResult;
+  fn itc_receive(msg_ptr: usize) -> SyscallResult;
+  fn itc_can_send(tid: u16, a: usize, b: usize, c: usize, d: usize) -> SyscallResult;
 }
 
 pub struct SystemCall;
@@ -73,41 +93,50 @@ fn lookup_as(asid: u16) -> Result<AddressSpace, Error> {
   }
 }
 
+const OK: SyscallResult = Ok(SystemCallValue::Unit);
+
 impl SystemCallTrait for SystemCall {
-  fn putc(c: char) {
+  fn null() -> SyscallResult {
+    OK
+  }
+
+  fn putc(c: char) -> SyscallResult {
     crate::driver::uart::putc(c as u8);
+    OK
   }
 
-  fn get_asid() -> u16 {
+  fn get_asid(_tid: u16) -> SyscallResult {
     match crate::lib::core::current().address_space() {
-      None => { 0 }
-      Some(a) => { a.asid() }
+      None => { Err(InternalError) }
+      Some(a) => { U16(a.asid()).into() }
     }
   }
 
-  fn get_tid() -> u16 {
+  fn get_tid() -> SyscallResult {
     match crate::lib::core::current().running_thread() {
-      None => { 0 }
-      Some(t) => { t.tid() }
+      None => { Err(InternalError) }
+      Some(t) => { U16(t.tid()).into() }
     }
   }
 
-  fn thread_yield() {
+  fn thread_yield() -> SyscallResult {
     crate::lib::core::current().schedule();
+    OK
   }
 
-  fn address_space_destroy(asid: u16) -> Result<(), Error> {
-    let p = lookup_as(asid)?;
-    p.destroy();
-    Ok(())
+  fn address_space_destroy(asid: u16) -> SyscallResult {
+    // TODO: destroy associated threads
+    let a = lookup_as(asid)?;
+    a.destroy();
+    OK
   }
 
   #[allow(unused_variables)]
-  fn process_set_exception_handler(pid: u16, entry: usize, stack_top: usize) -> Result<(), Error> {
+  fn process_set_exception_handler(pid: u16, entry: usize, stack_top: usize) -> SyscallResult {
     unimplemented!()
   }
 
-  fn mem_alloc(asid: u16, va: usize, attr: usize) -> Result<(), Error> {
+  fn mem_alloc(asid: u16, va: usize, attr: usize) -> SyscallResult {
     if va >= CONFIG_USER_LIMIT {
       return Err(MemoryLimitError);
     }
@@ -118,10 +147,10 @@ impl SystemCallTrait for SystemCall {
     let user_attr = Entry::from(ArchPageTableEntry::from_pte(attr)).attribute();
     let attr = user_attr.filter();
     page_table.insert_page(va, frame, attr)?;
-    Ok(())
+    OK
   }
 
-  fn mem_map(src_asid: u16, src_va: usize, dst_asid: u16, dst_va: usize, attr: usize) -> Result<(), Error> {
+  fn mem_map(src_asid: u16, src_va: usize, dst_asid: u16, dst_va: usize, attr: usize) -> SyscallResult {
     let src_va = round_down(src_va, PAGE_SIZE);
     let dst_va = round_down(dst_va, PAGE_SIZE);
     if src_va >= CONFIG_USER_LIMIT || dst_va >= CONFIG_USER_LIMIT {
@@ -136,41 +165,41 @@ impl SystemCallTrait for SystemCall {
       let attr = user_attr.filter();
       let dst_pt = dst_as.page_table();
       dst_pt.insert_page(dst_va, crate::mm::PageFrame::new(pa), attr)?;
-      Ok(())
+      OK
     } else {
       Err(MemoryNotMappedError)
     }
   }
 
-  fn mem_unmap(asid: u16, va: usize) -> Result<(), Error> {
+  fn mem_unmap(asid: u16, va: usize) -> SyscallResult {
     if va >= CONFIG_USER_LIMIT {
       return Err(MemoryLimitError);
     }
     let a = lookup_as(asid)?;
     let page_table = a.page_table();
     page_table.remove_page(va)?;
-    Ok(())
+    OK
   }
 
-  fn address_space_alloc() -> Result<Asid, Error> {
-    let new_as = crate::lib::address_space::alloc();
+  fn address_space_alloc() -> SyscallResult {
+    let a = crate::lib::address_space::alloc();
     let mut ctx = *crate::lib::core::current().context();
     ctx.set_syscall_return_value(0);
-    let child_thread = crate::lib::thread::new_user(0, 0, 0, new_as.clone(), current().running_thread());
-    child_thread.set_context(ctx);
-    child_thread.set_status(crate::lib::thread::Status::TsNotRunnable);
-    Ok(new_as.asid())
+    let t = crate::lib::thread::new_user(0, 0, 0, a.clone(), current().running_thread());
+    t.set_context(ctx);
+    t.set_status(crate::lib::thread::Status::TsNotRunnable);
+    U32(((a.asid() as u32) << 16) | (t.tid() as u32)).into()
   }
 
-  fn thread_alloc(entry: usize, sp: usize, arg: usize) -> Result<Tid, Error> {
+  fn thread_alloc(entry: usize, sp: usize, arg: usize) -> SyscallResult {
     let t = crate::lib::core::current().running_thread().unwrap();
     let p = t.address_space().unwrap();
     let child_thread = crate::lib::thread::new_user(entry, sp, arg, p.clone(), current().running_thread());
     child_thread.set_status(crate::lib::thread::Status::TsRunnable);
-    Ok(child_thread.tid())
+    U16(child_thread.tid()).into()
   }
 
-  fn thread_set_status(tid: u16, status: crate::lib::thread::Status) -> Result<(), Error> {
+  fn thread_set_status(tid: u16, status: crate::lib::thread::Status) -> SyscallResult {
     use crate::lib::thread::Status::{TsRunnable, TsNotRunnable};
     if status != TsRunnable && status != TsNotRunnable {
       return Err(InvalidArgumentError);
@@ -181,26 +210,26 @@ impl SystemCallTrait for SystemCall {
         t.set_status(status);
       }
     }
-    Ok(())
+    OK
   }
 
   #[allow(unused_variables)]
-  fn ipc_receive(dst_va: usize) {
+  fn ipc_receive(dst_va: usize)-> SyscallResult {
     unimplemented!()
   }
 
   #[allow(unused_variables)]
-  fn ipc_can_send(pid: u16, value: usize, src_va: usize, attr: usize) -> Result<(), Error> {
+  fn ipc_can_send(pid: u16, value: usize, src_va: usize, attr: usize) -> SyscallResult {
     unimplemented!()
   }
 
   #[allow(unused_variables)]
-  fn itc_receive(msg_ptr: usize) {
+  fn itc_receive(msg_ptr: usize)-> SyscallResult {
     unimplemented!()
   }
 
   #[allow(unused_variables)]
-  fn itc_can_send(tid: u16, a: usize, b: usize, c: usize, d: usize) -> Result<(), Error> {
+  fn itc_can_send(tid: u16, a: usize, b: usize, c: usize, d: usize) -> SyscallResult {
     unimplemented!()
   }
 }

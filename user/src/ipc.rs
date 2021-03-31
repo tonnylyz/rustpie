@@ -31,7 +31,7 @@ pub fn send(whom: u16, value: usize, src_va: usize, attr: EntryAttribute) {
   loop {
     match ipc_can_send(whom, value, src_va, attr) {
       Ok(_) => { break; }
-      Err(crate::syscall::Error::IpcNotReceivingError) => { process_yield(); }
+      //Err(crate::syscall::Error::IpcNotReceivingError) => { process_yield(); }
       Err(e) => { println!("ipc send {:?}", e) }
     }
   }

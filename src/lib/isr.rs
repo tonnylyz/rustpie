@@ -1,7 +1,6 @@
 use crate::arch::ContextFrameTrait;
-use crate::lib::address_space::Asid;
 use crate::lib::core::CoreTrait;
-use crate::lib::syscall::{SystemCall, SystemCallTrait};
+use crate::lib::syscall::{SystemCall, SystemCallTrait, SystemCallValue};
 
 pub trait InterruptServiceRoutine {
   fn system_call();
@@ -13,118 +12,99 @@ pub trait InterruptServiceRoutine {
 
 pub struct Isr;
 
-#[derive(Debug)]
-pub enum SystemCallResult {
-  Void,
-  Pid(Asid),
-  R(Option<isize>),
-}
-
-pub trait SystemCallResultOk {
-  fn to_isize(&self) -> isize;
-}
-
-impl SystemCallResultOk for () {
-  fn to_isize(&self) -> isize {
-    0
-  }
-}
-
-impl SystemCallResultOk for u16 {
-  fn to_isize(&self) -> isize {
-    self.clone() as isize
-  }
-}
-
-impl core::convert::From<Asid> for SystemCallResult {
-  fn from(pid: Asid) -> Self {
-    SystemCallResult::Pid(pid)
-  }
-}
-
-impl core::convert::From<()> for SystemCallResult {
-  fn from(_: ()) -> Self {
-    SystemCallResult::Void
-  }
-}
-
-impl<T> core::convert::From<Result<T, crate::lib::syscall::Error>> for SystemCallResult where T: SystemCallResultOk {
-  fn from(sce: Result<T, crate::lib::syscall::Error>) -> Self {
-    SystemCallResult::R(
-      match sce {
-        Ok(t) => { Some(t.to_isize()) }
-        Err(e) => { Some(-(e as isize)) }
-      }
-    )
-  }
-}
-
 impl InterruptServiceRoutine for Isr {
   fn system_call() {
     let ctx = crate::lib::core::current().context_mut();
     let arg = |i: usize| { ctx.syscall_argument(i) };
     let scr = match ctx.syscall_number() {
       1 => {
-        // print!("core_{}: putc({:02x})", crate::core_id(), arg(0) as u8);
-        // println!();
-        // ().into()
-        SystemCall::putc(arg(0) as u8 as char).into()
+        // SystemCall::null()
+        SystemCall::putc(arg(0) as u8 as char)
       }
       2 => {
-        SystemCall::get_asid().into()
+        SystemCall::get_asid(arg(0) as u16)
       }
       3 => {
-        SystemCall::thread_yield().into()
+        SystemCall::thread_yield()
       }
       4 => {
-        SystemCall::address_space_destroy(arg(0) as u16).into()
+        SystemCall::address_space_destroy(arg(0) as u16)
       }
       5 => {
-        SystemCall::process_set_exception_handler(arg(0) as u16, arg(1), arg(2)).into()
+        SystemCall::process_set_exception_handler(arg(0) as u16, arg(1), arg(2))
       }
       6 => {
-        SystemCall::mem_alloc(arg(0) as u16, arg(1), arg(2)).into()
+        SystemCall::mem_alloc(arg(0) as u16, arg(1), arg(2))
       }
       7 => {
-        SystemCall::mem_map(arg(0) as u16, arg(1), arg(2) as u16, arg(3), arg(4)).into()
+        SystemCall::mem_map(arg(0) as u16, arg(1), arg(2) as u16, arg(3), arg(4))
       }
       8 => {
-        SystemCall::mem_unmap(arg(0) as u16, arg(1)).into()
+        SystemCall::mem_unmap(arg(0) as u16, arg(1))
       }
       9 => {
-        SystemCall::address_space_alloc().into()
+        SystemCall::address_space_alloc()
       }
       10 => {
         use crate::lib::thread::Status::{TsNotRunnable, TsRunnable};
         match arg(1) {
-          1 => { SystemCall::thread_set_status(arg(0) as u16, TsRunnable).into() }
-          2 => { SystemCall::thread_set_status(arg(0) as u16, TsNotRunnable).into() }
-          _ => { ().into() }
+          1 => { SystemCall::thread_set_status(arg(0) as u16, TsRunnable) }
+          2 => { SystemCall::thread_set_status(arg(0) as u16, TsNotRunnable) }
+          _ => { Err(super::syscall::Error::InvalidArgumentError) }
         }
       }
       11 => {
-        SystemCall::ipc_receive(arg(0)).into()
+        SystemCall::ipc_receive(arg(0))
       }
       12 => {
-        SystemCall::ipc_can_send(arg(0) as u16, arg(1), arg(2), arg(3)).into()
+        SystemCall::ipc_can_send(arg(0) as u16, arg(1), arg(2), arg(3))
       }
       13 => {
-        SystemCall::thread_alloc(arg(0), arg(1), arg(2)).into()
+        SystemCall::thread_alloc(arg(0), arg(1), arg(2))
       }
-      _ => { println!("system call: unrecognized system call number").into() }
+      _ => {
+        println!("system call: unrecognized system call number");
+        Err(super::syscall::Error::InvalidArgumentError)
+      }
     };
     match scr {
-      SystemCallResult::Void => {}
-      SystemCallResult::Pid(pid) => {
-        println!("syscall {}:{:?}", (*ctx).syscall_number(), scr);
-        ctx.set_syscall_return_value(pid as usize);
-      }
-      SystemCallResult::R(o) => {
-        println!("syscall {}:{:?}", (*ctx).syscall_number(), scr);
-        match o {
-          None => { ctx.set_syscall_return_value(0); }
-          Some(i) => { ctx.set_syscall_return_value(i as usize); }
+      // SystemCallResult::Void => {}
+      // SystemCallResult::Pid(pid) => {
+      //   println!("syscall {}:{:?}", (*ctx).syscall_number(), scr);
+      //   ctx.set_syscall_return_value(pid as usize);
+      // }
+      // SystemCallResult::R(o) => {
+      //   println!("syscall {}:{:?}", (*ctx).syscall_number(), scr);
+      //   match o {
+      //     None => { ctx.set_syscall_return_value(0); }
+      //     Some(i) => { ctx.set_syscall_return_value(i as usize); }
+      //   }
+      // }
+      Ok(val) => {
+        let num = (*ctx).syscall_number();
+        if num != 1 {
+          println!("syscall_{} Ok {:x?}", num, val);
         }
+
+        match val {
+          SystemCallValue::Unit => {}
+          SystemCallValue::U32(u) => {
+            ctx.set_syscall_return_value(u as usize);
+          }
+          SystemCallValue::U16(u) => {
+            ctx.set_syscall_return_value(u as usize);
+          }
+          SystemCallValue::ISize(i) => {
+            ctx.set_syscall_return_value(i as usize);
+          }
+          SystemCallValue::USize(u) => {
+            ctx.set_syscall_return_value(u as usize);
+          }
+        }
+      }
+      Err(err) => {
+        println!("syscall_{} Err {:x?}", (*ctx).syscall_number(), err);
+        ctx.set_syscall_return_value(usize::MAX);
       }
     }
   }

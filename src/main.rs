@@ -84,13 +84,13 @@ pub unsafe fn main(core_id: arch::CoreId) -> ! {
   println!("init core {}", core_id);
   if core_id == 0 {
     // lib::fatfs::init();
-    extern "C" {
-      static KERNEL_ELF: [u8; 0x40000000];
-    }
-    panic::init_backtrace(&KERNEL_ELF);
-    println!("init_backtrace ok");
-    panic::init_backtrace_context();
-    println!("init_backtrace_context ok");
+    // extern "C" {
+    //   static KERNEL_ELF: [u8; 0x40000000];
+    // }
+    // panic::init_backtrace(&KERNEL_ELF);
+    // println!("init_backtrace ok");
+    // panic::init_backtrace_context();
+    // println!("init_backtrace_context ok");
   }
 
   if core_id == 0 {

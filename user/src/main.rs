@@ -67,18 +67,18 @@ fn main() {
 fn pingpong() {
   let who = fork();
   if who > 0 {
-    println!("send 0 from {} to {}", getpid(), who);
+    println!("send 0 from {} to {}", get_asid(), who);
     ipc::send(who as u16, 0, 0, PTE_DEFAULT);
   }
   loop {
-    println!("{} is waiting", getpid());
+    println!("{} is waiting", get_asid());
     let (who, value, _) = ipc::receive(0);
-    println!("{} received {} from {}", getpid(), value, who);
+    println!("{} received {} from {}", get_asid(), value, who);
     if value == 10 {
       return;
     }
     let value = value + 1;
-    println!("{} send {} to {}", getpid(), value, who);
+    println!("{} send {} to {}", get_asid(), value, who);
     ipc::send(who, value, 0, PTE_DEFAULT);
     if value == 10 {
       return;
@@ -87,7 +87,7 @@ fn pingpong() {
 }
 
 fn fktest() {
-  println!("fktest started pid {}", getpid());
+  println!("fktest started pid {}", get_asid());
   let mut a = 0;
   let mut id = fork();
   if id == 0 {
