@@ -1,6 +1,7 @@
 use crate::arch::page_table::*;
 use crate::config::*;
 use crate::syscall::*;
+use rlibc::memcpy;
 
 pub fn page_fault_handler(va: usize) {
   assert_eq!(va % PAGE_SIZE, 0);
@@ -22,7 +23,7 @@ pub fn page_fault_handler(va: usize) {
       Err(_) => { panic!("page_fault_handler: mem_alloc failed") }
     }
     unsafe {
-      core::intrinsics::volatile_copy_memory(va_tmp as *mut u8, va as *mut u8, PAGE_SIZE);
+      memcpy(va_tmp as *mut u8, va as *mut u8, PAGE_SIZE);
     }
     match mem_map(0, va_tmp, 0, va, pte + PTE_W - PTE_COW) {
       Ok(_) => {}

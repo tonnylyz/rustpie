@@ -150,7 +150,7 @@ impl InterruptServiceRoutine for Isr {
     //
     //     let stack_frame = PageFrame::new(stack_pte.pa());
     //     unsafe {
-    //       core::intrinsics::volatile_copy_memory(
+    //       memcpy(
     //         (stack_frame.kva() + PAGE_SIZE - size_of::<ContextFrame>()) as *mut ContextFrame,
     //         ctx as *mut ContextFrame,
     //         1,

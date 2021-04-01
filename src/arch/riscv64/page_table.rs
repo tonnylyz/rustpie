@@ -48,12 +48,12 @@ impl ArchPageTableEntryTrait for Riscv64PageTableEntry {
 
   fn entry(&self, index: usize) -> Self {
     let addr = self.to_kva() + index * MACHINE_SIZE;
-    unsafe { Riscv64PageTableEntry(core::intrinsics::volatile_load(addr as *const usize)) }
+    unsafe { Riscv64PageTableEntry((addr as *const usize).read_volatile()) }
   }
 
   fn set_entry(&self, index: usize, value: Self) {
     let addr = self.to_kva() + index * MACHINE_SIZE;
-    unsafe { core::intrinsics::volatile_store(addr as *mut usize, value.0) }
+    unsafe { (addr as *mut usize).write_volatile(value.0) }
   }
 
   fn alloc_table() -> Self {

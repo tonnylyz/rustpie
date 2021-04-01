@@ -1,11 +1,10 @@
-#![feature(asm)]
-#![feature(global_asm)]
-#![feature(panic_info_message)]
-#![feature(format_args_nl)]
-#![feature(core_intrinsics)]
-#![feature(alloc_error_handler)]
 #![no_std]
 #![no_main]
+#![feature(global_asm)]
+#![feature(llvm_asm)]
+#![feature(alloc_error_handler)]
+#![feature(panic_info_message)]
+#![feature(format_args_nl)]
 
 extern crate alloc;
 extern crate rlibc;
@@ -129,7 +128,7 @@ unsafe fn print(a: char) {
   loop {
     print!("{}", a);
     for _ in 0..0x1000000 {
-      asm!("nop");
+      llvm_asm!("nop");
     }
   }
 }

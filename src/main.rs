@@ -1,13 +1,11 @@
 #![no_std]
 #![no_main]
 #![feature(global_asm)]
+#![feature(llvm_asm)]
 #![feature(alloc_error_handler)]
 #![feature(panic_info_message)]
-#![feature(core_intrinsics)]
 #![feature(format_args_nl)]
-#![feature(llvm_asm)]
 #![feature(lang_items)]
-#![feature(array_map)]
 
 #[macro_use]
 extern crate alloc;
@@ -17,6 +15,7 @@ extern crate core_io;
 
 pub use crate::arch::CoreId;
 use crate::lib::core::CoreTrait;
+use crate::arch::ArchTrait;
 
 #[macro_use]
 mod misc;
@@ -36,13 +35,14 @@ pub fn core_id() -> CoreId {
 
 fn clear_bss() {
   use arch::Address;
+  use rlibc::memset;
   extern "C" {
     fn BSS_START();
     fn BSS_END();
   }
   let start = (BSS_START as usize).pa2kva();
   let end = (BSS_END as usize).pa2kva();
-  unsafe { core::intrinsics::volatile_set_memory(start as *mut u8, 0, end - start); }
+  unsafe { memset(start as *mut u8, 0, end - start); }
 }
 
 fn static_check() {
@@ -60,6 +60,7 @@ fn static_check() {
 
 #[no_mangle]
 pub unsafe fn main(core_id: arch::CoreId) -> ! {
+  crate::arch::Arch::exception_init();
   if core_id == 0 {
     println!("RUSTPI");
     clear_bss();

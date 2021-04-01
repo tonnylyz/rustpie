@@ -44,12 +44,12 @@ impl ArchPageTableEntryTrait for Aarch64PageTableEntry {
 
   fn entry(&self, index: usize) -> Aarch64PageTableEntry {
     let addr = self.to_kva() + index * MACHINE_SIZE;
-    unsafe { Aarch64PageTableEntry(core::intrinsics::volatile_load(addr as *const usize)) }
+    unsafe { Aarch64PageTableEntry((addr as *const usize).read_volatile()) }
   }
 
   fn set_entry(&self, index: usize, value: Aarch64PageTableEntry) {
     let addr = self.to_kva() + index * MACHINE_SIZE;
-    unsafe { core::intrinsics::volatile_store(addr as *mut usize, value.0) }
+    unsafe { (addr as *mut usize).write_volatile(value.0) }
   }
 
   fn alloc_table() -> Self {

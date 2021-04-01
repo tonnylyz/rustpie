@@ -9,7 +9,7 @@ fn read_directory_entry(l1_index: usize) -> u64 {
   let l2x = RECURSIVE_PAGE_TABLE_BTM >> PAGE_TABLE_L1_SHIFT;
   let l3x = l1_index;
   let ppte = RECURSIVE_PAGE_TABLE_BTM + l1x * (1 << PAGE_TABLE_L2_SHIFT) + l2x * (1 << PAGE_TABLE_L3_SHIFT) + l3x * (1 << WORD_SHIFT);
-  unsafe { core::intrinsics::volatile_load(ppte as *const u64) }
+  unsafe { (ppte as *const u64).read_volatile() }
 }
 
 fn read_level_1_entry(l1_index: usize, l2_index: usize) -> u64 {
@@ -17,7 +17,7 @@ fn read_level_1_entry(l1_index: usize, l2_index: usize) -> u64 {
   let l2x = l1_index;
   let l3x = l2_index;
   let ppte = RECURSIVE_PAGE_TABLE_BTM + l1x * (1 << PAGE_TABLE_L2_SHIFT) + l2x * (1 << PAGE_TABLE_L3_SHIFT) + l3x * (1 << WORD_SHIFT);
-  unsafe { core::intrinsics::volatile_load(ppte as *const u64) }
+  unsafe { (ppte as *const u64).read_volatile() }
 }
 
 fn read_level_2_entry(l1_index: usize, l2_index: usize, l3_index: usize) -> u64 {
@@ -25,7 +25,7 @@ fn read_level_2_entry(l1_index: usize, l2_index: usize, l3_index: usize) -> u64 
   let l2x = l2_index;
   let l3x = l3_index;
   let ppte = RECURSIVE_PAGE_TABLE_BTM + l1x * (1 << PAGE_TABLE_L2_SHIFT) + l2x * (1 << PAGE_TABLE_L3_SHIFT) + l3x * (1 << WORD_SHIFT);
-  unsafe { core::intrinsics::volatile_load(ppte as *const u64) }
+  unsafe { (ppte as *const u64).read_volatile() }
 }
 
 fn read_page_table_entry(va: usize) -> Option<u64> {

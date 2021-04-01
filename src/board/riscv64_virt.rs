@@ -37,11 +37,14 @@ pub unsafe extern "C" fn hart_spin(core_id: usize) {
   let mut hart_boot = HART_BOOT.lock();
   if hart_boot.is_none() {
     *hart_boot = Some(core_id);
+    drop(hart_boot);
     for i in 0..BOARD_CORE_NUMBER {
       if i != core_id {
         let _ = crate::driver::hsm::hart_start(i, 0x80200000, 0);
       }
     }
+  } else {
+    drop(hart_boot);
   }
 
   if core_id == 0 {

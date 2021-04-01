@@ -12,17 +12,17 @@ const CONFIG_READ_ONLY_LEVEL_1_PAGE_TABLE_BTM: usize = 0x3f_c000_0000 - 0x20_000
 
 fn read_directory_entry(l1_index: usize) -> u64 {
   let ppte = CONFIG_READ_ONLY_LEVEL_1_PAGE_TABLE_BTM + l1_index * 8;
-  unsafe { core::intrinsics::volatile_load(ppte as *const u64) }
+  unsafe { (ppte as *const u64).read_volatile() }
 }
 
 fn read_level_1_entry(l1_index: usize, l2_index: usize) -> u64 {
   let ppte = CONFIG_READ_ONLY_LEVEL_2_PAGE_TABLE_BTM + l1_index * PAGE_SIZE + l2_index * 8;
-  unsafe { core::intrinsics::volatile_load(ppte as *const u64) }
+  unsafe { (ppte as *const u64).read_volatile() }
 }
 
 fn read_level_2_entry(l1_index: usize, l2_index: usize, l3_index: usize) -> u64 {
   let ppte = CONFIG_READ_ONLY_LEVEL_3_PAGE_TABLE_BTM + l1_index * PAGE_SIZE * 512 + l2_index * PAGE_SIZE + l3_index * 8;
-  unsafe { core::intrinsics::volatile_load(ppte as *const u64) }
+  unsafe { (ppte as *const u64).read_volatile() }
 }
 
 fn read_page_table_entry(va: usize) -> Option<u64> {
