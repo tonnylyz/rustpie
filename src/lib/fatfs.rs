@@ -20,7 +20,6 @@ impl Read for Disk {
     for i in 0..buf.len() {
       buf[i] = frame.as_slice()[offset + i];
     }
-    crate::mm::page_pool::decrease_rc(frame);
     self.pointer += buf.len();
     Ok(buf.len())
   }

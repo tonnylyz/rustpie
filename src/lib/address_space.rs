@@ -29,13 +29,11 @@ impl AddressSpace {
   pub fn asid(&self) -> Asid {
     self.0.asid
   }
-  pub fn page_table(&self) -> PageTable {
-    self.0.page_table
+  pub fn page_table(&self) -> &PageTable {
+    &self.0.page_table
   }
   pub fn destroy(&self) {
     self.0.page_table.destroy();
-    let frame = self.0.page_table.directory();
-    crate::mm::page_pool::decrease_rc(frame);
     free(self);
   }
 }
@@ -51,7 +49,6 @@ pub enum Error {
 
 fn make_user_page_table() -> PageTable {
   let frame = crate::mm::page_pool::alloc();
-  crate::mm::page_pool::increase_rc(frame);
   let page_table = PageTable::new(frame);
   page_table.recursive_map(crate::config::CONFIG_RECURSIVE_PAGE_TABLE_BTM);
   page_table
@@ -81,11 +78,6 @@ impl Pool {
       Err(Error::AddressSpaceNotFound)
     }
   }
-
-  #[allow(dead_code)]
-  fn list(&self) -> Vec<AddressSpace> {
-    self.allocated.clone()
-  }
 }
 
 static ADDRESS_SPACE_MAP: spin::Once<Mutex<BTreeMap<Asid, Arc<Inner>>>> = spin::Once::new();
@@ -114,13 +106,6 @@ pub fn free(p: &AddressSpace) {
     Err(_) => { println!("process_pool: free: process not found") }
   }
 }
-
-// #[allow(dead_code)]
-// pub fn list() -> Vec<AddressSpace> {
-//   let pool = POOL.lock();
-//   let r = pool.list();
-//   r
-// }
 
 pub fn lookup(asid: Asid) -> Option<AddressSpace> {
   let map = ADDRESS_SPACE_MAP.get().unwrap().lock();

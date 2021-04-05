@@ -1,16 +1,20 @@
 use crate::arch::*;
-use crate::lib::page_table::{Entry, EntryAttribute, PageTableEntryAttrTrait, PageTableTrait};
-use crate::mm::PageFrame;
+use crate::lib::page_table::{Entry, EntryAttribute, PageTableEntryAttrTrait, PageTableTrait, Error};
+use crate::mm::{PageFrame, UserFrame};
 
 use super::vm_descriptor::*;
+use alloc::vec::Vec;
+use spin::Mutex;
 
 pub const PAGE_TABLE_L1_SHIFT: usize = 30;
 pub const PAGE_TABLE_L2_SHIFT: usize = 21;
 pub const PAGE_TABLE_L3_SHIFT: usize = 12;
 
-#[derive(Copy, Clone, Debug)]
+#[derive(Debug)]
 pub struct Aarch64PageTable {
-  directory: PageFrame
+  directory: PageFrame,
+  pages: Mutex<Vec<PageFrame>>,
+  user_pages: Mutex<Vec<UserFrame>>,
 }
 
 #[repr(transparent)]
@@ -52,10 +56,8 @@ impl ArchPageTableEntryTrait for Aarch64PageTableEntry {
     unsafe { (addr as *mut usize).write_volatile(value.0) }
   }
 
-  fn alloc_table() -> Self {
-    let frame = crate::mm::page_pool::alloc();
-    crate::mm::page_pool::increase_rc(frame);
-    Aarch64PageTableEntry::from(Entry::new(EntryAttribute::user_readonly(), frame.pa()))
+  fn make_table(frame_pa: usize) -> Self {
+    Aarch64PageTableEntry::from(Entry::new(EntryAttribute::user_readonly(), frame_pa))
   }
 }
 
@@ -125,24 +127,32 @@ impl core::convert::From<Entry> for Aarch64PageTableEntry {
 impl PageTableTrait for Aarch64PageTable {
   fn new(directory: PageFrame) -> Self {
     Aarch64PageTable {
-      directory
+      directory,
+      pages: Mutex::new(Vec::new()),
+      user_pages: Mutex::new(Vec::new()),
     }
   }
 
-  fn directory(&self) -> PageFrame {
-    self.directory
+  fn base_pa(&self) -> usize {
+    self.directory.pa()
   }
 
   fn map(&self, va: usize, pa: usize, attr: EntryAttribute) {
     let directory = Aarch64PageTableEntry::from_pa(self.directory.pa());
     let mut l1e = directory.entry(va.l1x());
     if !l1e.valid() {
-      l1e = Aarch64PageTableEntry::alloc_table();
+      let frame = crate::mm::page_pool::alloc();
+      l1e = Aarch64PageTableEntry::make_table(frame.pa());
+      let mut pages = self.pages.lock();
+      pages.push(frame);
       directory.set_entry(va.l1x(), l1e);
     }
     let mut l2e = l1e.entry(va.l2x());
     if !l2e.valid() {
-      l2e = Aarch64PageTableEntry::alloc_table();
+      let frame = crate::mm::page_pool::alloc();
+      l2e = Aarch64PageTableEntry::make_table(frame.pa());
+      let mut pages = self.pages.lock();
+      pages.push(frame);
       l1e.set_entry(va.l2x(), l2e);
     }
     l2e.set_entry(va.l3x(), Aarch64PageTableEntry::from(Entry::new(attr, pa)));
@@ -157,8 +167,10 @@ impl PageTableTrait for Aarch64PageTable {
     l2e.set_entry(va.l3x(), Aarch64PageTableEntry(0));
   }
 
-  fn insert_page(&self, va: usize, frame: PageFrame, attr: EntryAttribute) -> Result<(), crate::lib::page_table::Error> {
-    let pa = frame.pa();
+  fn insert_page(&self, va: usize, user_frame: crate::mm::UserFrame, attr: EntryAttribute) -> Result<(), Error> {
+    let pa = user_frame.pa();
+    let mut user_frames = self.user_pages.lock();
+    user_frames.push(user_frame);
     if let Some(p) = self.lookup_page(va) {
       if p.pa() != pa {
         // replace mapped frame
@@ -172,7 +184,6 @@ impl PageTableTrait for Aarch64PageTable {
     }
     crate::arch::Arch::invalidate_tlb();
     self.map(va, pa, attr);
-    crate::mm::page_pool::increase_rc(frame);
     Ok(())
   }
 
@@ -194,10 +205,24 @@ impl PageTableTrait for Aarch64PageTable {
     }
   }
 
+  fn lookup_user_page(&self, va: usize) -> Option<UserFrame> {
+    match self.lookup_page(va) {
+      None => { None }
+      Some(entry) => {
+        let pa = entry.pa();
+        let user_frames = self.user_pages.lock();
+        for uf in user_frames.iter() {
+          if uf.pa() == pa {
+            return Some(uf.clone());
+          }
+        }
+        None
+      }
+    }
+  }
+
   fn remove_page(&self, va: usize) -> Result<(), crate::lib::page_table::Error> {
-    if let Some(pte) = self.lookup_page(va) {
-      let frame = PageFrame::new(pte.pa());
-      crate::mm::page_pool::decrease_rc(frame);
+    if let Some(_) = self.lookup_page(va) {
       self.unmap(va);
       crate::arch::Arch::invalidate_tlb();
       Ok(())
@@ -217,57 +242,15 @@ impl PageTableTrait for Aarch64PageTable {
   }
 
   fn destroy(&self) {
-    let directory = Aarch64PageTableEntry::from_pa(self.directory.pa());
-    for l1x in 0..(PAGE_SIZE / MACHINE_SIZE) {
-      let l1e = directory.entry(l1x);
-      if !l1e.valid() {
-        continue;
-      }
-      for l2x in 0..(PAGE_SIZE / MACHINE_SIZE) {
-        let l2e = l1e.entry(l2x);
-        if !l2e.valid() {
-          continue;
-        }
-        for l3x in 0..(PAGE_SIZE / MACHINE_SIZE) {
-          let l3e = l2e.entry(l3x);
-          if !l3e.valid() {
-            continue;
-          }
-          let pa = l3e.to_pa();
-          if crate::mm::config::paged_range().contains(&pa) {
-            let frame = PageFrame::new(pa);
-            crate::mm::page_pool::decrease_rc(frame);
-          }
-        }
-        let pa = l2e.to_pa();
-        if crate::mm::config::paged_range().contains(&pa) {
-          let frame = PageFrame::new(pa);
-          crate::mm::page_pool::decrease_rc(frame);
-        }
-      }
-      let pa = l1e.to_pa();
-      if crate::mm::config::paged_range().contains(&pa) {
-        let frame = PageFrame::new(pa);
-        crate::mm::page_pool::decrease_rc(frame);
-      }
-    }
+    // TODO: remove all frames
   }
 
-  fn kernel_page_table() -> PageTable {
-    let frame = PageFrame::new(cortex_a::regs::TTBR1_EL1.get_baddr() as usize);
-    PageTable::new(frame)
-  }
 
-  fn user_page_table() -> PageTable {
-    let frame = PageFrame::new(cortex_a::regs::TTBR0_EL1.get_baddr() as usize);
-    PageTable::new(frame)
-  }
-
-  fn set_user_page_table(pt: PageTable, asid: AddressSpaceId) {
+  fn set_user_page_table(base: usize, asid: AddressSpaceId) {
     use cortex_a::{regs::*, *};
     unsafe {
       TTBR0_EL1.write(TTBR0_EL1::ASID.val(asid as u64));
-      TTBR0_EL1.set_baddr(pt.directory().pa() as u64);
+      TTBR0_EL1.set_baddr(base as u64);
       barrier::isb(barrier::SY);
       barrier::dsb(barrier::SY);
     }

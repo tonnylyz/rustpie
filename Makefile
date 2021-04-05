@@ -1,4 +1,4 @@
-.PHONY: all emu-aarch64 emu-riscv64 debug-aarch64 debug-riscv64 clean dependencies aarch64.bin riscv64.bin
+.PHONY: all emu-aarch64 emu-riscv64 debug-aarch64 debug-riscv64 clean dependencies aarch64.bin riscv64.bin user/aarch64.elf user/riscv64.elf
 
 all: aarch64.bin riscv64.bin
 

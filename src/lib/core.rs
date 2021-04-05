@@ -7,6 +7,7 @@ use crate::lib::address_space::AddressSpace;
 use crate::lib::page_table::PageTableTrait;
 use crate::lib::scheduler::{RoundRobinScheduler, SchedulerTrait};
 use crate::lib::thread::Thread;
+use crate::mm::PageFrame;
 
 pub trait CoreTrait {
   fn context(&self) -> &ContextFrame;
@@ -36,6 +37,7 @@ pub struct Core {
   running_thread: Option<Thread>,
   scheduler: RoundRobinScheduler,
   idle_thread: Once<Thread>,
+  idle_stack: Once<PageFrame>,
   address_space: Option<AddressSpace>,
 }
 
@@ -49,6 +51,7 @@ const CORE: Core = Core {
   running_thread: None,
   scheduler: RoundRobinScheduler::new(),
   idle_thread: Once::new(),
+  idle_stack: Once::new(),
   address_space: None,
 };
 
@@ -97,12 +100,14 @@ impl CoreTrait for Core {
   }
 
   fn create_idle_thread(&self) {
+    let frame = crate::mm::page_pool::alloc();
     let t = crate::lib::thread::new_kernel(
       idle_thread as usize,
-      crate::mm::page_pool::alloc().kva() + PAGE_SIZE,
+      frame.kva() + PAGE_SIZE,
       crate::core_id());
     t.set_status(crate::lib::thread::Status::TsIdle);
     self.idle_thread.call_once(|| t);
+    self.idle_stack.call_once(|| frame);
   }
 
   fn idle_thread(&self) -> Thread {
@@ -136,7 +141,7 @@ impl CoreTrait for Core {
 
   fn set_address_space(&mut self, a: AddressSpace) {
     self.address_space = Some(a.clone());
-    crate::arch::PageTable::set_user_page_table(a.page_table(), a.asid() as AddressSpaceId);
+    crate::arch::PageTable::set_user_page_table(a.page_table().base_pa(), a.asid() as AddressSpaceId);
     crate::arch::Arch::invalidate_tlb();
   }
 

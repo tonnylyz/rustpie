@@ -1,10 +1,9 @@
 use crate::arch::{ArchPageTableEntry, ArchPageTableEntryTrait, ContextFrameTrait, PAGE_SIZE};
 use crate::config::CONFIG_USER_LIMIT;
 use crate::lib::{round_down};
-use crate::lib::address_space::{AddressSpace, Asid};
+use crate::lib::address_space::{AddressSpace};
 use crate::lib::core::{CoreTrait, current};
 use crate::lib::page_table::{Entry, PageTableEntryAttrTrait, PageTableTrait};
-use crate::lib::thread::{Tid, Thread};
 
 use self::Error::*;
 
@@ -22,7 +21,7 @@ pub enum Error {
 impl core::convert::From<crate::mm::page_pool::Error> for Error {
   fn from(e: crate::mm::page_pool::Error) -> Self {
     match e {
-      crate::mm::page_pool::Error::OutOfFrameError => { OutOfMemoryError }
+      crate::mm::page_pool::Error::OutOfFrame => { OutOfMemoryError }
       _ => { InternalError }
     }
   }
@@ -146,7 +145,8 @@ impl SystemCallTrait for SystemCall {
     let page_table = p.page_table();
     let user_attr = Entry::from(ArchPageTableEntry::from_pte(attr)).attribute();
     let attr = user_attr.filter();
-    page_table.insert_page(va, frame, attr)?;
+    let uf = crate::mm::UserFrame::new(frame);
+    page_table.insert_page(va, uf, attr)?;
     OK
   }
 
@@ -159,12 +159,11 @@ impl SystemCallTrait for SystemCall {
     let src_as = lookup_as(src_asid)?;
     let dst_as = lookup_as(dst_asid)?;
     let src_pt = src_as.page_table();
-    if let Some(pte) = src_pt.lookup_page(src_va) {
-      let pa = pte.pa();
-      let user_attr = Entry::from(ArchPageTableEntry::from_pte(attr)).attribute();
-      let attr = user_attr.filter();
-      let dst_pt = dst_as.page_table();
-      dst_pt.insert_page(dst_va, crate::mm::PageFrame::new(pa), attr)?;
+    let user_attr = Entry::from(ArchPageTableEntry::from_pte(attr)).attribute();
+    let attr = user_attr.filter();
+    let dst_pt = dst_as.page_table();
+    if let Some(uf) = src_pt.lookup_user_page(src_va) {
+      dst_pt.insert_page(dst_va, uf, attr)?;
       OK
     } else {
       Err(MemoryNotMappedError)

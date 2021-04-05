@@ -10,17 +10,11 @@ use self::Error::*;
 
 #[derive(Copy, Clone, Debug)]
 pub enum Error {
-  OutOfFrameError,
-  UnmanagedFrameError,
-  FreeUnallocatedFrameError,
-  FreeReferencedFrameError,
-  RefCountOverflowError,
+  OutOfFrame,
+  FreeNotAllocated
 }
 
 struct PagePool {
-  start: usize,
-  end: usize,
-  rc: Vec<u8>,
   free: Vec<usize>,
   allocated: Vec<usize>,
 }
@@ -28,23 +22,14 @@ struct PagePool {
 pub trait PagePoolTrait {
   fn init(&mut self, range: Range<usize>);
   fn allocate(&mut self) -> Result<PageFrame, Error>;
-  fn free(&mut self, frame: PageFrame) -> Result<(), Error>;
-  fn increase_rc(&mut self, frame: PageFrame) -> Result<u8, Error>;
-  fn decrease_rc(&mut self, frame: PageFrame) -> Result<u8, Error>;
-  fn rc(&self, frame: PageFrame) -> Result<u8, Error>;
-  fn ppn(&self, frame: PageFrame) -> usize;
-  fn in_pool(&self, frame: PageFrame) -> bool;
-  fn report(&self);
+  fn free(&mut self, pa: usize) -> Result<(), Error>;
 }
 
 impl PagePoolTrait for PagePool {
   fn init(&mut self, range: Range<usize>) {
     assert_eq!(range.start % PAGE_SIZE, 0);
     assert_eq!(range.end % PAGE_SIZE, 0);
-    self.start = range.start;
-    self.end = range.end;
     for pa in range.step_by(PAGE_SIZE) {
-      self.rc.push(0);
       self.free.push(pa);
     }
   }
@@ -54,90 +39,27 @@ impl PagePoolTrait for PagePool {
       self.allocated.push(pa);
       Ok(PageFrame::new(pa))
     } else {
-      Err(OutOfFrameError)
+      Err(OutOfFrame)
     }
   }
 
-  fn free(&mut self, frame: PageFrame) -> Result<(), Error> {
-    if !self.in_pool(frame) {
-      return Err(UnmanagedFrameError);
-    }
-    if let Ok(0) = self.rc(frame) {
-      if self.allocated.contains(&frame.pa()) {
-        self.allocated.retain(|&pa| pa != frame.pa());
-        self.free.push(frame.pa());
-        Ok(())
-      } else {
-        Err(FreeUnallocatedFrameError)
-      }
+  fn free(&mut self, pa: usize) -> Result<(), Error> {
+    if !self.allocated.contains(&pa) {
+      Err(FreeNotAllocated)
     } else {
-      Err(FreeReferencedFrameError)
+      self.allocated.retain(|p| { *p != pa });
+      self.free.push(pa);
+      Ok(())
     }
   }
 
-  fn increase_rc(&mut self, frame: PageFrame) -> Result<u8, Error> {
-    if !self.in_pool(frame) {
-      return Err(UnmanagedFrameError);
-    }
-    let ppn = self.ppn(frame);
-    let val = self.rc[ppn];
-    if val == 255 {
-      return Err(RefCountOverflowError);
-    }
-    self.rc[ppn] += 1;
-    Ok(val + 1)
-  }
-
-  fn decrease_rc(&mut self, frame: PageFrame) -> Result<u8, Error> {
-    if !self.in_pool(frame) {
-      return Err(UnmanagedFrameError);
-    }
-    let ppn = self.ppn(frame);
-    if self.rc[ppn] == 0 {
-      self.free(frame)?;
-      return Ok(0);
-    }
-    self.rc[ppn] -= 1;
-    Ok(self.rc[ppn])
-  }
-
-  fn rc(&self, frame: PageFrame) -> Result<u8, Error> {
-    if !self.in_pool(frame) {
-      Err(UnmanagedFrameError)
-    } else {
-      Ok(self.rc[self.ppn(frame)])
-    }
-  }
-
-  fn ppn(&self, frame: PageFrame) -> usize {
-    assert!(self.in_pool(frame));
-    (frame.pa() - self.start) / PAGE_SIZE
-  }
-
-  fn in_pool(&self, frame: PageFrame) -> bool {
-    self.start <= frame.pa() && frame.pa() < self.end
-  }
-
-  fn report(&self) {
-    println!("page_pool report");
-    println!("free:      0x{:08x}", self.free.len());
-    println!("allocated: 0x{:08x}", self.allocated.len());
-  }
 }
 
-impl PagePool {
-  const fn new() -> Self {
-    PagePool {
-      start: 0,
-      end: 0,
-      rc: Vec::new(),
-      free: Vec::new(),
-      allocated: Vec::new(),
-    }
-  }
-}
 
-static PAGE_POOL: Mutex<PagePool> = Mutex::new(PagePool::new());
+static PAGE_POOL: Mutex<PagePool> = Mutex::new(PagePool {
+  free: Vec::new(),
+  allocated: Vec::new(),
+});
 
 pub fn init() {
   let range = super::config::paged_range();
@@ -160,18 +82,7 @@ pub fn try_alloc() -> Result<PageFrame, Error> {
   r
 }
 
-pub fn increase_rc(frame: PageFrame) {
+pub fn free(pa: usize) -> Result<(), Error> {
   let mut pool = PAGE_POOL.lock();
-  let _r = pool.increase_rc(frame);
-}
-
-pub fn decrease_rc(frame: PageFrame) {
-  let mut pool = PAGE_POOL.lock();
-  let _r = pool.decrease_rc(frame);
-}
-
-#[allow(dead_code)]
-pub fn report() {
-  let pool = PAGE_POOL.lock();
-  pool.report();
+  pool.free(pa)
 }

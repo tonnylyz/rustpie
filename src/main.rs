@@ -29,7 +29,6 @@ mod config;
 mod panic;
 
 pub fn core_id() -> CoreId {
-  use crate::arch::ArchTrait;
   crate::arch::Arch::core_id()
 }
 
@@ -109,12 +108,12 @@ pub unsafe fn main(core_id: arch::CoreId) -> ! {
     use lib::page_table::PageTableTrait;
     use lib::page_table::PageTableEntryAttrTrait;
     match page_table.insert_page(config::CONFIG_USER_STACK_TOP - arch::PAGE_SIZE,
-                                 mm::page_pool::alloc(),
+                                 mm::UserFrame::new(mm::page_pool::alloc()),
                                  lib::page_table::EntryAttribute::user_default()) {
       Ok(_) => {}
       Err(_) => { panic!("process: create: page_table.insert_page failed") }
     }
-    let t = crate::lib::thread::new_user(entry, config::CONFIG_USER_STACK_TOP, 0, a.clone(), None);
+    let t = crate::lib::thread::new_user(entry, config::CONFIG_USER_STACK_TOP, 2, a.clone(), None);
     t.set_status(crate::lib::thread::Status::TsRunnable);
   }
 

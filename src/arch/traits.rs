@@ -41,5 +41,5 @@ pub trait ArchPageTableEntryTrait {
   fn valid(&self) -> bool;
   fn entry(&self, index: usize) -> Self;
   fn set_entry(&self, index: usize, value: Self);
-  fn alloc_table() -> Self;
+  fn make_table(frame_pa: usize) -> Self;
 }

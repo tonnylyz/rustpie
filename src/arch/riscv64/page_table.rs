@@ -2,8 +2,8 @@ use riscv::regs::*;
 
 use crate::arch::*;
 use crate::config::*;
-use crate::lib::page_table::{Entry, EntryAttribute, PageTableEntryAttrTrait, PageTableTrait};
-use crate::mm::PageFrame;
+use crate::lib::page_table::{Entry, EntryAttribute, PageTableEntryAttrTrait, PageTableTrait, Error};
+use crate::mm::{PageFrame, UserFrame};
 
 use super::vm_descriptor::*;
 
@@ -56,7 +56,7 @@ impl ArchPageTableEntryTrait for Riscv64PageTableEntry {
     unsafe { (addr as *mut usize).write_volatile(value.0) }
   }
 
-  fn alloc_table() -> Self {
+  fn make_table(frame_pa: usize) -> Self {
     let frame = crate::mm::page_pool::alloc();
     crate::mm::page_pool::increase_rc(frame);
     Riscv64PageTableEntry(
@@ -152,7 +152,7 @@ impl PageTableTrait for Riscv64PageTable {
     r
   }
 
-  fn directory(&self) -> PageFrame {
+  fn base_pa(&self) -> PageFrame {
     self.directory
   }
 
@@ -186,8 +186,8 @@ impl PageTableTrait for Riscv64PageTable {
     l2e.set_entry(va.l3x(), Riscv64PageTableEntry(0));
   }
 
-  fn insert_page(&self, va: usize, frame: PageFrame, attr: EntryAttribute) -> Result<(), crate::lib::page_table::Error> {
-    let pa = frame.pa();
+  fn insert_page(&self, va: usize, user_frame: crate::mm::UserFrame, attr: EntryAttribute) -> Result<(), Error> {
+    let pa = user_frame.pa();
     if let Some(p) = self.lookup_page(va) {
       if p.pa() != pa {
         // replace mapped frame
@@ -201,7 +201,7 @@ impl PageTableTrait for Riscv64PageTable {
     }
     crate::arch::Arch::invalidate_tlb();
     self.map(va, pa, attr);
-    crate::mm::page_pool::increase_rc(frame);
+    crate::mm::page_pool::increase_rc(user_frame);
     Ok(())
   }
 
@@ -225,8 +225,6 @@ impl PageTableTrait for Riscv64PageTable {
 
   fn remove_page(&self, va: usize) -> Result<(), crate::lib::page_table::Error> {
     if let Some(pte) = self.lookup_page(va) {
-      let frame = PageFrame::new(pte.pa());
-      crate::mm::page_pool::decrease_rc(frame);
       self.unmap(va);
       crate::arch::Arch::invalidate_tlb();
       Ok(())
@@ -258,37 +256,15 @@ impl PageTableTrait for Riscv64PageTable {
             continue;
           }
           let pa = l3e.to_pa();
-          if crate::mm::config::paged_range().contains(&pa) {
-            let frame = PageFrame::new(pa);
-            crate::mm::page_pool::decrease_rc(frame);
-          }
         }
         let pa = l2e.to_pa();
-        if crate::mm::config::paged_range().contains(&pa) {
-          let frame = PageFrame::new(pa);
-          crate::mm::page_pool::decrease_rc(frame);
-        }
       }
       let pa = l1e.to_pa();
-      if crate::mm::config::paged_range().contains(&pa) {
-        let frame = PageFrame::new(pa);
-        crate::mm::page_pool::decrease_rc(frame);
-      }
     }
   }
 
-  fn kernel_page_table() -> PageTable {
-    let ppn = SATP.read(SATP::PPN) as usize;
-    PageTable::new(PageFrame::new(ppn << PAGE_SHIFT))
-  }
-
-  fn user_page_table() -> PageTable {
-    // Note user and kernel share page directory
-    Self::kernel_page_table()
-  }
-
-  fn set_user_page_table(pt: PageTable, asid: AddressSpaceId) {
-    SATP.write(SATP::MODE::Sv39 + SATP::ASID.val(asid as u64) + SATP::PPN.val((pt.directory().pa() >> PAGE_SHIFT) as u64));
+  fn set_user_page_table(base: usize, asid: AddressSpaceId) {
+    SATP.write(SATP::MODE::Sv39 + SATP::ASID.val(asid as u64) + SATP::PPN.val((base.directory_physical_address().pa() >> PAGE_SHIFT) as u64));
     riscv::barrier::sfence_vma_all();
   }
 }
