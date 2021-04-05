@@ -44,7 +44,7 @@ mod virtio_blk;
 
 #[no_mangle]
 fn _start(arg: usize) -> ! {
-  // set_page_fault_handler(page_fault_handler as usize);
+  set_page_fault_handler(page_fault_handler as usize);
   // set_self_ipc(getpid());
   heap::init();
   match arg {
@@ -67,12 +67,12 @@ fn virtio_blk() {
   mem_alloc(0, 0x3000_0000, PTE_DEFAULT).unwrap();
   virtio_blk::read(0, 8, 0x3000_0000);
   let slice = unsafe { core::slice::from_raw_parts(0x3000_0000 as *const u8, PAGE_SIZE) };
-  for i in 0..4096 {
-    print!("{:02x} ", slice[i]);
-    if (i + 1) % 16 == 0 {
-      println!();
-    }
-  }
+  // for i in 0..4096 {
+  //   print!("{:02x} ", slice[i]);
+  //   if (i + 1) % 16 == 0 {
+  //     println!();
+  //   }
+  // }
 
 
   loop {}

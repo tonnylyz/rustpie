@@ -13,7 +13,7 @@ extern "C" {
   fn syscall_2(tid: u16) -> u16;
   fn syscall_3();
   fn syscall_4(asid: u16) -> isize;
-  fn syscall_5(asid: u16, value: usize, sp: usize) -> isize;
+  fn syscall_5(asid: u16, value: usize, sp: usize, event: usize) -> isize;
   fn syscall_6(asid: u16, va: usize, attr: usize) -> isize;
   fn syscall_7(src_asid: u16, src_va: usize, dst_asid: u16, dst_va: usize, attr: usize) -> isize;
   fn syscall_8(asid: u16, va: usize) -> isize;
@@ -43,8 +43,8 @@ pub fn process_destroy(asid: u16) -> Result<(), Error> {
   }
 }
 
-pub fn process_set_exception_handler(asid: u16, value: usize, sp: usize) -> Result<(), Error> {
-  match unsafe { syscall_5(asid, value, sp) } {
+pub fn process_set_exception_handler(asid: u16, value: usize, sp: usize, event: usize) -> Result<(), Error> {
+  match unsafe { syscall_5(asid, value, sp, event) } {
     -1 => Err(()),
     _ => Ok(()),
   }

@@ -155,13 +155,6 @@ fn setup_queue(idx: u32) {
   mmio.QueueDeviceLow.set(ring.device.base_addr_usize().va2pa() as u32);
   mmio.QueueDeviceHigh.set((ring.device.base_addr_usize().va2pa() >> 32) as u32);
 
-  println!("mmio.QueueDescLow.{:08x}",ring.desc.base_addr_usize().va2pa() as u32);
-  println!("mmio.QueueDescHigh.{:08x}",(ring.desc.base_addr_usize().va2pa() >> 32) as u32);
-  println!("mmio.QueueDriverLow.{:08x}",ring.driver.base_addr_usize().va2pa() as u32);
-  println!("mmio.QueueDriverHigh.{:08x}",(ring.driver.base_addr_usize().va2pa() >> 32) as u32);
-  println!("mmio.QueueDeviceLow.{:08x}",ring.device.base_addr_usize().va2pa() as u32);
-  println!("mmio.QueueDeviceHigh.{:08x}",(ring.device.base_addr_usize().va2pa() >> 32) as u32);
-
   mmio.QueueReady.set(1);
 }
 

@@ -18,5 +18,6 @@ pub mod barrier;
 pub mod stack;
 pub mod fatfs;
 pub mod device;
+pub mod event;
 
 

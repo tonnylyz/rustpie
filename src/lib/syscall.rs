@@ -56,6 +56,7 @@ pub enum SystemCallValue {
   USize(usize),
 }
 use SystemCallValue::*;
+use crate::lib::event::Event;
 
 pub type SyscallResult = Result<SystemCallValue, Error>;
 
@@ -66,7 +67,7 @@ pub trait SystemCallTrait {
   fn get_tid() -> SyscallResult;
   fn thread_yield() -> SyscallResult;
   fn address_space_destroy(asid: u16) -> SyscallResult;
-  fn process_set_exception_handler(asid: u16, value: usize, sp: usize) -> SyscallResult;
+  fn process_set_exception_handler(asid: u16, value: usize, sp: usize, event: usize) -> SyscallResult;
   fn mem_alloc(asid: u16, va: usize, perm: usize) -> SyscallResult;
   fn mem_map(src_asid: u16, src_va: usize, dst_asid: u16, dst_va: usize, perm: usize) -> SyscallResult;
   fn mem_unmap(asid: u16, va: usize) -> SyscallResult;
@@ -130,9 +131,14 @@ impl SystemCallTrait for SystemCall {
     OK
   }
 
-  #[allow(unused_variables)]
-  fn process_set_exception_handler(pid: u16, entry: usize, stack_top: usize) -> SyscallResult {
-    unimplemented!()
+  fn process_set_exception_handler(asid: u16, entry: usize, sp: usize, event: usize) -> SyscallResult {
+    let event = match event {
+      0 => Event::PageFault,
+      x => Event::Interrupt(x),
+    };
+    let a = lookup_as(asid)?;
+    a.event_register(event, entry, sp);
+    OK
   }
 
   fn mem_alloc(asid: u16, va: usize, attr: usize) -> SyscallResult {

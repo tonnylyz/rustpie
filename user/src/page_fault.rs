@@ -55,7 +55,7 @@ pub fn set_page_fault_handler(handler: usize) {
         Ok(_) => {}
         Err(_) => { panic!("set_page_fault_handler: mem_alloc failed") }
       }
-      match process_set_exception_handler(0, asm_page_fault_handler as usize, EXCEPTION_STACK_TOP) {
+      match process_set_exception_handler(0, asm_page_fault_handler as usize, EXCEPTION_STACK_TOP, 0) {
         Ok(_) => {}
         Err(_) => { panic!("set_page_fault_handler: process_set_exception_handler failed") }
       }

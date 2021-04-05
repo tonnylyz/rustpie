@@ -1,7 +1,12 @@
-use crate::arch::{ContextFrameTrait, ArchTrait};
+use crate::arch::{ContextFrameTrait, ArchTrait, PAGE_SIZE, ContextFrame, Address};
 use crate::lib::core::{CoreTrait, current};
 use crate::lib::syscall::{SystemCall, SystemCallTrait, SystemCallValue};
 use crate::lib::page_table::PageTableTrait;
+use crate::lib::round_down;
+use crate::config::CONFIG_USER_LIMIT;
+use crate::lib::event::Event;
+use core::mem::size_of;
+use rlibc::memcpy;
 
 pub trait InterruptServiceRoutine {
   fn system_call();
@@ -32,7 +37,7 @@ impl InterruptServiceRoutine for Isr {
         SystemCall::address_space_destroy(arg(0) as u16)
       }
       5 => {
-        SystemCall::process_set_exception_handler(arg(0) as u16, arg(1), arg(2))
+        SystemCall::process_set_exception_handler(arg(0) as u16, arg(1), arg(2), arg(3))
       }
       6 => {
         SystemCall::mem_alloc(arg(0) as u16, arg(1), arg(2))
@@ -124,60 +129,52 @@ impl InterruptServiceRoutine for Isr {
     if t.is_none() {
       panic!("isr: page_fault: no running thread");
     }
-    let ctx = current().context();
-    let fa = crate::arch::Arch::fault_address();
-    println!("fault address {:016x}", fa);
-    println!("{}", ctx);
+    let t = t.unwrap();
+    if t.address_space().is_none() {
+      panic!("isr: kernel thread page fault");
+    }
+    let p = t.address_space().unwrap();
 
-    let a = t.unwrap().address_space().unwrap();
-    let entry = a.page_table().lookup_page(fa);
-    println!("{:?}", entry);
+    let addr = crate::arch::Arch::fault_address();
+    let va = round_down(addr, PAGE_SIZE);
+    if va >= CONFIG_USER_LIMIT {
+      println!("isr: page_fault: va >= CONFIG_USER_LIMIT, process killed");
+      p.destroy();
+      return;
+    }
+    if p.event_handler(Event::PageFault).is_none() {
+      println!("isr: page_fault: process has no handler, process killed");
+      p.destroy();
+      return;
+    }
+    let (entry, stack_top) = p.event_handler(Event::PageFault).unwrap();
+    let page_table = p.page_table();
+    let stack_btm = stack_top - PAGE_SIZE;
+    match page_table.lookup_page(stack_btm) {
+      Some(stack_pte) => {
+        if va == stack_btm {
+          println!("isr: page_fault: fault on exception stack, process killed");
+          p.destroy();
+          return;
+        }
+        let ctx = current().context_mut();
 
-
-    panic!("");
-    // let addr = Arch::fault_address();
-    // let va = round_down(addr, PAGE_SIZE);
-    // if va >= CONFIG_USER_LIMIT {
-    //   println!("isr: page_fault: va >= CONFIG_USER_LIMIT, process killed");
-    //   p.destroy();
-    //   return;
-    // }
-    // if p.exception_handler().is_none() {
-    //   println!("isr: page_fault: process has no handler, process killed");
-    //   p.destroy();
-    //   return;
-    // }
-    // let (entry, stack_top) = p.exception_handler().unwrap();
-    // let page_table = p.page_table();
-    // let stack_btm = stack_top - PAGE_SIZE;
-    // match page_table.lookup_page(stack_btm) {
-    //   Some(stack_pte) => {
-    //     if va == stack_btm {
-    //       println!("isr: page_fault: fault on exception stack, process killed");
-    //       p.destroy();
-    //       return;
-    //     }
-    //     let ctx = current_core().context_mut();
-    //
-    //     let stack_frame = PageFrame::new(stack_pte.pa());
-    //     unsafe {
-    //       memcpy(
-    //         (stack_frame.kva() + PAGE_SIZE - size_of::<ContextFrame>()) as *mut ContextFrame,
-    //         ctx as *mut ContextFrame,
-    //         1,
-    //       );
-    //       ctx.set_exception_pc(entry);
-    //       ctx.set_stack_pointer(stack_top - size_of::<ContextFrame>());
-    //       ctx.set_argument(va);
-    //     }
-    //     return;
-    //   }
-    //   None => {
-    //     println!("isr: page_fault: exception stack not valid, process killed");
-    //     p.destroy();
-    //     return;
-    //   }
-    // }
+        let uf = page_table.lookup_user_page(stack_btm).unwrap();
+        unsafe {
+          ((uf.pa().pa2kva() + PAGE_SIZE - size_of::<ContextFrame>()) as *mut ContextFrame)
+            .write_volatile(*ctx);
+        }
+        ctx.set_exception_pc(entry);
+        ctx.set_stack_pointer(stack_top - size_of::<ContextFrame>());
+        ctx.set_argument(va);
+        return;
+      }
+      None => {
+        println!("isr: page_fault: exception stack not valid, process killed");
+        p.destroy();
+        return;
+      }
+    }
   }
 
   fn default() {
