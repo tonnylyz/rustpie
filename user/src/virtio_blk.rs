@@ -6,6 +6,8 @@ use register::mmio::*;
 use spin::Mutex;
 
 use crate::arch::Address;
+use crate::syscall::{thread_set_status, process_yield};
+use crate::syscall::ThreadStatus::TsNotRunnable;
 
 const VIRTIO_MMIO_BASE: usize = 0x8_0000_0000 + 0x0a000000;
 
@@ -355,12 +357,11 @@ fn io(sector: usize, count: usize, buf: usize, op: Operation) /*-> Box<VirtioBlk
   let mmio = &VIRTIO_MMIO;
 
   mmio.QueueNotify.set(0); // queue num
-
-  loop {
-    if mmio.InterruptStatus.get() == 1 {
-      mmio.InterruptACK.set(1);
-      break;
-    }
-  }
+  // loop {
+  //   if mmio.InterruptStatus.get() == 1 {
+  //     mmio.InterruptACK.set(1);
+  //     break;
+  //   }
+  // }
   // hdr
 }

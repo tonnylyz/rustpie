@@ -58,7 +58,7 @@ unsafe extern "C" fn lower_aarch64_irq(ctx: *mut ContextFrame) {
     }
     Some(i) => {
       if i >= 32 {
-        Isr::external_interrupt();
+        Isr::external_interrupt(i);
       } else {
         panic!("GIC unhandled SGI PPI")
       }

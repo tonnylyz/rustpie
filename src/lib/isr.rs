@@ -7,11 +7,16 @@ use crate::config::CONFIG_USER_LIMIT;
 use crate::lib::event::Event;
 use core::mem::size_of;
 use rlibc::memcpy;
+use crate::lib::interrupt::InterruptController;
+use crate::lib::thread::Thread;
+use crate::lib::thread::Status::TsRunnable;
+use crate::lib::address_space::AddressSpace;
+use crate::driver::{Interrupt, INTERRUPT_CONTROLLER};
 
 pub trait InterruptServiceRoutine {
   fn system_call();
   fn timer_interrupt();
-  fn external_interrupt();
+  fn external_interrupt(int: Interrupt);
   fn page_fault();
   fn default();
 }
@@ -120,8 +125,30 @@ impl InterruptServiceRoutine for Isr {
     crate::lib::core::current().schedule();
   }
 
-  fn external_interrupt() {
-    panic!("external_interrupt");
+  fn external_interrupt(int: Interrupt) {
+    println!("external_interrupt {}", int);
+    match crate::lib::interrupt::INTERRUPT_WAIT.get(int) {
+      None => { println!("irq not registered"); }
+      Some(t) => {
+        match t.address_space() {
+          None => { panic!("kernel thread interrupt?") }
+          Some(a) => {
+            match a.event_handler(Event::Interrupt(int)) {
+              None => { println!("no event handler") }
+              Some((pc, sp)) => {
+                // panic!("spawn new thread");
+                INTERRUPT_CONTROLLER.disable(int);
+                let child_thread = crate::lib::thread::new_user(pc, sp, int, a.clone(), Some(t.clone()));
+                child_thread.set_status(crate::lib::thread::Status::TsRunnable);
+
+                crate::driver::timer::next();
+                crate::lib::core::current().schedule();
+              }
+            }
+          }
+        }
+      }
+    }
   }
 
   fn page_fault() {
@@ -143,6 +170,7 @@ impl InterruptServiceRoutine for Isr {
       return;
     }
     if p.event_handler(Event::PageFault).is_none() {
+      println!("isr: page_fault: {:016x}", addr);
       println!("isr: page_fault: process has no handler, process killed");
       p.destroy();
       return;

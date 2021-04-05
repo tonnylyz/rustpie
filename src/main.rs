@@ -6,6 +6,7 @@
 #![feature(panic_info_message)]
 #![feature(format_args_nl)]
 #![feature(lang_items)]
+#![feature(const_btree_new)]
 
 #[macro_use]
 extern crate alloc;
@@ -113,10 +114,7 @@ pub unsafe fn main(core_id: arch::CoreId) -> ! {
     page_table.insert_page(config::CONFIG_USER_STACK_TOP - arch::PAGE_SIZE,
                            mm::UserFrame::new_memory(mm::page_pool::alloc()),
                            lib::page_table::EntryAttribute::user_default()).unwrap();
-    // page_table.insert_page(config::CONFIG_USER_STACK_TOP - 2 * arch::PAGE_SIZE,
-    //                        mm::UserFrame::new_memory(mm::page_pool::alloc()),
-    //                        lib::page_table::EntryAttribute::user_default()).unwrap();
-    let t = crate::lib::thread::new_user(entry, config::CONFIG_USER_STACK_TOP, 0, a.clone(), None);
+    let t = crate::lib::thread::new_user(entry, config::CONFIG_USER_STACK_TOP, 3, a.clone(), None);
     t.set_status(crate::lib::thread::Status::TsRunnable);
 
 
@@ -130,7 +128,7 @@ pub unsafe fn main(core_id: arch::CoreId) -> ! {
       a.page_table().insert_page(0x8_0000_0000 + uf.pa(), uf.clone(), lib::page_table::EntryAttribute::user_device());
     }
     for i in virtio_mmio.interrupts.iter() {
-      // crate::driver::INTERRUPT_CONTROLLER.enable(*i);
+      crate::driver::INTERRUPT_CONTROLLER.enable(*i);
     }
   }
 

@@ -212,6 +212,7 @@ impl InterruptController for Gic {
   fn finish(&self, int: Interrupt) {
     let gicc = &GICC;
     gicc.EOIR.set(int as u32);
+    gicc.DIR.set(int as u32);
   }
 }
 

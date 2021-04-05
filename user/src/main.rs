@@ -61,12 +61,18 @@ fn _start(arg: usize) -> ! {
   loop {};
 }
 
+fn virtio_blk_irq() {
+  panic!("virtio_blk_irq");
+}
+
 fn virtio_blk() {
   virtio_blk::init();
   println!("virtio_blk init ok");
+  mem_alloc(0, 0x7_0000_0000, PTE_DEFAULT);
+  process_set_exception_handler(0, virtio_blk_irq as usize, 0x7_0000_1000, 0x10 + 32);
   mem_alloc(0, 0x3000_0000, PTE_DEFAULT).unwrap();
   virtio_blk::read(0, 8, 0x3000_0000);
-  let slice = unsafe { core::slice::from_raw_parts(0x3000_0000 as *const u8, PAGE_SIZE) };
+  // let slice = unsafe { core::slice::from_raw_parts(0x3000_0000 as *const u8, PAGE_SIZE) };
   // for i in 0..4096 {
   //   print!("{:02x} ", slice[i]);
   //   if (i + 1) % 16 == 0 {

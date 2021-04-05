@@ -132,12 +132,17 @@ impl SystemCallTrait for SystemCall {
   }
 
   fn process_set_exception_handler(asid: u16, entry: usize, sp: usize, event: usize) -> SyscallResult {
-    let event = match event {
+    let e = match event {
       0 => Event::PageFault,
       x => Event::Interrupt(x),
     };
     let a = lookup_as(asid)?;
-    a.event_register(event, entry, sp);
+    a.event_register(e, entry, sp);
+
+    if asid == 0 && event != 0 {
+      // register an interrupt event for current thread
+      crate::lib::interrupt::INTERRUPT_WAIT.add(current().running_thread().unwrap().clone(), event);
+    }
     OK
   }
 
