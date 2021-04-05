@@ -23,6 +23,7 @@ pub trait PageTableEntryAttrTrait {
   fn kernel_device() -> Self;
   fn user_default() -> Self;
   fn user_readonly() -> Self;
+  fn user_device() -> Self;
   fn filter(&self) -> Self;
 }
 
@@ -111,6 +112,18 @@ impl PageTableEntryAttrTrait for EntryAttribute {
       writable: false,
       user: true,
       device: false,
+      k_executable: false,
+      u_executable: false,
+      copy_on_write: false,
+      shared: false,
+    }
+  }
+
+  fn user_device() -> Self {
+    EntryAttribute {
+      writable: true,
+      user: true,
+      device: true,
       k_executable: false,
       u_executable: false,
       copy_on_write: false,

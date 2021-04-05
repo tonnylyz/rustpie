@@ -16,6 +16,7 @@ use page_fault::*;
 use syscall::*;
 
 use crate::config::PAGE_SIZE;
+use crate::arch::Address;
 
 #[macro_export]
 macro_rules! print {
@@ -38,6 +39,7 @@ mod syscall;
 mod fork;
 mod ipc;
 mod heap;
+mod virtio_blk;
 
 
 #[no_mangle]
@@ -49,7 +51,7 @@ fn _start(arg: usize) -> ! {
     0 => { fktest() }
     1 => { pingpong() }
     2 => { heap_test() }
-    3 => { main() }
+    3 => { virtio_blk() }
     _ => unsafe { print(arg as u8 as char) }
   }
   match process_destroy(0) {
@@ -59,8 +61,21 @@ fn _start(arg: usize) -> ! {
   loop {};
 }
 
-fn main() {
-  loop { print!("1") }
+fn virtio_blk() {
+  virtio_blk::init();
+  println!("virtio_blk init ok");
+  mem_alloc(0, 0x3000_0000, PTE_DEFAULT).unwrap();
+  virtio_blk::read(0, 8, 0x3000_0000);
+  let slice = unsafe { core::slice::from_raw_parts(0x3000_0000 as *const u8, PAGE_SIZE) };
+  for i in 0..4096 {
+    print!("{:02x} ", slice[i]);
+    if (i + 1) % 16 == 0 {
+      println!();
+    }
+  }
+
+
+  loop {}
 }
 
 fn pingpong() {

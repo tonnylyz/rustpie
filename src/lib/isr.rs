@@ -1,6 +1,7 @@
-use crate::arch::ContextFrameTrait;
-use crate::lib::core::CoreTrait;
+use crate::arch::{ContextFrameTrait, ArchTrait};
+use crate::lib::core::{CoreTrait, current};
 use crate::lib::syscall::{SystemCall, SystemCallTrait, SystemCallValue};
+use crate::lib::page_table::PageTableTrait;
 
 pub trait InterruptServiceRoutine {
   fn system_call();
@@ -123,7 +124,17 @@ impl InterruptServiceRoutine for Isr {
     if t.is_none() {
       panic!("isr: page_fault: no running thread");
     }
-    panic!();
+    let ctx = current().context();
+    let fa = crate::arch::Arch::fault_address();
+    println!("fault address {:016x}", fa);
+    println!("{}", ctx);
+
+    let a = t.unwrap().address_space().unwrap();
+    let entry = a.page_table().lookup_page(fa);
+    println!("{:?}", entry);
+
+
+    panic!("");
     // let addr = Arch::fault_address();
     // let va = round_down(addr, PAGE_SIZE);
     // if va >= CONFIG_USER_LIMIT {

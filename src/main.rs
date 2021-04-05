@@ -16,6 +16,8 @@ extern crate core_io;
 pub use crate::arch::CoreId;
 use crate::lib::core::CoreTrait;
 use crate::arch::ArchTrait;
+use crate::lib::device::Device;
+use crate::lib::interrupt::InterruptController;
 
 #[macro_use]
 mod misc;
@@ -107,14 +109,28 @@ pub unsafe fn main(core_id: arch::CoreId) -> ! {
 
     use lib::page_table::PageTableTrait;
     use lib::page_table::PageTableEntryAttrTrait;
-    match page_table.insert_page(config::CONFIG_USER_STACK_TOP - arch::PAGE_SIZE,
-                                 mm::UserFrame::new(mm::page_pool::alloc()),
-                                 lib::page_table::EntryAttribute::user_default()) {
-      Ok(_) => {}
-      Err(_) => { panic!("process: create: page_table.insert_page failed") }
-    }
-    let t = crate::lib::thread::new_user(entry, config::CONFIG_USER_STACK_TOP, 2, a.clone(), None);
+    page_table.insert_page(config::CONFIG_USER_STACK_TOP - arch::PAGE_SIZE,
+                           mm::UserFrame::new_memory(mm::page_pool::alloc()),
+                           lib::page_table::EntryAttribute::user_default()).unwrap();
+    page_table.insert_page(config::CONFIG_USER_STACK_TOP - 2 * arch::PAGE_SIZE,
+                           mm::UserFrame::new_memory(mm::page_pool::alloc()),
+                           lib::page_table::EntryAttribute::user_default()).unwrap();
+    let t = crate::lib::thread::new_user(entry, config::CONFIG_USER_STACK_TOP, 3, a.clone(), None);
     t.set_status(crate::lib::thread::Status::TsRunnable);
+
+
+    use crate::lib::device::*;
+    let virtio_mmio = Device::new(vec![
+      0x0a000000..0x0a000200
+    ], vec![
+      0x10 + 32
+    ]);
+    for uf in virtio_mmio.to_user_frames().iter() {
+      a.page_table().insert_page(0x8_0000_0000 + uf.pa(), uf.clone(), lib::page_table::EntryAttribute::user_device());
+    }
+    for i in virtio_mmio.interrupts.iter() {
+      // crate::driver::INTERRUPT_CONTROLLER.enable(*i);
+    }
   }
 
   lib::barrier::barrier();

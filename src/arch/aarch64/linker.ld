@@ -3,6 +3,7 @@ ENTRY(_start)
 SECTIONS
 {
     . = 0xFFFFFF8040080000;
+    KERNEL_ENTRY = .;
     .init : {
         *(.text.start)
         *(.data.start)

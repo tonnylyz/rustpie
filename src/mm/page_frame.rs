@@ -39,13 +39,24 @@ impl PageFrame {
 }
 
 #[derive(Debug, Clone)]
-pub struct UserFrame(Arc<PageFrame>);
+pub enum UserFrame {
+  Memory(Arc<PageFrame>),
+  Device(usize),
+}
 
 impl UserFrame {
-  pub fn new(frame: PageFrame) -> Self {
-    UserFrame(Arc::new(frame))
+  pub fn new_memory(frame: PageFrame) -> Self {
+    UserFrame::Memory(Arc::new(frame))
   }
-  pub fn pa(&self) -> usize { self.0.pa }
+  pub fn new_device(physical_address: usize) -> Self {
+    UserFrame::Device(physical_address)
+  }
+  pub fn pa(&self) -> usize {
+    match self {
+      UserFrame::Memory(frame) => { frame.pa }
+      UserFrame::Device(pa) => { *pa }
+    }
+  }
 }
 
 impl Drop for PageFrame {

@@ -8,7 +8,16 @@ version = "0.7.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "52ab399d7f0b5ad02bbd9ffee6ff1844b84c3c336e0831f167e105ea866a2564"
 dependencies = [
- "spin",
+ "spin 0.7.0",
+]
+
+[[package]]
+name = "lock_api"
+version = "0.4.3"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "5a3c91c24eae6777794bb1997ad98bbb87daf92890acab859f7eaa4320333176"
+dependencies = [
+ "scopeguard",
 ]
 
 [[package]]
@@ -33,13 +42,29 @@ dependencies = [
  "buddy_system_allocator",
  "register",
  "rlibc",
+ "spin 0.9.0",
 ]
+
+[[package]]
+name = "scopeguard"
+version = "1.1.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "d29ab0c6d3fc0ee92fe66e2d99f700eab17a8d57d1c1d3b748380fb20baa78cd"
 
 [[package]]
 name = "spin"
 version = "0.7.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "652ac3743312871a5fb703f0337e68ffa3cdc28c863efad0b8dc858fa10c991b"
+
+[[package]]
+name = "spin"
+version = "0.9.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "b87bbf98cb81332a56c1ee8929845836f85e8ddd693157c30d76660196014478"
+dependencies = [
+ "lock_api",
+]
 
 [[package]]
 name = "tock-registers"

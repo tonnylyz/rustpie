@@ -145,7 +145,7 @@ impl SystemCallTrait for SystemCall {
     let page_table = p.page_table();
     let user_attr = Entry::from(ArchPageTableEntry::from_pte(attr)).attribute();
     let attr = user_attr.filter();
-    let uf = crate::mm::UserFrame::new(frame);
+    let uf = crate::mm::UserFrame::new_memory(frame);
     page_table.insert_page(va, uf, attr)?;
     OK
   }
