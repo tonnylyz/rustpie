@@ -1,7 +1,8 @@
 use core_io as io;
-use io::prelude::*;
 use io::{Read, SeekFrom};
-use crate::lib::{round_up, round_down};
+use io::prelude::*;
+
+use crate::lib::{round_down, round_up};
 
 struct Disk {
   pointer: usize,

@@ -15,8 +15,8 @@ use ipc::*;
 use page_fault::*;
 use syscall::*;
 
-use crate::config::PAGE_SIZE;
 use crate::arch::Address;
+use crate::config::PAGE_SIZE;
 
 #[macro_export]
 macro_rules! print {

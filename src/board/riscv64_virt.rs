@@ -3,7 +3,7 @@ use core::sync::atomic::{AtomicBool, Ordering};
 
 use spin::Mutex;
 
-use crate::arch::{ArchTrait, Address};
+use crate::arch::{Address, ArchTrait};
 use crate::lib::interrupt::InterruptController;
 
 #[allow(dead_code)]

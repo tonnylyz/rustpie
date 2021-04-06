@@ -1,17 +1,13 @@
-use crate::arch::{ContextFrameTrait, ArchTrait, PAGE_SIZE, ContextFrame, Address};
+use core::mem::size_of;
+
+use crate::arch::{Address, ArchTrait, ContextFrame, ContextFrameTrait, PAGE_SIZE};
+use crate::config::CONFIG_USER_LIMIT;
+use crate::driver::{Interrupt};
 use crate::lib::core::{CoreTrait, current};
-use crate::lib::syscall::{SystemCall, SystemCallTrait, SystemCallValue};
+use crate::lib::event::Event;
 use crate::lib::page_table::PageTableTrait;
 use crate::lib::round_down;
-use crate::config::CONFIG_USER_LIMIT;
-use crate::lib::event::Event;
-use core::mem::size_of;
-use rlibc::memcpy;
-use crate::lib::interrupt::InterruptController;
-use crate::lib::thread::Thread;
-use crate::lib::thread::Status::TsRunnable;
-use crate::lib::address_space::AddressSpace;
-use crate::driver::{Interrupt, INTERRUPT_CONTROLLER};
+use crate::lib::syscall::{SystemCall, SystemCallTrait, SystemCallValue};
 
 pub trait InterruptServiceRoutine {
   fn system_call();
@@ -164,28 +160,23 @@ impl InterruptServiceRoutine for Isr {
     let va = round_down(addr, PAGE_SIZE);
     if va >= CONFIG_USER_LIMIT {
       println!("isr: page_fault: va >= CONFIG_USER_LIMIT, process killed");
-      p.destroy();
       return;
     }
     if p.event_handler(Event::PageFault).is_none() {
       println!("isr: page_fault: {:016x}", addr);
       println!("isr: page_fault: process has no handler, process killed");
-      p.destroy();
       return;
     }
     let (entry, stack_top) = p.event_handler(Event::PageFault).unwrap();
     let page_table = p.page_table();
     let stack_btm = stack_top - PAGE_SIZE;
-    match page_table.lookup_page(stack_btm) {
-      Some(stack_pte) => {
+    match page_table.lookup_user_page(stack_btm) {
+      Some(uf) => {
         if va == stack_btm {
           println!("isr: page_fault: fault on exception stack, process killed");
-          p.destroy();
           return;
         }
         let ctx = current().context_mut();
-
-        let uf = page_table.lookup_user_page(stack_btm).unwrap();
         unsafe {
           ((uf.pa().pa2kva() + PAGE_SIZE - size_of::<ContextFrame>()) as *mut ContextFrame)
             .write_volatile(*ctx);
@@ -197,7 +188,6 @@ impl InterruptServiceRoutine for Isr {
       }
       None => {
         println!("isr: page_fault: exception stack not valid, process killed");
-        p.destroy();
         return;
       }
     }

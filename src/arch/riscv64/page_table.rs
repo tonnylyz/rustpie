@@ -2,7 +2,7 @@ use riscv::regs::*;
 
 use crate::arch::*;
 use crate::config::*;
-use crate::lib::page_table::{Entry, EntryAttribute, PageTableEntryAttrTrait, PageTableTrait, Error};
+use crate::lib::page_table::{Entry, EntryAttribute, Error, PageTableEntryAttrTrait, PageTableTrait};
 use crate::mm::{PageFrame, UserFrame};
 
 use super::vm_descriptor::*;

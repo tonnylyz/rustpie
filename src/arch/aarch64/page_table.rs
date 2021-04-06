@@ -1,10 +1,12 @@
+use alloc::vec::Vec;
+
+use spin::Mutex;
+
 use crate::arch::*;
-use crate::lib::page_table::{Entry, EntryAttribute, PageTableEntryAttrTrait, PageTableTrait, Error};
+use crate::lib::page_table::{Entry, EntryAttribute, Error, PageTableEntryAttrTrait, PageTableTrait};
 use crate::mm::{PageFrame, UserFrame};
 
 use super::vm_descriptor::*;
-use alloc::vec::Vec;
-use spin::Mutex;
 
 pub const PAGE_TABLE_L1_SHIFT: usize = 30;
 pub const PAGE_TABLE_L2_SHIFT: usize = 21;

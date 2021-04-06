@@ -14,10 +14,9 @@ extern crate rlibc;
 // extern crate fatfs;
 // extern crate core_io;
 
+use crate::arch::ArchTrait;
 pub use crate::arch::CoreId;
 use crate::lib::core::CoreTrait;
-use crate::arch::ArchTrait;
-use crate::lib::device::Device;
 use crate::lib::interrupt::InterruptController;
 
 #[macro_use]

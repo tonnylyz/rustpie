@@ -1,7 +1,8 @@
+use rlibc::memcpy;
+
 use crate::arch::page_table::*;
 use crate::config::*;
 use crate::syscall::*;
-use rlibc::memcpy;
 
 pub fn page_fault_handler(va: usize) {
   assert_eq!(va % PAGE_SIZE, 0);

@@ -1,8 +1,11 @@
+use SystemCallValue::*;
+
 use crate::arch::{ArchPageTableEntry, ArchPageTableEntryTrait, ContextFrameTrait, PAGE_SIZE};
 use crate::config::CONFIG_USER_LIMIT;
-use crate::lib::{round_down};
-use crate::lib::address_space::{AddressSpace};
+use crate::lib::round_down;
+use crate::lib::address_space::AddressSpace;
 use crate::lib::core::{CoreTrait, current};
+use crate::lib::event::Event;
 use crate::lib::page_table::{Entry, PageTableEntryAttrTrait, PageTableTrait};
 
 use self::Error::*;
@@ -56,9 +59,6 @@ pub enum SystemCallValue {
   ISize(isize),
   USize(usize),
 }
-use SystemCallValue::*;
-use crate::lib::event::Event;
-use crate::lib::thread::Thread;
 
 pub type SyscallResult = Result<SystemCallValue, Error>;
 
@@ -134,8 +134,7 @@ impl SystemCallTrait for SystemCall {
       current_thread.destroy();
       SystemCall::thread_yield()
     } else {
-      let target = crate::lib::thread::lookup(tid);
-      match target {
+      match crate::lib::thread::lookup(tid) {
         None => { Err(PermissionDenied) }
         Some(t) => {
           if t.is_child_of(current_thread.tid()) {
@@ -160,7 +159,10 @@ impl SystemCallTrait for SystemCall {
 
     if asid == 0 && event != 0 {
       // register an interrupt event for current thread
-      crate::lib::interrupt::INTERRUPT_WAIT.add(current().running_thread().unwrap().clone(), event);
+      match crate::lib::interrupt::INTERRUPT_WAIT.add(current().running_thread().unwrap().clone(), event) {
+        Ok(_) => { return OK; }
+        Err(_) => { return Err(InternalError); }
+      }
     }
     OK
   }

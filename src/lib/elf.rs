@@ -1,5 +1,5 @@
 use crate::arch::{PAGE_SIZE, PageTable};
-use crate::lib::{round_down, round_up};
+use crate::lib::{round_up};
 use crate::lib::page_table::{EntryAttribute, PageTableEntryAttrTrait, PageTableTrait};
 
 pub enum Error {

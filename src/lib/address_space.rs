@@ -6,8 +6,8 @@ use spin::Mutex;
 
 use crate::arch::PageTable;
 use crate::lib::bitmap::BitMap;
-use crate::lib::page_table::PageTableTrait;
 use crate::lib::event::Event;
+use crate::lib::page_table::PageTableTrait;
 
 pub type Asid = u16;
 

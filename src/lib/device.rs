@@ -1,9 +1,10 @@
 use alloc::vec::Vec;
 use core::ops::Range;
-use crate::driver::Interrupt;
-use crate::mm::UserFrame;
-use crate::lib::round_down;
+
 use crate::arch::PAGE_SIZE;
+use crate::driver::Interrupt;
+use crate::lib::round_down;
+use crate::mm::UserFrame;
 
 #[derive(Debug)]
 pub struct Device {
@@ -25,7 +26,7 @@ impl Device {
     for range in self.registers.iter() {
       let start = round_down(range.start, PAGE_SIZE);
       for pa in (start..range.end).step_by(PAGE_SIZE) {
-        result.push(UserFrame::Device(pa));
+        result.push(UserFrame::new_device(pa));
       }
     }
     result

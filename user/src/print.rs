@@ -1,6 +1,6 @@
 use core::fmt;
 
-use crate::syscall::{thread_destroy, putc};
+use crate::syscall::{putc, thread_destroy};
 
 struct Writer;
 

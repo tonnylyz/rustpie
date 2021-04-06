@@ -1,8 +1,9 @@
+use rlibc::memcpy;
+
 use crate::arch::page_table::*;
 use crate::config::*;
 use crate::ipc::set_self_ipc;
 use crate::syscall::*;
-use rlibc::memcpy;
 
 fn duplicate_page(asid: u16, va: usize, pte: EntryAttribute) {
   if pte.shared {

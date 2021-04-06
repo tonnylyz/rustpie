@@ -1,6 +1,5 @@
 use alloc::boxed::Box;
 use core::mem::size_of;
-
 use register::*;
 use register::mmio::*;
 use spin::Mutex;

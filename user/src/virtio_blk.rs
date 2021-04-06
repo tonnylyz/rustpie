@@ -7,7 +7,7 @@ use register::mmio::*;
 use spin::Mutex;
 
 use crate::arch::Address;
-use crate::syscall::{thread_yield, thread_set_status, thread_destroy};
+use crate::syscall::{thread_destroy, thread_set_status, thread_yield};
 use crate::syscall::ThreadStatus::TsNotRunnable;
 
 const VIRTIO_MMIO_BASE: usize = 0x8_0000_0000 + 0x0a000000;

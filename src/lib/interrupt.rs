@@ -1,7 +1,9 @@
-use crate::driver::Interrupt;
 use alloc::collections::BTreeMap;
-use crate::lib::thread::Thread;
+
 use spin::Mutex;
+
+use crate::driver::Interrupt;
+use crate::lib::thread::Thread;
 
 pub trait InterruptController {
   fn init(&self);
