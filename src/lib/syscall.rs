@@ -16,6 +16,7 @@ pub enum Error {
   MemoryNotMappedError,
   _IpcNotReceivingError,
   InternalError,
+  PermissionDenied,
 }
 
 impl core::convert::From<crate::mm::page_pool::Error> for Error {
@@ -57,6 +58,7 @@ pub enum SystemCallValue {
 }
 use SystemCallValue::*;
 use crate::lib::event::Event;
+use crate::lib::thread::Thread;
 
 pub type SyscallResult = Result<SystemCallValue, Error>;
 
@@ -66,8 +68,8 @@ pub trait SystemCallTrait {
   fn get_asid(tid: u16) -> SyscallResult;
   fn get_tid() -> SyscallResult;
   fn thread_yield() -> SyscallResult;
-  fn address_space_destroy(asid: u16) -> SyscallResult;
-  fn process_set_exception_handler(asid: u16, value: usize, sp: usize, event: usize) -> SyscallResult;
+  fn thread_destroy(asid: u16) -> SyscallResult;
+  fn event_handler(asid: u16, value: usize, sp: usize, event: usize) -> SyscallResult;
   fn mem_alloc(asid: u16, va: usize, perm: usize) -> SyscallResult;
   fn mem_map(src_asid: u16, src_va: usize, dst_asid: u16, dst_va: usize, perm: usize) -> SyscallResult;
   fn mem_unmap(asid: u16, va: usize) -> SyscallResult;
@@ -83,6 +85,7 @@ pub trait SystemCallTrait {
 pub struct SystemCall;
 
 fn lookup_as(asid: u16) -> Result<AddressSpace, Error> {
+  // TODO: check permission
   match if asid == 0 {
     crate::lib::core::current().address_space()
   } else {
@@ -124,14 +127,30 @@ impl SystemCallTrait for SystemCall {
     OK
   }
 
-  fn address_space_destroy(asid: u16) -> SyscallResult {
-    // TODO: destroy associated threads
-    let a = lookup_as(asid)?;
-    a.destroy();
-    OK
+  fn thread_destroy(tid: u16) -> SyscallResult {
+    let current_thread = current().running_thread().unwrap();
+    if tid == 0 {
+      println!("current thread {} destroyed", current_thread.tid());
+      current_thread.destroy();
+      SystemCall::thread_yield()
+    } else {
+      let target = crate::lib::thread::lookup(tid);
+      match target {
+        None => { Err(PermissionDenied) }
+        Some(t) => {
+          if t.is_child_of(current_thread.tid()) {
+            // TODO: check if destroy safe for inter-processor
+            t.destroy();
+            OK
+          } else {
+            Err(PermissionDenied)
+          }
+        }
+      }
+    }
   }
 
-  fn process_set_exception_handler(asid: u16, entry: usize, sp: usize, event: usize) -> SyscallResult {
+  fn event_handler(asid: u16, entry: usize, sp: usize, event: usize) -> SyscallResult {
     let e = match event {
       0 => Event::PageFault,
       x => Event::Interrupt(x),

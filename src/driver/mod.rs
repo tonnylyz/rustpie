@@ -9,5 +9,5 @@ mod aarch64_virt;
 #[cfg(feature = "riscv64_virt")]
 mod riscv64_virt;
 
-pub mod common;
+// pub mod common;
 pub mod mmio;

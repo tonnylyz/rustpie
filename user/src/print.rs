@@ -1,6 +1,6 @@
 use core::fmt;
 
-use crate::syscall::{process_destroy, putc};
+use crate::syscall::{thread_destroy, putc};
 
 struct Writer;
 
@@ -33,7 +33,7 @@ fn panic_handler(info: &core::panic::PanicInfo) -> ! {
   } else {
     println!("\nuser panic!");
   }
-  match process_destroy(0) {
+  match thread_destroy(0) {
     Ok(_) => {}
     Err(_) => { println!("user: panic_handler: process_destroy failed"); }
   }

@@ -32,18 +32,18 @@ pub fn get_asid() -> u16 {
   unsafe { syscall_2(0) }
 }
 
-pub fn process_yield() {
+pub fn thread_yield() {
   unsafe { syscall_3(); }
 }
 
-pub fn process_destroy(asid: u16) -> Result<(), Error> {
-  match unsafe { syscall_4(asid) } {
+pub fn thread_destroy(tid: u16) -> Result<(), Error> {
+  match unsafe { syscall_4(tid) } {
     -1 => Err(()),
     _ => Ok(()),
   }
 }
 
-pub fn process_set_exception_handler(asid: u16, value: usize, sp: usize, event: usize) -> Result<(), Error> {
+pub fn event_handler(asid: u16, value: usize, sp: usize, event: usize) -> Result<(), Error> {
   match unsafe { syscall_5(asid, value, sp, event) } {
     -1 => Err(()),
     _ => Ok(()),

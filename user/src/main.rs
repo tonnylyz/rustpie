@@ -54,7 +54,7 @@ fn _start(arg: usize) -> ! {
     3 => { virtio_blk() }
     _ => unsafe { print(arg as u8 as char) }
   }
-  match process_destroy(0) {
+  match thread_destroy(0) {
     Ok(_) => {}
     Err(_) => {}
   }
@@ -65,7 +65,7 @@ fn virtio_blk() {
   virtio_blk::init();
   println!("virtio_blk init ok");
   mem_alloc(0, 0x7_0000_0000, PTE_DEFAULT);
-  process_set_exception_handler(0, virtio_blk::irq as usize, 0x7_0000_1000, 0x10 + 32);
+  event_handler(0, virtio_blk::irq as usize, 0x7_0000_1000, 0x10 + 32);
   mem_alloc(0, 0x3000_0000, PTE_DEFAULT).unwrap();
   loop {
     virtio_blk::read(0, 8, 0x3000_0000);

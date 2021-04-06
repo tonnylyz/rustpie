@@ -68,15 +68,6 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "baf1de4339761588bc0619e3cbc0120ee582ebb74b53b4efbf79117bd2da40fd"
 
 [[package]]
-name = "core_io"
-version = "0.1.20210325"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "97f8932064288cc79feb4d343a399d353a6f6f001e586ece47fe518a9e8507df"
-dependencies = [
- "rustc_version",
-]
-
-[[package]]
 name = "cortex-a"
 version = "5.1.6"
 dependencies = [
@@ -99,18 +90,6 @@ name = "fallible-iterator"
 version = "0.2.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "4443176a9f2c162692bd3d352d745ef9413eec5782a80d8fd6f8a1ac692a07f7"
-
-[[package]]
-name = "fatfs"
-version = "0.3.5"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "e18f80a87439240dac45d927fd8f8081b6f1e34c03e97271189fa8a8c2e96c8f"
-dependencies = [
- "bitflags",
- "byteorder",
- "core_io",
- "log",
-]
 
 [[package]]
 name = "gimli"
@@ -208,25 +187,14 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "6e3bad0ee36814ca07d7968269dd4b7ec89ec2da10c4bb613928d3077083c232"
 
 [[package]]
-name = "rustc_version"
-version = "0.1.7"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "c5f5376ea5e30ce23c03eb77cbe4962b988deead10910c372b226388b594c084"
-dependencies = [
- "semver",
-]
-
-[[package]]
 name = "rustpi"
 version = "0.1.0"
 dependencies = [
  "addr2line",
  "backtracer",
  "buddy_system_allocator",
- "core_io",
  "cortex-a",
  "elfloader",
- "fatfs",
  "register 1.0.2",
  "riscv",
  "rlibc",
@@ -239,12 +207,6 @@ name = "scopeguard"
 version = "1.1.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "d29ab0c6d3fc0ee92fe66e2d99f700eab17a8d57d1c1d3b748380fb20baa78cd"
-
-[[package]]
-name = "semver"
-version = "0.1.20"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "d4f410fedcf71af0345d7607d246e7ad15faaadd49d240ee3b24e5dc21a820ac"
 
 [[package]]
 name = "smallvec"

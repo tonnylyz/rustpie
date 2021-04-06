@@ -52,6 +52,15 @@ impl Thread {
     self.0.tid
   }
 
+  pub fn is_child_of(&self, tid: Tid) -> bool {
+    match &self.0.parent {
+      None => { false }
+      Some(t) => {
+        t.tid() == tid
+      }
+    }
+  }
+
   pub fn set_status(&self, status: Status) {
     let mut lock = self.0.status.lock();
     *lock = status;

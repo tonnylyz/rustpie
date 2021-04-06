@@ -11,8 +11,8 @@
 #[macro_use]
 extern crate alloc;
 extern crate rlibc;
-extern crate fatfs;
-extern crate core_io;
+// extern crate fatfs;
+// extern crate core_io;
 
 pub use crate::arch::CoreId;
 use crate::lib::core::CoreTrait;

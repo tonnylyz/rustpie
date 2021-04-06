@@ -11,8 +11,8 @@ register = "1.0.2"
 buddy_system_allocator = "0.7.0"
 spin = "0.9.0"
 xmas-elf = "0.7.0"
-fatfs = { version = "0.3.5", features = ["core_io", "alloc"], default-features = false }
-core_io = "0.1"
+#fatfs = { version = "0.3.5", features = ["core_io", "alloc"], default-features = false }
+#core_io = "0.1"
 
 elfloader = "0.11.0"
 backtracer = { path = "../backtracer" }

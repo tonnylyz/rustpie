@@ -72,7 +72,7 @@ pub fn fork() -> i32 {
         Ok(_) => {}
         Err(_) => { panic!("fork: mem_alloc failed") }
       }
-      match process_set_exception_handler(asid, asm_page_fault_handler as usize, EXCEPTION_STACK_TOP, 0) {
+      match event_handler(asid, asm_page_fault_handler as usize, EXCEPTION_STACK_TOP, 0) {
         Ok(_) => {}
         Err(_) => { panic!("fork: process_set_exception_handler failed") }
       }

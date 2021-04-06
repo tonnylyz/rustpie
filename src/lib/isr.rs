@@ -39,10 +39,10 @@ impl InterruptServiceRoutine for Isr {
         SystemCall::thread_yield()
       }
       4 => {
-        SystemCall::address_space_destroy(arg(0) as u16)
+        SystemCall::thread_destroy(arg(0) as u16)
       }
       5 => {
-        SystemCall::process_set_exception_handler(arg(0) as u16, arg(1), arg(2), arg(3))
+        SystemCall::event_handler(arg(0) as u16, arg(1), arg(2), arg(3))
       }
       6 => {
         SystemCall::mem_alloc(arg(0) as u16, arg(1), arg(2))
@@ -136,7 +136,7 @@ impl InterruptServiceRoutine for Isr {
             match a.event_handler(Event::Interrupt(int)) {
               None => { println!("no event handler") }
               Some((pc, sp)) => {
-                let nt = crate::lib::thread::new_user(pc, sp, int, a.clone(), Some(t.clone()));
+                let nt = crate::lib::thread::new_user(pc, sp, int, a.clone(), None);
                 nt.set_status(crate::lib::thread::Status::TsRunnable);
 
                 crate::driver::timer::next();

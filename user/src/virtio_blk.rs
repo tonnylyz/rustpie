@@ -7,7 +7,7 @@ use register::mmio::*;
 use spin::Mutex;
 
 use crate::arch::Address;
-use crate::syscall::{process_yield, thread_set_status};
+use crate::syscall::{thread_yield, thread_set_status, thread_destroy};
 use crate::syscall::ThreadStatus::TsNotRunnable;
 
 const VIRTIO_MMIO_BASE: usize = 0x8_0000_0000 + 0x0a000000;
@@ -360,7 +360,6 @@ const VIRTIO_BLK_S_OK: u8 = 0;
 const VIRTIO_BLK_S_IOERR: u8 = 1;
 const VIRTIO_BLK_S_UNSUPP: u8 = 2;
 
-
 pub fn irq() {
   let mmio = &VIRTIO_MMIO;
   let status = mmio.InterruptStatus.get();
@@ -410,5 +409,5 @@ pub fn irq() {
   }
   mmio.InterruptACK.set(status);
   println!("irq handled by user server");
-  loop {}
+  thread_destroy(0);
 }
