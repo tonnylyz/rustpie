@@ -136,10 +136,8 @@ impl InterruptServiceRoutine for Isr {
             match a.event_handler(Event::Interrupt(int)) {
               None => { println!("no event handler") }
               Some((pc, sp)) => {
-                // panic!("spawn new thread");
-                INTERRUPT_CONTROLLER.disable(int);
-                let child_thread = crate::lib::thread::new_user(pc, sp, int, a.clone(), Some(t.clone()));
-                child_thread.set_status(crate::lib::thread::Status::TsRunnable);
+                let nt = crate::lib::thread::new_user(pc, sp, int, a.clone(), Some(t.clone()));
+                nt.set_status(crate::lib::thread::Status::TsRunnable);
 
                 crate::driver::timer::next();
                 crate::lib::core::current().schedule();

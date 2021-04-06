@@ -167,6 +167,14 @@ impl GicDistributor {
     let prev = self.IPRIORITYR[idx].get();
     self.IPRIORITYR[idx].set((prev & (!mask)) | (((priority as u32) << offset) & mask));
   }
+
+  fn set_config(&self, int: usize, edge: bool) {
+    let idx = (int * 2) / 32;
+    let offset = (int * 2) % 32;
+    let mask: u32 = 0b11 << offset;
+    let prev = self.ICFGR[idx].get();
+    self.ICFGR[idx].set((prev & (!mask)) | ((if edge {0b10} else {0b00} << offset) & mask));
+  }
 }
 
 static GICD: GicDistributor = GicDistributor::new(GICD_BASE | 0xFFFF_FF80_0000_0000);
@@ -191,6 +199,9 @@ impl InterruptController for Gic {
     let gicd = &GICD;
     gicd.set_enable(int);
     gicd.set_priority(int, 0x7f);
+    if int >= 32 {
+      gicd.set_config(int, true);
+    }
     gicd.set_target(int, (1 << core_id) as u8);
   }
 
@@ -212,7 +223,6 @@ impl InterruptController for Gic {
   fn finish(&self, int: Interrupt) {
     let gicc = &GICC;
     gicc.EOIR.set(int as u32);
-    gicc.DIR.set(int as u32);
   }
 }
 

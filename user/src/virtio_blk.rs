@@ -1,4 +1,5 @@
 use alloc::boxed::Box;
+use alloc::vec::Vec;
 use core::mem::size_of;
 
 use register::*;
@@ -6,7 +7,7 @@ use register::mmio::*;
 use spin::Mutex;
 
 use crate::arch::Address;
-use crate::syscall::{thread_set_status, process_yield};
+use crate::syscall::{process_yield, thread_set_status};
 use crate::syscall::ThreadStatus::TsNotRunnable;
 
 const VIRTIO_MMIO_BASE: usize = 0x8_0000_0000 + 0x0a000000;
@@ -202,7 +203,6 @@ struct VirtioRing {
   device: VirtioRingDevice,
 }
 
-
 static VIRTIO_RING: Mutex<VirtioRing> = Mutex::new(VirtioRing {
   desc: [VirtioRingDesc {
     addr: 0,
@@ -264,11 +264,11 @@ pub enum Operation {
 }
 
 #[repr(C)]
+#[derive(Debug)]
 pub struct VirtioBlkOutHdr {
   t: u32,
   priority: u32,
   sector: u64,
-  // status: u8,
 }
 
 /* This marks a buffer as continuing via the next field */
@@ -278,45 +278,34 @@ const VRING_DESC_F_WRITE: u16 = 2;
 /* This means the buffer contains a list of buffer descriptors */
 const VRING_DESC_F_INDIRECT: u16 = 4;
 
-pub enum DiskRequestData<'a> {
-  Read(&'a mut [u8]),
-  Write(&'a [u8]),
-}
-
-pub struct DiskRequest<'a> {
+#[derive(Debug)]
+pub struct DiskRequest {
   sector: usize,
   count: usize,
-  data: DiskRequestData<'a>,
-  imp: Box<VirtioBlkOutHdr>, // implementation specified (desc chain head idx)
+  buf: usize,
+  imp: Box<VirtioBlkOutHdr>,
+  status: Box<u8>,
 }
 
 pub struct Disk {
   last_used: u16,
+  requests: Vec<DiskRequest>,
 }
 
-pub fn read(sector: usize, count: usize, buf: usize)/* -> Box<DiskRequest>*/ {
+static DISK: Mutex<Disk> = Mutex::new(Disk {
+  last_used: 0,
+  requests: Vec::new(),
+});
+
+pub fn read(sector: usize, count: usize, buf: usize) {
   io(sector, count, buf, Operation::Read);
-  // let addr = buf.base_addr_usize();
-  // Box::new(DiskRequest {
-  //   sector,
-  //   count,
-  //   data: DiskRequestData::Read(buf),
-  //   imp: io(sector, count, addr, Read),
-  // })
 }
 
-pub fn write(sector: usize, count: usize, buf: usize)/* -> Box<DiskRequest>*/ {
+pub fn write(sector: usize, count: usize, buf: usize) {
   io(sector, count, buf, Operation::Write);
-  // let addr = buf.base_addr_usize();
-  // Box::new(DiskRequest {
-  //   sector,
-  //   count,
-  //   data: DiskRequestData::Write(buf),
-  //   imp: io(sector, count, addr, Write),
-  // })
 }
 
-fn io(sector: usize, count: usize, buf: usize, op: Operation) /*-> Box<VirtioBlkOutHdr>*/ {
+fn io(sector: usize, count: usize, buf: usize, op: Operation) {
   let hdr = Box::new(VirtioBlkOutHdr {
     t: match op {
       Operation::Read => 0,
@@ -354,14 +343,72 @@ fn io(sector: usize, count: usize, buf: usize, op: Operation) /*-> Box<VirtioBlk
   // barrier
   avail.idx = avail.idx.wrapping_add(1);
 
-  let mmio = &VIRTIO_MMIO;
+  let mut disk = DISK.lock();
+  disk.requests.push(DiskRequest {
+    sector,
+    count,
+    buf,
+    imp: hdr,
+    status
+  });
 
-  mmio.QueueNotify.set(0); // queue num
-  // loop {
-  //   if mmio.InterruptStatus.get() == 1 {
-  //     mmio.InterruptACK.set(1);
-  //     break;
-  //   }
-  // }
-  // hdr
+  let mmio = &VIRTIO_MMIO;
+  mmio.QueueNotify.set(0); // queue num #0
+}
+
+const VIRTIO_BLK_S_OK: u8 = 0;
+const VIRTIO_BLK_S_IOERR: u8 = 1;
+const VIRTIO_BLK_S_UNSUPP: u8 = 2;
+
+
+pub fn irq() {
+  let mmio = &VIRTIO_MMIO;
+  let status = mmio.InterruptStatus.get();
+  if status & 0b01 != 0 {
+    // Used Buffer Notification: the device has used a buffer in at least one of the active virtual queues.
+
+    let ring = VIRTIO_RING.lock();
+    let mut disk = DISK.lock();
+    let used = &ring.device;
+
+    println!("last used {} used {}", disk.last_used, used.idx);
+    loop {
+      if disk.last_used == used.idx {
+        break;
+      }
+      if disk.requests.is_empty() {
+        println!("no requests record");
+        break;
+      }
+      if used.ring[(disk.last_used as usize) % QUEUE_SIZE].id != 0 {
+        // TODO?
+        println!("unexpected ring desc head, only #0 is used");
+        break;
+      }
+      let req = &disk.requests[0];
+      match *req.status {
+        VIRTIO_BLK_S_OK => {
+          println!("ok {:#x?}", req);
+        }
+        VIRTIO_BLK_S_IOERR => {
+          println!("status io err {:#x?}", req);
+        }
+        VIRTIO_BLK_S_UNSUPP => {
+          println!("status unsupported {:#x?}", req);
+        }
+        x => {
+          println!("unknown status {}", x);
+        }
+      }
+      disk.requests.remove(0);
+      disk.last_used += 1;
+    }
+  }
+  if status & 0b10 != 0 {
+    // Configuration Change Notification
+    println!("Configuration Change Notification not handled!");
+  }
+  mmio.InterruptACK.set(status);
+  println!("irq handled by user server");
+  loop {}
 }
