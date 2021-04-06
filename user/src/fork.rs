@@ -63,7 +63,7 @@ extern "C" {
 pub fn fork() -> i32 {
   match address_space_alloc() {
     Ok((asid, tid)) => if asid == 0 {
-      set_self_ipc(get_asid());
+      set_self_ipc(get_asid(0));
       0
     } else {
       traverse(TRAVERSE_LIMIT, |va, attr| {

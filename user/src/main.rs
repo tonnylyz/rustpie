@@ -17,6 +17,7 @@ use syscall::*;
 
 use crate::arch::Address;
 use crate::config::PAGE_SIZE;
+use alloc::boxed::Box;
 
 #[macro_export]
 macro_rules! print {
@@ -52,6 +53,7 @@ fn _start(arg: usize) -> ! {
     1 => { pingpong() }
     2 => { heap_test() }
     3 => { virtio_blk() }
+    4 => { itc_test() }
     _ => unsafe { print(arg as u8 as char) }
   }
   match thread_destroy(0) {
@@ -59,6 +61,45 @@ fn _start(arg: usize) -> ! {
     Err(_) => {}
   }
   loop {};
+}
+
+#[repr(C)]
+#[derive(Copy, Clone, Debug)]
+struct ItcMessage {
+  a: usize,
+  b: usize,
+  c: usize,
+  d: usize,
+}
+
+fn itc_test2(arg: usize) {
+  println!("itc_test2: arg {}", arg);
+  let mut msg = Box::new(ItcMessage {
+    a: 0x1010101010,
+    b: 0x2020202020,
+    c: 0x3030303030,
+    d: 0x4040404040,
+  });
+  itc_receive(msg.as_mut() as *mut _ as usize);
+  println!("receive {:x?}", msg);
+  loop {}
+}
+
+fn itc_test() {
+  println!("itc_test start");
+  mem_alloc(0, 0x1000_0000, PTE_DEFAULT).unwrap();
+  let t2 = thread_alloc(itc_test2 as usize, 0x1000_0000 + PAGE_SIZE, 0).unwrap();
+  thread_yield();
+  for _ in 0..0x100000 {
+    unsafe { llvm_asm!("nop"); }
+  }
+  let r = itc_send(t2, 0x11121314, 0x21222324, 0x31323334, 0x41424344);
+  if r == 0 {
+    println!("send ok");
+  } else {
+    println!("send error {}", r);
+  }
+  loop {}
 }
 
 fn virtio_blk() {
@@ -89,18 +130,18 @@ fn virtio_blk() {
 fn pingpong() {
   let who = fork();
   if who > 0 {
-    println!("send 0 from {} to {}", get_asid(), who);
+    println!("send 0 from {} to {}", get_asid(0), who);
     ipc::send(who as u16, 0, 0, PTE_DEFAULT);
   }
   loop {
-    println!("{} is waiting", get_asid());
+    println!("{} is waiting", get_asid(0));
     let (who, value, _) = ipc::receive(0);
-    println!("{} received {} from {}", get_asid(), value, who);
+    println!("{} received {} from {}", get_asid(0), value, who);
     if value == 10 {
       return;
     }
     let value = value + 1;
-    println!("{} send {} to {}", get_asid(), value, who);
+    println!("{} send {} to {}", get_asid(0), value, who);
     ipc::send(who, value, 0, PTE_DEFAULT);
     if value == 10 {
       return;
@@ -109,7 +150,7 @@ fn pingpong() {
 }
 
 fn fktest() {
-  println!("fktest started pid {}", get_asid());
+  println!("fktest started pid {}", get_asid(0));
   let mut a = 0;
   let mut id = fork();
   if id == 0 {

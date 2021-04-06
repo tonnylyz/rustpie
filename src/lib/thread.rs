@@ -17,7 +17,7 @@ pub enum Type {
   Kernel,
 }
 
-#[derive(Debug, Eq, PartialEq)]
+#[derive(Debug, Eq, PartialEq, Copy, Clone)]
 pub enum Status {
   TsRunnable = 1,
   TsNotRunnable = 2,
@@ -25,13 +25,14 @@ pub enum Status {
 }
 
 #[derive(Debug)]
-pub struct ControlBlock {
+struct Inner {
   tid: Tid,
   parent: Option<Thread>,
   t: Type,
   status: Mutex<Status>,
   context_frame: Mutex<ContextFrame>,
   running_core: Mutex<Option<CoreId>>,
+  msg_ptr: Mutex<Option<usize>>,
 }
 
 pub enum Error {
@@ -39,7 +40,7 @@ pub enum Error {
 }
 
 #[derive(Debug, Clone)]
-pub struct Thread(Arc<ControlBlock>);
+pub struct Thread(Arc<Inner>);
 
 impl PartialEq for Thread {
   fn eq(&self, other: &Self) -> bool {
@@ -59,6 +60,10 @@ impl Thread {
         t.tid() == tid
       }
     }
+  }
+
+  pub fn status(&self) -> Status {
+    *self.0.status.lock()
   }
 
   pub fn set_status(&self, status: Status) {
@@ -112,6 +117,16 @@ impl Thread {
     }
     free(self)
   }
+
+  pub fn msg_ptr(&self) -> Option<usize> {
+    let ptr = self.0.msg_ptr.lock();
+    ptr.clone()
+  }
+
+  pub fn set_msg_ptr(&self, msg_ptr: usize) {
+    let mut ptr = self.0.msg_ptr.lock();
+    *ptr = Some(msg_ptr);
+  }
 }
 
 struct ThreadPool {
@@ -122,13 +137,14 @@ struct ThreadPool {
 impl ThreadPool {
   fn alloc_user(&mut self, pc: usize, sp: usize, arg: usize, a: AddressSpace, t: Option<Thread>) -> Thread {
     let id = (self.bitmap.alloc() + 1) as Tid;
-    let arc = Arc::new(ControlBlock {
+    let arc = Arc::new(Inner {
       tid: id,
       parent: t,
       t: Type::User(a),
       status: Mutex::new(Status::TsNotRunnable),
       context_frame: Mutex::new(ContextFrame::new(pc, sp, arg, false)),
       running_core: Mutex::new(None),
+      msg_ptr: Mutex::new(None)
     });
     let mut map = THREAD_MAP.get().unwrap().lock();
     map.insert(id, arc.clone());
@@ -138,13 +154,14 @@ impl ThreadPool {
 
   fn alloc_kernel(&mut self, pc: usize, sp: usize, arg: usize) -> Thread {
     let id = (self.bitmap.alloc() + 1) as Tid;
-    let arc = Arc::new(ControlBlock {
+    let arc = Arc::new(Inner {
       tid: id,
       parent: None,
       t: Type::Kernel,
       status: Mutex::new(Status::TsNotRunnable),
       context_frame: Mutex::new(ContextFrame::new(pc, sp, arg, true)),
       running_core: Mutex::new(None),
+      msg_ptr: Mutex::new(None)
     });
     let mut map = THREAD_MAP.get().unwrap().lock();
     map.insert(id, arc.clone());
@@ -169,7 +186,7 @@ impl ThreadPool {
   }
 }
 
-static THREAD_MAP: spin::Once<Mutex<BTreeMap<Tid, Arc<ControlBlock>>>> = spin::Once::new();
+static THREAD_MAP: spin::Once<Mutex<BTreeMap<Tid, Arc<Inner>>>> = spin::Once::new();
 
 pub fn init() {
   THREAD_MAP.call_once(|| {
@@ -208,7 +225,6 @@ pub fn list() -> Vec<Thread> {
   r
 }
 
-#[allow(dead_code)]
 pub fn lookup(tid: Tid) -> Option<Thread> {
   let map = THREAD_MAP.get().unwrap().lock();
   let r = match map.get(&tid) {

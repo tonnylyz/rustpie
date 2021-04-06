@@ -101,6 +101,7 @@ pub unsafe fn main(core_id: arch::CoreId) -> ! {
     //    1 - pingpong: an IPC test
     //    2 - heap_test: test copy on write of heap
     //    3 - virtio_blk server
+    //    4 - itc test
     #[cfg(target_arch = "aarch64")]
       let (a, entry) = lib::address_space::load_image(&lib::user_image::_binary_user_aarch64_elf_start);
     #[cfg(target_arch = "riscv64")]
@@ -113,7 +114,7 @@ pub unsafe fn main(core_id: arch::CoreId) -> ! {
     page_table.insert_page(config::CONFIG_USER_STACK_TOP - arch::PAGE_SIZE,
                            mm::UserFrame::new_memory(mm::page_pool::alloc()),
                            lib::page_table::EntryAttribute::user_default()).unwrap();
-    let t = crate::lib::thread::new_user(entry, config::CONFIG_USER_STACK_TOP, 3, a.clone(), None);
+    let t = crate::lib::thread::new_user(entry, config::CONFIG_USER_STACK_TOP, 4, a.clone(), None);
     t.set_status(crate::lib::thread::Status::TsRunnable);
 
 
