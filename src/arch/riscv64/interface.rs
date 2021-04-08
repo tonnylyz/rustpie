@@ -41,7 +41,7 @@ impl crate::arch::ArchTrait for Riscv64Arch {
     riscv::barrier::sfence_vma_all();
   }
 
-  fn wait_for_event() {
+  fn wait_for_interrupt() {
     wfi();
   }
 

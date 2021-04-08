@@ -1,10 +1,22 @@
 use core::fmt;
 
 use crate::syscall::{putc, thread_destroy};
+use spin::Mutex;
+
+macro_rules! print {
+    ($($arg:tt)*) => ($crate::print::print_arg(format_args!($($arg)*)));
+}
+
+macro_rules! println {
+    () => (print!("\n"));
+    ($($arg:tt)*) => ({
+        $crate::print::print_arg(format_args_nl!($($arg)*));
+    })
+}
 
 struct Writer;
 
-static mut WRITER: Writer = Writer;
+static WRITER: Mutex<Writer> = Mutex::new(Writer);
 
 impl fmt::Write for Writer {
   fn write_str(&mut self, s: &str) -> fmt::Result {
@@ -17,9 +29,8 @@ impl fmt::Write for Writer {
 
 pub fn print_arg(args: fmt::Arguments) {
   use core::fmt::Write;
-  unsafe {
-    WRITER.write_fmt(args).unwrap();
-  }
+  let mut writer = WRITER.lock();
+  writer.write_fmt(args).unwrap();
 }
 
 #[panic_handler]
@@ -33,9 +44,6 @@ fn panic_handler(info: &core::panic::PanicInfo) -> ! {
   } else {
     println!("\nuser panic!");
   }
-  match thread_destroy(0) {
-    Ok(_) => {}
-    Err(_) => { println!("user: panic_handler: process_destroy failed"); }
-  }
+  thread_destroy(0).unwrap();
   loop {}
 }

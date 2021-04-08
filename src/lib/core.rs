@@ -140,9 +140,15 @@ impl CoreTrait for Core {
   }
 
   fn set_address_space(&mut self, a: AddressSpace) {
-    self.address_space = Some(a.clone());
-    crate::arch::PageTable::set_user_page_table(a.page_table().base_pa(), a.asid() as AddressSpaceId);
-    crate::arch::Arch::invalidate_tlb();
+    let mut prev_id = u16::MAX;
+    if let Some(prev) = &self.address_space {
+      prev_id = prev.asid();
+    }
+    if a.asid() != prev_id {
+      self.address_space = Some(a.clone());
+      crate::arch::PageTable::set_user_page_table(a.page_table().base_pa(), a.asid() as AddressSpaceId);
+      crate::arch::Arch::invalidate_tlb();
+    }
   }
 
   fn clear_address_space(&mut self) {
@@ -157,6 +163,6 @@ pub fn current() -> &'static mut Core {
 
 fn idle_thread(_arg: usize) {
   loop {
-    crate::arch::Arch::wait_for_event();
+    crate::arch::Arch::wait_for_interrupt();
   }
 }

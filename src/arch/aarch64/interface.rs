@@ -47,8 +47,8 @@ impl crate::arch::ArchTrait for Aarch64Arch {
     }
   }
 
-  fn wait_for_event() {
-    wfe();
+  fn wait_for_interrupt() {
+    wfi();
   }
 
   fn nop() {

@@ -1,4 +1,3 @@
-// rCore buddy system allocator
 use buddy_system_allocator::LockedHeap;
 
 use crate::arch::page_table::PTE_DEFAULT;

@@ -9,7 +9,7 @@ pub enum ThreadStatus {
 }
 
 extern "C" {
-  fn syscall_0(); // null
+fn syscall_0(); // null
 fn syscall_1(x0: u8); // putc
 fn syscall_2(tid: u16) -> u16; // get_asid
 fn syscall_3() -> u16; // get_tid
@@ -25,7 +25,7 @@ fn syscall_12(tid: u16, status: usize) -> isize; // thread_set_status
 fn syscall_13(dst_va: usize); // ipc_receive
 fn syscall_14(asid: u16, value: usize, src_va: usize, attr: usize) -> isize; // ipc_can_send
 fn syscall_15(msg_ptr: usize);
-  fn syscall_16(tid: u16, a: usize, b: usize, c: usize, d: usize) -> isize;
+fn syscall_16(tid: u16, a: usize, b: usize, c: usize, d: usize) -> isize;
 }
 
 pub fn null() { unsafe { syscall_0(); } }

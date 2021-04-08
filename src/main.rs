@@ -14,11 +14,6 @@ extern crate rlibc;
 // extern crate fatfs;
 // extern crate core_io;
 
-use crate::arch::ArchTrait;
-pub use crate::arch::CoreId;
-use crate::lib::core::CoreTrait;
-use crate::lib::interrupt::InterruptController;
-
 #[macro_use]
 mod misc;
 
@@ -29,6 +24,13 @@ mod lib;
 mod mm;
 mod config;
 mod panic;
+
+use crate::arch::ArchTrait;
+pub use crate::arch::CoreId;
+use crate::lib::core::CoreTrait;
+use crate::lib::interrupt::InterruptController;
+use lib::page_table::PageTableTrait;
+use lib::page_table::PageTableEntryAttrTrait;
 
 pub fn core_id() -> CoreId {
   crate::arch::Arch::core_id()
@@ -96,27 +98,24 @@ pub unsafe fn main(core_id: arch::CoreId) -> ! {
   }
 
   if core_id == 0 {
-    // Note: `arg` is used to start different programs:
-    //    0 - fktest: a `fork` test
-    //    1 - pingpong: an IPC test
-    //    2 - heap_test: test copy on write of heap
-    //    3 - virtio_blk server
-    //    4 - itc test
     #[cfg(target_arch = "aarch64")]
       let (a, entry) = lib::address_space::load_image(&lib::user_image::_binary_user_aarch64_elf_start);
     #[cfg(target_arch = "riscv64")]
       let (a, entry) = lib::address_space::load_image(&lib::user_image::_binary_user_riscv64_elf_start);
 
+    // Note: `arg` is used to start different programs:
+    //    0 - fktest: a `fork` test
+    //    3 - virtio_blk server
+    //    4 - itc test
+    const INIT_ARG: usize = 3;
+
     let page_table = a.page_table();
 
-    use lib::page_table::PageTableTrait;
-    use lib::page_table::PageTableEntryAttrTrait;
     page_table.insert_page(config::CONFIG_USER_STACK_TOP - arch::PAGE_SIZE,
                            mm::UserFrame::new_memory(mm::page_pool::alloc()),
                            lib::page_table::EntryAttribute::user_default()).unwrap();
-    let t = crate::lib::thread::new_user(entry, config::CONFIG_USER_STACK_TOP, 4, a.clone(), None);
+    let t = crate::lib::thread::new_user(entry, config::CONFIG_USER_STACK_TOP, INIT_ARG, a.clone(), None);
     t.set_status(crate::lib::thread::Status::TsRunnable);
-
 
     use crate::lib::device::*;
     let virtio_mmio = Device::new(vec![

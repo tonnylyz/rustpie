@@ -248,7 +248,6 @@ impl SyscallTrait for Syscall {
     let t = crate::lib::core::current().running_thread().unwrap();
     let a = t.address_space().unwrap();
     let child_thread = crate::lib::thread::new_user(entry, sp, arg, a.clone(), current().running_thread());
-    println!("{}", child_thread.context());
     child_thread.set_status(crate::lib::thread::Status::TsRunnable);
     U16(child_thread.tid()).into()
   }
@@ -324,8 +323,10 @@ impl SyscallTrait for Syscall {
 
 pub fn syscall() {
   let ctx = crate::lib::core::current().context_mut();
+  let tid = current().running_thread().unwrap().tid();
   let arg = |i: usize| { ctx.syscall_argument(i) };
-  let scr = match ctx.syscall_number() {
+  let num = ctx.syscall_number();
+  let scr = match num {
     0 => Syscall::null(),
     1 => Syscall::putc(arg(0) as u8 as char),
     2 => Syscall::get_asid(arg(0) as u16),
@@ -372,13 +373,12 @@ pub fn syscall() {
           ctx.set_syscall_return_value(u as usize);
         }
       }
-      let num = (*ctx).syscall_number();
       if num != 1 {
-        println!("#{} {} Ok {}", num, SYSCALL_NAMES[num], ctx.syscall_argument(0));
+        println!("#{}\t{} t{} Ok {:x}", num, SYSCALL_NAMES[num], tid, ctx.syscall_argument(0));
       }
     }
     Err(err) => {
-      println!("#{} {} Err {:x?}", (*ctx).syscall_number(), SYSCALL_NAMES[(*ctx).syscall_number()], err);
+      println!("#{}\t{} t{} Err {:x?}", num, SYSCALL_NAMES[num], tid, err);
       ctx.set_syscall_return_value(usize::MAX);
     }
   }

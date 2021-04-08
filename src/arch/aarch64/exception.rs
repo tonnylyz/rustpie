@@ -12,6 +12,17 @@ use crate::lib::core::CoreTrait;
 global_asm!(include_str!("exception.S"));
 
 #[no_mangle]
+unsafe extern "C" fn current_el_sp0_synchronous(ctx: *mut ContextFrame) {
+  panic!("current_el_sp0_synchronous\n{}", ctx.read());
+}
+
+#[no_mangle]
+unsafe extern "C" fn current_el_sp0_irq(ctx: *mut ContextFrame) {
+  // panic!("current_el_sp0_irq\n{}", ctx.read());
+  lower_aarch64_irq(ctx);
+}
+
+#[no_mangle]
 unsafe extern "C" fn current_el_spx_synchronous(ctx: *mut ContextFrame) {
   panic!("current_el_spx_synchronous\n{}", ctx.read());
 }

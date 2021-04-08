@@ -12,7 +12,7 @@ pub trait ArchTrait {
   // context filled in CONTEXT_FRAME, and its
   // page table installed at low address space.
   fn invalidate_tlb();
-  fn wait_for_event();
+  fn wait_for_interrupt();
   fn nop();
   fn fault_address() -> usize;
   fn core_id() -> usize;

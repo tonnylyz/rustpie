@@ -4,11 +4,11 @@ use core::mem::size_of;
 
 use register::*;
 use register::mmio::*;
-use spin::Mutex;
-
+use spin::{Mutex, Once};
+use crate::syscall::{thread_destroy, mem_alloc, mem_unmap};
 use crate::arch::Address;
-use crate::syscall::{thread_destroy, thread_set_status, thread_yield};
-use crate::syscall::ThreadStatus::TsNotRunnable;
+use crate::config::PAGE_SIZE;
+use crate::arch::page_table::PTE_DEFAULT;
 
 const VIRTIO_MMIO_BASE: usize = 0x8_0000_0000 + 0x0a000000;
 
@@ -285,6 +285,7 @@ pub struct DiskRequest {
   buf: usize,
   imp: Box<VirtioBlkOutHdr>,
   status: Box<u8>,
+  src: u16,
 }
 
 pub struct Disk {
@@ -297,15 +298,7 @@ static DISK: Mutex<Disk> = Mutex::new(Disk {
   requests: Vec::new(),
 });
 
-pub fn read(sector: usize, count: usize, buf: usize) {
-  io(sector, count, buf, Operation::Read);
-}
-
-pub fn write(sector: usize, count: usize, buf: usize) {
-  io(sector, count, buf, Operation::Write);
-}
-
-fn io(sector: usize, count: usize, buf: usize, op: Operation) {
+fn io(sector: usize, count: usize, buf: usize, op: Operation, src: u16) {
   let hdr = Box::new(VirtioBlkOutHdr {
     t: match op {
       Operation::Read => 0,
@@ -349,7 +342,8 @@ fn io(sector: usize, count: usize, buf: usize, op: Operation) {
     count,
     buf,
     imp: hdr,
-    status
+    status,
+    src
   });
 
   let mmio = &VIRTIO_MMIO;
@@ -387,6 +381,14 @@ pub fn irq() {
       let req = &disk.requests[0];
       match *req.status {
         VIRTIO_BLK_S_OK => {
+          {
+            use crate::itc::*;
+            use crate::syscall::*;
+            let r = itc_send(req.src, 0, 0, 0, 0);
+            if r != 0 {
+              println!("client not receiving!");
+            }
+          }
           println!("ok {:#x?}", req);
         }
         VIRTIO_BLK_S_IOERR => {
@@ -409,5 +411,89 @@ pub fn irq() {
   }
   mmio.InterruptACK.set(status);
   println!("irq handled by user server");
-  thread_destroy(0);
+  thread_destroy(0).unwrap();
+}
+
+static BLK_SERVER: Once<u16> = Once::new();
+
+pub fn server() {
+  use crate::syscall::*;
+  use crate::arch::page_table::*;
+  init();
+  println!("virtio_blk server ok t{}", get_tid());
+
+  const TEST_STACK: usize = 0x7_0004_0000;
+  mem_alloc(0, TEST_STACK, PTE_DEFAULT).unwrap();
+  thread_alloc(test as usize, TEST_STACK + PAGE_SIZE, 0);
+
+
+  const EVENT_STACK: usize = 0x7_0000_0000;
+  mem_alloc(0, EVENT_STACK, PTE_DEFAULT).unwrap();
+  event_handler(0, irq as usize, EVENT_STACK + PAGE_SIZE, 0x10 + 32).unwrap();
+
+  BLK_SERVER.call_once(|| get_tid());
+  loop {
+    use crate::itc::*;
+    use crate::syscall::*;
+
+    let mut msg = ItcMessage::default();
+    itc_receive(&mut msg as *mut _ as usize);
+    println!("blk server receive request {:x} {:x} {:x} {:x}", msg.a, msg.b, msg.c, msg.d);
+    let client_thread_id = msg.a as u16;
+    let sector = msg.b;
+    let count = msg.c;
+    let op = if (msg.a >> 16) == 0 { Operation::Read } else { Operation::Write };
+    let buf = msg.d;
+
+    io(sector, count, buf, op, client_thread_id);
+  }
+}
+
+fn test() {
+  use crate::itc::*;
+  use crate::syscall::*;
+  let mut sector = 0;
+
+  println!("virtio_blk client ok t{}", get_tid());
+  loop {
+    // Wait for block server
+    if BLK_SERVER.get().is_some() {
+      break;
+    }
+  }
+  let blk_server = *BLK_SERVER.get().unwrap();
+
+  loop {
+
+    const BUF: usize = 0x3000_0000;
+    mem_alloc(0, BUF, PTE_DEFAULT).unwrap();
+
+    loop {
+      let r = itc_send(blk_server,
+                       get_tid() as usize,
+                       sector,
+                       8,
+                       BUF);
+      if r == 0 {
+        break;
+      }
+      println!("retry send to blk server");
+    }
+
+
+    let mut msg = ItcMessage::default();
+    itc_receive(&mut msg as *mut _ as usize);
+
+    let slice = unsafe { core::slice::from_raw_parts(BUF as *const u8, PAGE_SIZE) };
+    println!("BLK[{}]", sector);
+    for i in 0..4096 {
+      print!("{:02x} ", slice[i]);
+      if (i + 1) % 16 == 0 {
+        println!();
+      }
+    }
+
+    mem_unmap(0, BUF);
+    sector += 8;
+  }
 }

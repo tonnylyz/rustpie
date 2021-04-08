@@ -36,9 +36,9 @@ vectors:
 
 // Current exception level with SP_EL0.
 .org 0x000
-    VECTOR_DISABLED
+    VECTOR current_el_sp0_synchronous
 .org 0x080
-    VECTOR_DISABLED
+    VECTOR current_el_sp0_irq
 .org 0x100
     VECTOR_DISABLED
 .org 0x180
@@ -48,7 +48,7 @@ vectors:
 .org 0x200
     VECTOR current_el_spx_synchronous
 .org 0x280
-    VECTOR current_el_spx_irq
+    VECTOR_DISABLED
 .org 0x300
     VECTOR_DISABLED // FIQ
 .org 0x380
