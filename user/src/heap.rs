@@ -8,12 +8,12 @@ use crate::syscall::mem_alloc;
 static HEAP_ALLOCATOR: LockedHeap = LockedHeap::empty();
 
 pub fn init() {
-  match mem_alloc(0, HEAP_BTM, PTE_DEFAULT) {
-    Ok(_) => {}
-    Err(_) => { panic!("heap: init: mem_alloc failed") }
+  const HEAP_SIZE: usize = 16;
+  for i in 0..HEAP_SIZE {
+    mem_alloc(0, HEAP_BTM + i * PAGE_SIZE, PTE_DEFAULT);
   }
   unsafe {
-    HEAP_ALLOCATOR.lock().init(HEAP_BTM, PAGE_SIZE)
+    HEAP_ALLOCATOR.lock().init(HEAP_BTM, HEAP_SIZE * PAGE_SIZE)
   }
 }
 

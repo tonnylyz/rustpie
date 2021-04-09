@@ -190,9 +190,9 @@ impl SyscallTrait for Syscall {
   }
 
   fn mem_alloc(asid: u16, va: usize, attr: usize) -> SyscallResult {
-    if va >= CONFIG_USER_LIMIT {
-      return Err(MemoryLimitError);
-    }
+    // if va >= CONFIG_USER_LIMIT {
+    //   return Err(MemoryLimitError);
+    // }
     let p = lookup_as(asid)?;
     let frame = crate::mm::page_pool::try_alloc()?;
     frame.zero();
@@ -207,9 +207,9 @@ impl SyscallTrait for Syscall {
   fn mem_map(src_asid: u16, src_va: usize, dst_asid: u16, dst_va: usize, attr: usize) -> SyscallResult {
     let src_va = round_down(src_va, PAGE_SIZE);
     let dst_va = round_down(dst_va, PAGE_SIZE);
-    if src_va >= CONFIG_USER_LIMIT || dst_va >= CONFIG_USER_LIMIT {
-      return Err(MemoryLimitError);
-    }
+    // if src_va >= CONFIG_USER_LIMIT || dst_va >= CONFIG_USER_LIMIT {
+    //   return Err(MemoryLimitError);
+    // }
     let src_as = lookup_as(src_asid)?;
     let dst_as = lookup_as(dst_asid)?;
     let src_pt = src_as.page_table();
@@ -225,9 +225,9 @@ impl SyscallTrait for Syscall {
   }
 
   fn mem_unmap(asid: u16, va: usize) -> SyscallResult {
-    if va >= CONFIG_USER_LIMIT {
-      return Err(MemoryLimitError);
-    }
+    // if va >= CONFIG_USER_LIMIT {
+    //   return Err(MemoryLimitError);
+    // }
     let a = lookup_as(asid)?;
     let page_table = a.page_table();
     page_table.remove_page(va)?;
@@ -316,6 +316,9 @@ impl SyscallTrait for Syscall {
       println!("recv thread runnable?");
       return Err(InternalError);
     }
+    let mut ctx = target.context();
+    ctx.set_syscall_return_value(t.tid() as usize);
+    target.set_context(ctx);
     target.set_status(TsRunnable);
     Ok(ISize(0))
   }

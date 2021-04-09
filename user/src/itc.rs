@@ -11,6 +11,20 @@ pub struct ItcMessage {
   pub d: usize,
 }
 
+impl ItcMessage {
+  pub fn receive() -> (u16, Self) {
+    let mut msg = ItcMessage::default();
+    let sender = itc_receive(&mut msg as *mut _ as usize) as u16;
+    println!("\t\t***t{} --> t{}", sender, get_tid());
+    (sender, msg)
+  }
+  pub fn send_to(&self, tid: u16) -> isize
+  {
+    println!("\t\t***t{} --> t{}", get_tid(), tid);
+    itc_send(tid, self.a, self.b, self.c, self.d)
+  }
+}
+
 fn itc_test2(arg: usize) {
   println!("itc_test2: arg {}", arg);
   let mut msg = Box::new(ItcMessage {
@@ -27,8 +41,8 @@ fn itc_test2(arg: usize) {
 pub fn test() {
   use crate::arch::page_table::*;
   println!("itc_test start");
-  mem_alloc(0, 0x1000_0000, PTE_DEFAULT).unwrap();
-  let t2 = thread_alloc(itc_test2 as usize, 0x1000_0000 + PAGE_SIZE, 0).unwrap();
+  mem_alloc(0, 0x1000_0000, PTE_DEFAULT);
+  let t2 = thread_alloc(itc_test2 as usize, 0x1000_0000 + PAGE_SIZE, 0);
   thread_yield();
   for _ in 0..0x100000 {
     unsafe { llvm_asm!("nop"); }

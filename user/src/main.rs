@@ -6,6 +6,7 @@
 #![feature(panic_info_message)]
 #![feature(format_args_nl)]
 
+#[macro_use]
 extern crate alloc;
 extern crate rlibc;
 
@@ -22,6 +23,8 @@ mod fork;
 mod heap;
 mod virtio_blk;
 mod itc;
+mod fs;
+mod mem;
 
 use crate::page_fault::{set_page_fault_handler, page_fault_handler};
 use crate::syscall::thread_destroy;
@@ -36,6 +39,6 @@ fn _start(arg: usize) -> ! {
     4 => { itc::test() }
     _ => {}
   }
-  thread_destroy(0).unwrap();
+  thread_destroy(0);
   loop {};
 }

@@ -44,6 +44,6 @@ fn panic_handler(info: &core::panic::PanicInfo) -> ! {
   } else {
     println!("\nuser panic!");
   }
-  thread_destroy(0).unwrap();
+  thread_destroy(0);
   loop {}
 }

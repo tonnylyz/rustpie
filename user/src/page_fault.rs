@@ -19,26 +19,14 @@ pub fn page_fault_handler(va: usize) {
         break;
       }
     }
-    match mem_alloc(0, va_tmp, PTE_W) {
-      Ok(_) => {}
-      Err(_) => { panic!("page_fault_handler: mem_alloc failed") }
-    }
+    mem_alloc(0, va_tmp, PTE_W);
     unsafe {
       memcpy(va_tmp as *mut u8, va as *mut u8, PAGE_SIZE);
     }
-    match mem_map(0, va_tmp, 0, va, pte + PTE_W - PTE_COW) {
-      Ok(_) => {}
-      Err(_) => { panic!("page_fault_handler: mem_map failed") }
-    }
-    match mem_unmap(0, va_tmp) {
-      Ok(_) => {}
-      Err(_) => { panic!("page_fault_handler: mem_unmap failed") }
-    }
+    mem_map(0, va_tmp, 0, va, pte + PTE_W - PTE_COW);
+    mem_unmap(0, va_tmp);
   } else {
-    match mem_alloc(0, va, PTE_DEFAULT) {
-      Ok(_) => {}
-      Err(_) => { panic!("page_fault_handler: mem_alloc failed") }
-    }
+    mem_alloc(0, va, PTE_DEFAULT);
   }
 }
 
@@ -52,14 +40,8 @@ pub static mut page_fault_handler_stub: usize = 0;
 pub fn set_page_fault_handler(handler: usize) {
   unsafe {
     if page_fault_handler_stub == 0 {
-      match mem_alloc(0, EXCEPTION_STACK_TOP - PAGE_SIZE, PTE_W) {
-        Ok(_) => {}
-        Err(_) => { panic!("set_page_fault_handler: mem_alloc failed") }
-      }
-      match event_handler(0, asm_page_fault_handler as usize, EXCEPTION_STACK_TOP, 0) {
-        Ok(_) => {}
-        Err(_) => { panic!("set_page_fault_handler: process_set_exception_handler failed") }
-      }
+      mem_alloc(0, EXCEPTION_STACK_TOP - PAGE_SIZE, PTE_W);
+      event_handler(0, asm_page_fault_handler as usize, EXCEPTION_STACK_TOP, 0);
     }
     page_fault_handler_stub = handler;
   }

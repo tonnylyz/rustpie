@@ -9,6 +9,8 @@ use crate::syscall::{thread_destroy, mem_alloc, mem_unmap};
 use crate::arch::Address;
 use crate::config::PAGE_SIZE;
 use crate::arch::page_table::PTE_DEFAULT;
+use crate::itc::ItcMessage;
+use crate::mem::valloc;
 
 const VIRTIO_MMIO_BASE: usize = 0x8_0000_0000 + 0x0a000000;
 
@@ -411,10 +413,10 @@ pub fn irq() {
   }
   mmio.InterruptACK.set(status);
   println!("irq handled by user server");
-  thread_destroy(0).unwrap();
+  thread_destroy(0);
 }
 
-static BLK_SERVER: Once<u16> = Once::new();
+pub static BLK_SERVER: Once<u16> = Once::new();
 
 pub fn server() {
   use crate::syscall::*;
@@ -422,14 +424,12 @@ pub fn server() {
   init();
   println!("virtio_blk server ok t{}", get_tid());
 
-  const TEST_STACK: usize = 0x7_0004_0000;
-  mem_alloc(0, TEST_STACK, PTE_DEFAULT).unwrap();
-  thread_alloc(test as usize, TEST_STACK + PAGE_SIZE, 0);
+  let stack = valloc(16);
+  thread_alloc(crate::fs::server as usize, stack as usize + 16 * PAGE_SIZE, 0);
 
 
-  const EVENT_STACK: usize = 0x7_0000_0000;
-  mem_alloc(0, EVENT_STACK, PTE_DEFAULT).unwrap();
-  event_handler(0, irq as usize, EVENT_STACK + PAGE_SIZE, 0x10 + 32).unwrap();
+  let stack = valloc(16);
+  event_handler(0, irq as usize, stack as usize + 16 * PAGE_SIZE, 0x10 + 32);
 
   BLK_SERVER.call_once(|| get_tid());
   loop {
@@ -437,18 +437,36 @@ pub fn server() {
     use crate::syscall::*;
 
     let mut msg = ItcMessage::default();
-    itc_receive(&mut msg as *mut _ as usize);
-    println!("blk server receive request {:x} {:x} {:x} {:x}", msg.a, msg.b, msg.c, msg.d);
-    let client_thread_id = msg.a as u16;
-    let sector = msg.b;
-    let count = msg.c;
-    let op = if (msg.a >> 16) == 0 { Operation::Read } else { Operation::Write };
-    let buf = msg.d;
+    let client_tid = itc_receive(&mut msg as *mut _ as usize) as u16;
+    println!("blk server receive request from t{} a:{:x} b:{:x} c:{:x} d:{:x}", client_tid, msg.a, msg.b, msg.c, msg.d);
+    let sector = msg.a;
+    let count = msg.b;
+    let buf = msg.c;
+    let op = if msg.d == 0 { Operation::Read } else { Operation::Write };
 
-    io(sector, count, buf, op, client_thread_id);
+    io(sector, count, buf, op, client_tid);
   }
 }
 
+pub fn read_msg(sector: usize, count: usize, buf: &mut [u8]) -> ItcMessage {
+  ItcMessage {
+    a: sector,
+    b: count,
+    c: buf.as_mut_ptr() as usize,
+    d: 0
+  }
+}
+
+pub fn write_msg(sector: usize, count: usize, buf: &[u8]) -> ItcMessage {
+  ItcMessage {
+    a: sector,
+    b: count,
+    c: buf.as_ptr() as usize,
+    d: 1
+  }
+}
+
+#[allow(dead_code)]
 fn test() {
   use crate::itc::*;
   use crate::syscall::*;
@@ -466,14 +484,15 @@ fn test() {
   loop {
 
     const BUF: usize = 0x3000_0000;
-    mem_alloc(0, BUF, PTE_DEFAULT).unwrap();
-
+    mem_alloc(0, BUF, PTE_DEFAULT);
+    let buf = unsafe {core::slice::from_raw_parts_mut(BUF as *mut u8, PAGE_SIZE)};
     loop {
-      let r = itc_send(blk_server,
-                       get_tid() as usize,
-                       sector,
-                       8,
-                       BUF);
+      // let r = itc_send(blk_server,
+      //                  get_tid() as usize,
+      //                  sector,
+      //                  8,
+      //                  BUF);
+      let r = read_msg(sector, 8, buf).send_to(blk_server);
       if r == 0 {
         break;
       }
@@ -484,7 +503,7 @@ fn test() {
     let mut msg = ItcMessage::default();
     itc_receive(&mut msg as *mut _ as usize);
 
-    let slice = unsafe { core::slice::from_raw_parts(BUF as *const u8, PAGE_SIZE) };
+    let slice = buf;
     println!("BLK[{}]", sector);
     for i in 0..4096 {
       print!("{:02x} ", slice[i]);
