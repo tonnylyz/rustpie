@@ -29,15 +29,15 @@ impl InterruptServiceRoutine for Isr {
   }
 
   fn external_interrupt(int: Interrupt) {
-    println!("external_interrupt {}", int);
+    println!("[IRQ] external {}", int);
     match crate::lib::interrupt::INTERRUPT_WAIT.get(int) {
-      None => { println!("irq not registered"); }
+      None => { println!("[IRQ] irq not registered"); }
       Some(t) => {
         match t.address_space() {
           None => { panic!("kernel thread interrupt?") }
           Some(a) => {
             match a.event_handler(Event::Interrupt(int)) {
-              None => { println!("no event handler") }
+              None => { println!("[IRQ] no event handler") }
               Some((pc, sp)) => {
                 let nt = crate::lib::thread::new_user(pc, sp, int, a.clone(), None);
                 nt.set_status(crate::lib::thread::Status::TsRunnable);

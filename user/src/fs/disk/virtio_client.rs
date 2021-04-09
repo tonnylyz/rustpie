@@ -26,7 +26,6 @@ impl VirtioClient {
 
 impl Disk for VirtioClient {
     fn read_at(&mut self, block: u64, buffer: &mut [u8]) -> Result<usize> {
-        println!("block {:016x} buffer {:016x} len {}", block, buffer.as_mut_ptr() as usize, buffer.len());
         assert_eq!(buffer.len() % BLOCK_SIZE as usize, 0);
         assert_eq!(buffer.len(), PAGE_SIZE);
         let tmp =valloc(1);

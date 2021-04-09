@@ -15,12 +15,12 @@ impl ItcMessage {
   pub fn receive() -> (u16, Self) {
     let mut msg = ItcMessage::default();
     let sender = itc_receive(&mut msg as *mut _ as usize) as u16;
-    println!("\t\t***t{} --> t{}", sender, get_tid());
+    println!("[ITC] R t{} -> t{}", sender, get_tid());
     (sender, msg)
   }
   pub fn send_to(&self, tid: u16) -> isize
   {
-    println!("\t\t***t{} --> t{}", get_tid(), tid);
+    println!("[ITC] T t{} -> t{}", get_tid(), tid);
     itc_send(tid, self.a, self.b, self.c, self.d)
   }
 }

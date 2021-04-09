@@ -35,8 +35,7 @@ fn _start(arg: usize) -> ! {
   heap::init();
   match arg {
     0 => { fork::test() }
-    3 => { virtio_blk::server() }
-    4 => { itc::test() }
+    1 => { virtio_blk::server() }
     _ => {}
   }
   thread_destroy(0);

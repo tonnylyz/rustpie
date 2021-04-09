@@ -1,6 +1,6 @@
 use crate::fs::mount::scheme::FileScheme;
 use crate::fs::{VirtioClient, DiskCache, FileSystem, IS_UMT};
-use crate::syscall::{Error, Packet, Scheme, SYS_OPEN, O_RDONLY, thread_alloc, get_tid};
+use crate::syscall::{Error, Packet, Scheme, SYS_OPEN, O_RDONLY, thread_alloc, get_tid, thread_destroy};
 use alloc::string::String;
 use core::sync::atomic::Ordering;
 use crate::itc::*;
@@ -8,11 +8,11 @@ use crate::mem::valloc;
 use crate::config::PAGE_SIZE;
 
 pub fn server() {
+  println!("[FS] server started t{}", get_tid());
   let disk = VirtioClient::new();
   match FileSystem::open(disk, Some(0)) {
     Ok(filesystem) => {
       let scheme = FileScheme::new(String::from("virtio"), filesystem);
-      println!("file server start loop");
       let stack = valloc(16);
       thread_alloc(test as usize, stack as usize + PAGE_SIZE * 16, get_tid() as usize);
 
@@ -28,7 +28,7 @@ pub fn server() {
         packet.c = msg.1.c;
         packet.d = msg.1.d;
         let client = msg.0;
-        println!("{:#x?}", msg);
+        // println!("{:#x?}", msg);
         scheme.handle(&mut packet);
 
         let mut msg = ItcMessage::default();
@@ -36,12 +36,12 @@ pub fn server() {
         msg.send_to(client);
       }
     }
-    Err(e) => { println!("FileSystem::open {}", e.errno); }
+    Err(e) => { println!("[FS] FileSystem::open {}", e.errno); }
   }
 }
 
 fn test(server_tid: u16) {
-  println!("fs client test start t{}", get_tid());
+  println!("[FS] client started t{}", get_tid());
   let filename = "CACHEDIR.TAG";
   let mut msg = ItcMessage::default();
   msg.a = SYS_OPEN;
@@ -55,5 +55,7 @@ fn test(server_tid: u16) {
   }
 
   let (tid, msg) = ItcMessage::receive();
-  println!("file client ok {}:{}", tid, msg.a as isize);
+  println!("[FS] client opened {}:{}", tid, msg.a as isize);
+
+  thread_destroy(0);
 }

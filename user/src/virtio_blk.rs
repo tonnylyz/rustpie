@@ -366,18 +366,18 @@ pub fn irq() {
     let mut disk = DISK.lock();
     let used = &ring.device;
 
-    println!("last used {} used {}", disk.last_used, used.idx);
+    println!("[BLK][IRQ] last used {} used {}", disk.last_used, used.idx);
     loop {
       if disk.last_used == used.idx {
         break;
       }
       if disk.requests.is_empty() {
-        println!("no requests record");
+        println!("[BLK][IRQ] no requests record");
         break;
       }
       if used.ring[(disk.last_used as usize) % QUEUE_SIZE].id != 0 {
         // TODO?
-        println!("unexpected ring desc head, only #0 is used");
+        println!("[BLK][IRQ] unexpected ring desc head, only #0 is used");
         break;
       }
       let req = &disk.requests[0];
@@ -388,19 +388,19 @@ pub fn irq() {
             use crate::syscall::*;
             let r = itc_send(req.src, 0, 0, 0, 0);
             if r != 0 {
-              println!("client not receiving!");
+              println!("[BLK][IRQ] client not receiving!");
             }
           }
-          println!("ok {:#x?}", req);
+          // println!("ok {:#x?}", req);
         }
         VIRTIO_BLK_S_IOERR => {
-          println!("status io err {:#x?}", req);
+          println!("[BLK][IRQ] status io err {:#x?}", req);
         }
         VIRTIO_BLK_S_UNSUPP => {
-          println!("status unsupported {:#x?}", req);
+          println!("[BLK][IRQ] status unsupported {:#x?}", req);
         }
         x => {
-          println!("unknown status {}", x);
+          println!("[BLK][IRQ] unknown status {}", x);
         }
       }
       disk.requests.remove(0);
@@ -409,10 +409,10 @@ pub fn irq() {
   }
   if status & 0b10 != 0 {
     // Configuration Change Notification
-    println!("Configuration Change Notification not handled!");
+    println!("[BLK][IRQ] Configuration Change Notification not handled!");
   }
   mmio.InterruptACK.set(status);
-  println!("irq handled by user server");
+  println!("[BLK][IRQ] irq handled by user server");
   thread_destroy(0);
 }
 
@@ -421,24 +421,24 @@ pub static BLK_SERVER: Once<u16> = Once::new();
 pub fn server() {
   use crate::syscall::*;
   use crate::arch::page_table::*;
+  use crate::itc::*;
+  use crate::syscall::*;
+
   init();
-  println!("virtio_blk server ok t{}", get_tid());
+  println!("[BLK] virtio_blk server started t{}", get_tid());
 
   let stack = valloc(16);
   thread_alloc(crate::fs::server as usize, stack as usize + 16 * PAGE_SIZE, 0);
-
 
   let stack = valloc(16);
   event_handler(0, irq as usize, stack as usize + 16 * PAGE_SIZE, 0x10 + 32);
 
   BLK_SERVER.call_once(|| get_tid());
   loop {
-    use crate::itc::*;
-    use crate::syscall::*;
 
     let mut msg = ItcMessage::default();
     let client_tid = itc_receive(&mut msg as *mut _ as usize) as u16;
-    println!("blk server receive request from t{} a:{:x} b:{:x} c:{:x} d:{:x}", client_tid, msg.a, msg.b, msg.c, msg.d);
+    println!("[BLK] receive request t{} a:{:x} b:{:x} c:{:x} d:{:x}", client_tid, msg.a, msg.b, msg.c, msg.d);
     let sector = msg.a;
     let count = msg.b;
     let buf = msg.c;
@@ -463,56 +463,5 @@ pub fn write_msg(sector: usize, count: usize, buf: &[u8]) -> ItcMessage {
     b: count,
     c: buf.as_ptr() as usize,
     d: 1
-  }
-}
-
-#[allow(dead_code)]
-fn test() {
-  use crate::itc::*;
-  use crate::syscall::*;
-  let mut sector = 0;
-
-  println!("virtio_blk client ok t{}", get_tid());
-  loop {
-    // Wait for block server
-    if BLK_SERVER.get().is_some() {
-      break;
-    }
-  }
-  let blk_server = *BLK_SERVER.get().unwrap();
-
-  loop {
-
-    const BUF: usize = 0x3000_0000;
-    mem_alloc(0, BUF, PTE_DEFAULT);
-    let buf = unsafe {core::slice::from_raw_parts_mut(BUF as *mut u8, PAGE_SIZE)};
-    loop {
-      // let r = itc_send(blk_server,
-      //                  get_tid() as usize,
-      //                  sector,
-      //                  8,
-      //                  BUF);
-      let r = read_msg(sector, 8, buf).send_to(blk_server);
-      if r == 0 {
-        break;
-      }
-      println!("retry send to blk server");
-    }
-
-
-    let mut msg = ItcMessage::default();
-    itc_receive(&mut msg as *mut _ as usize);
-
-    let slice = buf;
-    println!("BLK[{}]", sector);
-    for i in 0..4096 {
-      print!("{:02x} ", slice[i]);
-      if (i + 1) % 16 == 0 {
-        println!();
-      }
-    }
-
-    mem_unmap(0, BUF);
-    sector += 8;
   }
 }

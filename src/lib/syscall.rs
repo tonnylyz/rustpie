@@ -152,7 +152,6 @@ impl SyscallTrait for Syscall {
   fn thread_destroy(tid: u16) -> SyscallResult {
     let current_thread = current().running_thread().unwrap();
     if tid == 0 {
-      println!("current thread {} destroyed", current_thread.tid());
       current_thread.destroy();
       Syscall::thread_yield()
     } else {
@@ -376,12 +375,12 @@ pub fn syscall() {
           ctx.set_syscall_return_value(u as usize);
         }
       }
-      if num != 1 {
-        println!("#{}\t{} t{} Ok {:x}", num, SYSCALL_NAMES[num], tid, ctx.syscall_argument(0));
-      }
+      // if num != 1 {
+      //   println!("#{}\t{} t{} Ok {:x}", num, SYSCALL_NAMES[num], tid, ctx.syscall_argument(0));
+      // }
     }
     Err(err) => {
-      println!("#{}\t{} t{} Err {:x?}", num, SYSCALL_NAMES[num], tid, err);
+      // println!("#{}\t{} t{} Err {:x?}", num, SYSCALL_NAMES[num], tid, err);
       ctx.set_syscall_return_value(usize::MAX);
     }
   }
