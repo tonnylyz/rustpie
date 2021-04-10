@@ -41,7 +41,7 @@ pub unsafe extern "C" fn hart_spin(core_id: usize) {
     drop(hart_boot);
     for i in 0..BOARD_CORE_NUMBER {
       if i != core_id {
-        let _ = crate::driver::hsm::hart_start(i, (KERNEL_ENTRY as usize).kva2pa() as u64, 0);
+        let _ = crate::driver::hsm::hart_start(i, (KERNEL_ENTRY as usize).kva2pa(), 0);
       }
     }
   } else {

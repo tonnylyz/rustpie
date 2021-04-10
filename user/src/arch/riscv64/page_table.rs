@@ -186,6 +186,14 @@ pub const PTE_COW: EntryAttribute = EntryAttribute::copy_on_write();
 #[allow(dead_code)]
 pub const PTE_LIB: EntryAttribute = EntryAttribute::shared();
 
+pub fn va2pa(va: usize) -> Option<usize> {
+  if let Some(pte) = read_page_table_entry(va) {
+    Some(((pte as usize >> 10) << 12) | (va & 0xFFF))
+  } else {
+    None
+  }
+}
+
 pub fn query(va: usize) -> Option<EntryAttribute> {
   if let Some(pte) = read_page_table_entry(va) {
     Some(EntryAttribute::from(ArchEntryAttribute(pte)))
