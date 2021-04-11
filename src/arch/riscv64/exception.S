@@ -48,6 +48,7 @@ push_context:
     sd s2, 33 * 8(sp)
 
     mv a0, sp
+    mv s0, sp
     jal exception_entry // see exception.rs
     j pop_context
 

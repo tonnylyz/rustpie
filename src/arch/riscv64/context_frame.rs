@@ -10,26 +10,60 @@ pub struct Riscv64ContextFrame {
   sepc: u64,
 }
 
+static REG_ABI_NAMES: [&str; 32] = [
+  "ZERO",
+  "RA",
+  "SP",
+  "GP",
+  "TP",
+  "T0",
+  "T1",
+  "T2",
+  "S0/FP",
+  "S1",
+  "A0",
+  "A1",
+  "A2",
+  "A3",
+  "A4",
+  "A5",
+  "A6",
+  "A7",
+  "S2",
+  "S3",
+  "S4",
+  "S5",
+  "S6",
+  "S7",
+  "S8",
+  "S9",
+  "S10",
+  "S11",
+  "T3",
+  "T4",
+  "T5",
+  "T6",
+];
+
 impl core::fmt::Display for Riscv64ContextFrame {
   fn fmt(&self, f: &mut Formatter<'_>) -> Result<(), core::fmt::Error> {
     for i in 0..32 {
-      write!(f, "x{:02}: {:016x}   ", i, self.gpr[i])?;
+      write!(f, "{:5}: {:016x}   ", REG_ABI_NAMES[i], self.gpr[i])?;
       if (i + 1) % 2 == 0 {
         write!(f, "\n")?;
       }
     }
-    write!(f, "sst: {:016x}", self.sstatus)?;
-    writeln!(f, "   epc: {:016x}", self.sepc)?;
+    write!(f, "{:5}: {:016x}   ", "SSTAT", self.sstatus)?;
+    writeln!(f, "{:5}: {:016x}   ", "EPC", self.sepc)?;
     Ok(())
   }
 }
 
 impl crate::arch::traits::ContextFrameTrait for Riscv64ContextFrame {
   fn new(pc: usize, sp: usize, arg: usize, privileged: bool) -> Self {
-    let sstatus = SSTATUS.get();
     let mut r = Riscv64ContextFrame {
       gpr: [0xdeadbeef_deadbeef; 32],
-      sstatus: sstatus | (if privileged { SSTATUS::SPP::Supervisor } else { SSTATUS::SPP::User } + SSTATUS::SPIE.val(1) + SSTATUS::SIE.val(0)).value,
+      sstatus: (SSTATUS::SD::SET + SSTATUS::FS.val(0b11) + if privileged { SSTATUS::SPP::Supervisor } else { SSTATUS::SPP::User } + SSTATUS::SPIE.val(1) + SSTATUS::SIE.val(0)).value,
       sepc: 0xdeadbeef_deadbeef,
     };
     r.set_exception_pc(pc);

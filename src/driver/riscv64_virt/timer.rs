@@ -11,5 +11,5 @@ pub fn next() {
 
 pub fn init() {
   next();
-  SIE.write(SIE::STIE.val(1));
+  SIE.write(SIE::STIE::SET);
 }

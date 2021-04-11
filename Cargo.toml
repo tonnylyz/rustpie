@@ -24,10 +24,6 @@ cortex-a = { path = "../cortex-a" }
 [target.'cfg(target_arch = "riscv64")'.dependencies]
 riscv = { git = "https://github.com/tonnylyz/riscv" }
 
-# ide only
-#[target.'cfg(target_arch = "x86_64")'.dependencies]
-#fatfs = { version = "0.3.5" }
-
 
 [features]
 default = []

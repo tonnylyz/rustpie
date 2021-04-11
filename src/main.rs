@@ -31,6 +31,8 @@ use crate::lib::core::CoreTrait;
 use crate::lib::interrupt::InterruptController;
 use lib::page_table::PageTableTrait;
 use lib::page_table::PageTableEntryAttrTrait;
+use spin::Mutex;
+use core::ops::Deref;
 
 pub fn core_id() -> CoreId {
   crate::arch::Arch::core_id()
@@ -87,14 +89,13 @@ pub unsafe fn main(core_id: arch::CoreId) -> ! {
   crate::lib::core::current().create_idle_thread();
   println!("init core {}", core_id);
   if core_id == 0 {
-    // lib::fatfs::init();
-    // extern "C" {
-    //   static KERNEL_ELF: [u8; 0x40000000];
-    // }
-    // panic::init_backtrace(&KERNEL_ELF);
-    // println!("init_backtrace ok");
-    // panic::init_backtrace_context();
-    // println!("init_backtrace_context ok");
+    extern "C" {
+      static KERNEL_ELF: [u8; 0x40000000];
+    }
+    panic::init_backtrace(&KERNEL_ELF);
+    println!("init_backtrace ok");
+    panic::init_backtrace_context();
+    println!("init_backtrace_context ok");
   }
 
   if core_id == 0 {
@@ -117,11 +118,20 @@ pub unsafe fn main(core_id: arch::CoreId) -> ! {
     t.set_status(crate::lib::thread::Status::TsRunnable);
 
     use crate::lib::device::*;
+    #[cfg(target_arch = "aarch64")]
     let virtio_mmio = Device::new(vec![
       0x0a000000..0x0a000200
     ], vec![
       0x10 + 32
     ]);
+    #[cfg(target_arch = "riscv64")]
+    let virtio_mmio = Device::new(vec![
+      0x10001000..0x10002000
+    ], vec![
+      0x01
+    ]);
+
+
     for uf in virtio_mmio.to_user_frames().iter() {
       a.page_table().insert_page(0x8_0000_0000 + uf.pa(), uf.clone(), lib::page_table::EntryAttribute::user_device());
     }

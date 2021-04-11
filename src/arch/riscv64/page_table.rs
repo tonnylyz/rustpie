@@ -169,6 +169,7 @@ impl PageTableTrait for Riscv64PageTable {
       l1e = Riscv64PageTableEntry::make_table(frame.pa());
       let mut pages = self.pages.lock();
       pages.push(frame);
+      drop(pages);
       if va <= CONFIG_READ_ONLY_LEVEL_1_PAGE_TABLE_BTM {
         self.map(CONFIG_READ_ONLY_LEVEL_2_PAGE_TABLE_BTM + va.l1x() * PAGE_SIZE, l1e.to_pa(), EntryAttribute::user_readonly());
       }
@@ -177,9 +178,10 @@ impl PageTableTrait for Riscv64PageTable {
     let mut l2e = l1e.entry(va.l2x());
     if !l2e.valid() {
       let frame = crate::mm::page_pool::alloc();
-      l1e = Riscv64PageTableEntry::make_table(frame.pa());
+      l2e = Riscv64PageTableEntry::make_table(frame.pa());
       let mut pages = self.pages.lock();
       pages.push(frame);
+      drop(pages);
       if va <= CONFIG_READ_ONLY_LEVEL_1_PAGE_TABLE_BTM {
         self.map(CONFIG_READ_ONLY_LEVEL_3_PAGE_TABLE_BTM + va.l1x() * PAGE_SIZE * (PAGE_SIZE / MACHINE_SIZE) + va.l2x() * PAGE_SIZE, l2e.to_pa(), EntryAttribute::user_readonly());
       }
@@ -228,10 +230,10 @@ impl PageTableTrait for Riscv64PageTable {
       return None;
     }
     let l3e = l2e.entry(va.l3x());
-    if !(l3e.valid()) {
-      None
-    } else {
+    if l3e.valid() {
       Some(Entry::from(l3e))
+    } else {
+      None
     }
   }
 

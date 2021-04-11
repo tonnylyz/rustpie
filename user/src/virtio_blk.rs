@@ -5,14 +5,19 @@ use core::mem::size_of;
 use register::*;
 use register::mmio::*;
 use spin::{Mutex, Once};
-use crate::syscall::{thread_destroy, mem_alloc, mem_unmap};
+
 use crate::arch::Address;
-use crate::config::PAGE_SIZE;
 use crate::arch::page_table::PTE_DEFAULT;
+use crate::config::PAGE_SIZE;
 use crate::itc::ItcMessage;
 use crate::mem::valloc;
+use crate::syscall::{mem_alloc, mem_unmap, thread_destroy};
 
+#[cfg(target_arch = "aarch64")]
 const VIRTIO_MMIO_BASE: usize = 0x8_0000_0000 + 0x0a000000;
+
+#[cfg(target_arch = "riscv64")]
+const VIRTIO_MMIO_BASE: usize = 0x8_0000_0000 + 0x10001000;
 
 register_structs! {
   #[allow(non_snake_case)]
@@ -431,7 +436,12 @@ pub fn server() {
   thread_alloc(crate::fs::server as usize, stack as usize + 16 * PAGE_SIZE, 0);
 
   let stack = valloc(16);
-  event_handler(0, irq as usize, stack as usize + 16 * PAGE_SIZE, 0x10 + 32);
+
+  #[cfg(target_arch = "aarch64")]
+    event_handler(0, irq as usize, stack as usize + 16 * PAGE_SIZE, 0x10 + 32);
+
+  #[cfg(target_arch = "riscv64")]
+    event_handler(0, irq as usize, stack as usize + 16 * PAGE_SIZE, 0x01);
 
   BLK_SERVER.call_once(|| get_tid());
   loop {

@@ -24,3 +24,8 @@ pub fn stack() -> &'static Stack {
   let core_id = crate::core_id();
   &STACKS[core_id]
 }
+
+#[no_mangle]
+pub fn stack_of_core(core_id: usize) -> usize {
+  STACKS[core_id].top()
+}

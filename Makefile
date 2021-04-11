@@ -15,9 +15,10 @@ user/riscv64.elf:
 	make -C user -B riscv64.elf
 
 riscv64.bin: user/riscv64.elf
-	RUSTFLAGS="-C llvm-args=-global-isel=false" \
+	RUSTFLAGS="-C llvm-args=-global-isel=false -C force-frame-pointers=yes" \
 	cargo build --target src/targets/riscv64.json --features riscv64_virt -Z build-std=core,alloc
 	rust-objcopy target/riscv64/debug/rustpi -O binary riscv64.bin
+	rust-objdump -d target/riscv64/debug/rustpi > target/riscv64/debug/rustpi.asm
 
 emu-aarch64: aarch64.bin
 	qemu-system-aarch64 -M virt,virtualization=on -cpu cortex-a53 -smp 4 -m 2048 -kernel $< -serial stdio -display none \
@@ -26,7 +27,10 @@ emu-aarch64: aarch64.bin
 		-global virtio-mmio.force-legacy=false
 
 emu-riscv64: riscv64.bin
-	qemu-system-riscv64 -M virt -smp 4 -m 1024 -bios default -kernel $< -serial stdio -display none
+	qemu-system-riscv64 -M virt -smp 4 -m 2048 -bios default -kernel $< -serial stdio -display none \
+		-device loader,file=target/riscv64/debug/rustpi,addr=0xc0000000,force-raw=on \
+		-drive file=disk.img,if=none,format=raw,id=x0 -device virtio-blk-device,drive=x0,bus=virtio-mmio-bus.0 \
+		-global virtio-mmio.force-legacy=false
 
 debug-aarch64: aarch64.bin
 	qemu-system-aarch64 -M virt,virtualization=on -cpu cortex-a53 -smp 4 -m 2048 -kernel $< -serial stdio -display none -s -S \
@@ -35,7 +39,10 @@ debug-aarch64: aarch64.bin
 		-global virtio-mmio.force-legacy=false
 
 debug-riscv64: riscv64.bin
-	qemu-system-riscv64 -M virt -smp 4 -m 1024 -bios default -kernel $< -serial stdio -display none -s -S
+	qemu-system-riscv64 -M virt -smp 4 -m 2048 -bios default -kernel $< -serial stdio -display none -s -S \
+		-device loader,file=target/riscv64/debug/rustpi,addr=0xc0000000,force-raw=on \
+		-drive file=disk.img,if=none,format=raw,id=x0 -device virtio-blk-device,drive=x0,bus=virtio-mmio-bus.0 \
+		-global virtio-mmio.force-legacy=false
 
 clean:
 	-cargo clean

@@ -161,6 +161,7 @@ pub fn current() -> &'static mut Core {
   unsafe { &mut CORES[core_id] }
 }
 
+#[no_mangle]
 fn idle_thread(_arg: usize) {
   loop {
     crate::arch::Arch::wait_for_interrupt();

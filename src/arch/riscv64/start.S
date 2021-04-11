@@ -29,6 +29,17 @@ _start:
     sd    a0, 0(sp)
     csrrw x0, sscratch, sp // sscratch <- pointer to hart_id
 
+    mv    s1, a0 // save hart_id
+    // call stack_of_core(hart_id)
+    lui   t0, %hi(stack_of_core)
+    addi  t0, t0, %lo(stack_of_core)
+    addiw t0, t0, 0
+    jalr  t0
+    mv    sp, a0
+
+    mv    s0, sp // fp <- sp
+
+    mv    a0, s1 // a0 <- hart_id
     lui   t0, %hi(hart_spin)
     addi  t0, t0, %lo(hart_spin)
     addiw t0, t0, 0

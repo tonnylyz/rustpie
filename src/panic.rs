@@ -46,13 +46,31 @@ pub fn backtrace_exception() {
   let ctx = crate::lib::core::current().context();
 
   unsafe {
-    backtracer::trace_from(backtracer::EntryPoint::new(
+
+    #[cfg(target_arch = "aarch64")]
+    let frame_zero = backtracer::EntryPoint::new(
       ctx.gpr(29) as u64,
       ctx.stack_pointer() as u64,
       ctx.exception_pc() as u64,
-      ctx.gpr(30) as u64),
+      ctx.gpr(30) as u64);
+
+    #[cfg(target_arch = "riscv64")]
+    let frame_zero = backtracer::EntryPoint::new(
+      ctx.gpr(8) as u64,
+      ctx.stack_pointer() as u64,
+      ctx.exception_pc() as u64,
+      ctx.gpr(1) as u64);
+    backtracer::trace_from(frame_zero,
                            |frame| {
                              count += 1;
+                             // println!("pc {:x}\nfp {:x}", frame.pc(), frame.fp());
+                             // println!("sp {:x}", frame.sp());
+                             // for i in (frame.sp()..frame.fp()).step_by(8).rev() {
+                             //   println!("\t\t{:x}: {:016x}", i, (i as *const usize).read_volatile());
+                             // }
+                             if count == 10 {
+                               return false;
+                             }
                              backtrace_format(ELF_CONTEXT.as_ref(), relocated_offset, count, frame)
                            },
     );
