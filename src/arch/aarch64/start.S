@@ -28,7 +28,7 @@ _el2_start:
     adr x3, _el1_start
     msr elr_el2, x3
 
-    adr x3, boot_stack_top
+    adr x3, BOOT_STACK_TOP
     msr sp_el1, x3
     eret
 
@@ -38,7 +38,7 @@ _el1_start:
     mov x19, x1
     mov x1, #1
     msr spsel, x1
-    adr x0, boot_stack_top
+    adr x0, BOOT_STACK_TOP
     mov x1, 4096
     mul x1, x1, x19
     sub x0, x0, x1
@@ -49,10 +49,11 @@ _el1_start:
 1:  adr x0, KERNEL_PAGE_DIRECTORY
     bl mmu_init
     mov x0, x19
-    ldr x1, =core_stack
+    ldr x1, =stack_of_core
     blr x1
     mov sp, x0
     mov x0, x19
+    mov fp, sp
     ldr x1, =main
     blr x1
 
@@ -60,13 +61,10 @@ _loop:
     wfe
     b _loop
 .section .data.start
-boot_stack:
+BOOT_STACK:
     .align 12
-    .space 4096
-    .space 4096
-    .space 4096
-    .space 4096
-boot_stack_top:
+    .space 4096 * 4
+BOOT_STACK_TOP:
 
 .align 12
 .global KERNEL_PAGE_DIRECTORY

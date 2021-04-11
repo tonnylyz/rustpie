@@ -5,6 +5,7 @@ use crate::lib::core::CoreTrait;
 use crate::lib::isr::{InterruptServiceRoutine, Isr};
 use crate::panic::backtrace_exception;
 use crate::lib::interrupt::InterruptController;
+use crate::core_id;
 
 global_asm!(include_str!("exception.S"));
 
@@ -63,7 +64,7 @@ unsafe extern "C" fn exception_entry(ctx: *mut ContextFrame) {
         if let Some(int) = plic.fetch() {
           Isr::external_interrupt(int);
           plic.finish(int);
-        } {
+        } else {
           println!("PLIC report no irq");
         }
       },

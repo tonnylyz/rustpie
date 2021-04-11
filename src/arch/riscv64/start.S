@@ -6,8 +6,8 @@ _start:
     addiw sp, sp, 0 // sp sign-extended to 64 bit
 
     mv    t0, a0 // t0 <- hartid
-    slli  t0, t0, 17 // t0 <- hartid * 0x20000
-    subw  sp, sp, t0
+    slli  t0, t0, 12 // t0 <- hartid * 4096
+    subw  sp, sp, t0 // sp <- BOOT_STACK_TOP - hartid * 4096
 
     lui   t0, %hi(KERNEL_PAGE_DIRECTORY)
     addi  t0, t0, %lo(KERNEL_PAGE_DIRECTORY)
@@ -87,6 +87,6 @@ KERNEL_PAGE_DIRECTORY:
 .section .data.start
 .align 12
 BOOT_STACK:
-    .space 4096 * 32 * 4
+    .space 4096 * 4
 .global BOOT_STACK_TOP
 BOOT_STACK_TOP:
