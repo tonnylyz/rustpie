@@ -10,7 +10,6 @@ pub const BOARD_DEVICE_MEMORY_RANGE: Range<usize> = 0x0000_0000..0x4000_0000;
 
 pub fn init() {
   crate::driver::uart::init();
-  // crate::driver::common::virtio_blk::init();
 }
 
 pub fn init_per_core() {

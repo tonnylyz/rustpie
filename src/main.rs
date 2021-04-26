@@ -11,8 +11,6 @@
 #[macro_use]
 extern crate alloc;
 extern crate rlibc;
-// extern crate fatfs;
-// extern crate core_io;
 
 #[macro_use]
 mod misc;

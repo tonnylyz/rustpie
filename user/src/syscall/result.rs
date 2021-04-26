@@ -22,6 +22,14 @@ impl Error {
       Err(error) => -error.errno as usize,
     }
   }
+  pub fn demux(value: usize) -> Result<usize> {
+    let errno = -(value as i32);
+    if errno >= 1 && errno < STR_ERROR.len() as i32 {
+      Err(Error::new(errno))
+    } else {
+      Ok(value)
+    }
+  }
 }
 
 pub const EPERM: i32 = 1;  /* Operation not permitted */
