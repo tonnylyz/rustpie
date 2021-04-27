@@ -6,12 +6,11 @@ use register::*;
 use register::mmio::*;
 use spin::{Mutex, Once};
 
+use crate::syscall::*;
+use crate::itc::*;
 use crate::arch::Address;
-use crate::arch::page_table::PTE_DEFAULT;
 use crate::config::PAGE_SIZE;
-use crate::itc::ItcMessage;
 use crate::mem::valloc;
-use crate::syscall::{mem_alloc, mem_unmap, thread_destroy};
 
 #[cfg(target_arch = "aarch64")]
 const VIRTIO_MMIO_BASE: usize = 0x8_0000_0000 + 0x0a000000;
@@ -282,8 +281,6 @@ pub struct VirtioBlkOutHdr {
 const VRING_DESC_F_NEXT: u16 = 1;
 /* This marks a buffer as write-only (otherwise read-only) */
 const VRING_DESC_F_WRITE: u16 = 2;
-/* This means the buffer contains a list of buffer descriptors */
-const VRING_DESC_F_INDIRECT: u16 = 4;
 
 #[derive(Debug)]
 pub struct DiskRequest {
@@ -389,7 +386,7 @@ pub fn irq() {
       match *req.status {
         VIRTIO_BLK_S_OK => {
           {
-            use crate::itc::*;
+
             use crate::syscall::*;
             let r = itc_send(req.src, 0, 0, 0, 0);
             if r != 0 {
@@ -424,10 +421,6 @@ pub fn irq() {
 pub static BLK_SERVER: Once<u16> = Once::new();
 
 pub fn server() {
-  use crate::syscall::*;
-  use crate::arch::page_table::*;
-  use crate::itc::*;
-  use crate::syscall::*;
 
   init();
   println!("[BLK] virtio_blk server started t{}", get_tid());
@@ -455,23 +448,5 @@ pub fn server() {
     let op = if msg.d == 0 { Operation::Read } else { Operation::Write };
 
     io(sector, count, buf, op, client_tid);
-  }
-}
-
-pub fn read_msg(sector: usize, count: usize, buf: &mut [u8]) -> ItcMessage {
-  ItcMessage {
-    a: sector,
-    b: count,
-    c: buf.as_mut_ptr() as usize,
-    d: 0
-  }
-}
-
-pub fn write_msg(sector: usize, count: usize, buf: &[u8]) -> ItcMessage {
-  ItcMessage {
-    a: sector,
-    b: count,
-    c: buf.as_ptr() as usize,
-    d: 1
   }
 }

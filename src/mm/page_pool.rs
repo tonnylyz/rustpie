@@ -81,8 +81,3 @@ pub fn try_alloc() -> Result<PageFrame, Error> {
   let r = pool.allocate();
   r
 }
-
-pub fn free(pa: usize) -> Result<(), Error> {
-  let mut pool = PAGE_POOL.lock();
-  pool.free(pa)
-}

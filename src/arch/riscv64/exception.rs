@@ -3,9 +3,8 @@ use riscv::regs::*;
 use crate::arch::{ContextFrame, ContextFrameTrait};
 use crate::lib::core::CoreTrait;
 use crate::lib::isr::{InterruptServiceRoutine, Isr};
-use crate::panic::backtrace_exception;
+use crate::panic::exception_trace;
 use crate::lib::interrupt::InterruptController;
-use crate::core_id;
 
 global_asm!(include_str!("exception.S"));
 
@@ -50,7 +49,7 @@ unsafe extern "C" fn exception_entry(ctx: *mut ContextFrame) {
   if from_kernel && !irq {
     PANIC = true;
     println!("[kernel exception] {:x} irq:{} code:{} \n{}", cause, irq, code, *ctx);
-    backtrace_exception();
+    exception_trace();
   }
   if irq {
     match code {

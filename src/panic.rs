@@ -10,109 +10,65 @@ use spin::Once;
 use crate::arch::ContextFrameTrait;
 use crate::lib::core::CoreTrait;
 
-#[inline(always)]
-pub fn backtrace_exception_no_resolve() {
-  println!("Backtrace:");
-
+#[allow(dead_code)]
+pub fn exception_trace() {
   let ctx = crate::lib::core::current().context();
+  #[cfg(target_arch = "aarch64")]
+    let frame_zero = backtracer::EntryPoint::new(
+    ctx.gpr(29) as u64,
+    ctx.exception_pc() as u64);
 
-  backtracer::trace_from(
-    backtracer::EntryPoint::new(
-      ctx.gpr(29) as u64,
-      ctx.stack_pointer() as u64,
-      ctx.exception_pc() as u64,
-      ctx.gpr(30) as u64),
-    |frame| {
-      let ip = frame.ip();
-      println!("ip:{:?}", ip);
-      true
-    },
-  );
+  #[cfg(target_arch = "riscv64")]
+    let frame_zero = backtracer::EntryPoint::new(
+    ctx.gpr(8) as u64,
+    ctx.exception_pc() as u64);
+
+  backtrace(Some(frame_zero.clone()));
 }
 
 #[inline(always)]
-pub fn backtrace_exception() {
+fn backtrace(frame_zero: Option<backtracer::EntryPoint>) {
   println!("Backtrace:");
-  unsafe {
-    if ELF_CONTEXT.is_none() {
-      println!("ELF_CONTEXT was not initialized");
-      backtrace_exception_no_resolve();
-      return;
+  let mut count = 0;
+  match frame_zero {
+    None => {
+      backtracer::trace(|frame| {
+        count += 1;
+        backtrace_format(unsafe { ELF_CONTEXT.as_ref() }, 0, count, frame);
+        true
+      });
+    }
+    Some(frame_zero) => {
+      backtracer::trace_from(frame_zero, |frame| {
+        count += 1;
+        backtrace_format(unsafe { ELF_CONTEXT.as_ref() }, 0, count, frame);
+        true
+      });
     }
   }
-  let relocated_offset = RELOCATED_OFFSET;
-  let mut count = 0;
-
-  let ctx = crate::lib::core::current().context();
-
-  unsafe {
-
-    #[cfg(target_arch = "aarch64")]
-    let frame_zero = backtracer::EntryPoint::new(
-      ctx.gpr(29) as u64,
-      ctx.stack_pointer() as u64,
-      ctx.exception_pc() as u64,
-      ctx.gpr(30) as u64);
-
-    #[cfg(target_arch = "riscv64")]
-    let frame_zero = backtracer::EntryPoint::new(
-      ctx.gpr(8) as u64,
-      ctx.stack_pointer() as u64,
-      ctx.exception_pc() as u64,
-      ctx.gpr(1) as u64);
-    backtracer::trace_from(frame_zero,
-                           |frame| {
-                             count += 1;
-                             // println!("pc {:x}\nfp {:x}", frame.pc(), frame.fp());
-                             // println!("sp {:x}", frame.sp());
-                             // for i in (frame.sp()..frame.fp()).step_by(8).rev() {
-                             //   println!("\t\t{:x}: {:016x}", i, (i as *const usize).read_volatile());
-                             // }
-                             if count == 10 {
-                               return false;
-                             }
-                             backtrace_format(ELF_CONTEXT.as_ref(), relocated_offset, count, frame)
-                           },
-    );
-  }
-}
-
-pub fn backtrace_no_resolve() {
-  backtracer::trace(|frame| {
-    let ip = frame.ip();
-    println!("ip:{:?}", ip);
-    true
-  });
 }
 
 static ELF_DATA: Once<&'static [u8]> = Once::new();
-// #[thread_local]
-// static ELF_CONTEXT: Once<Option<Context>> = Once::new();
 static mut ELF_CONTEXT: Option<Context> = None;
 static ELF_BIN: Once<elfloader::ElfBinary> = Once::new();
-static RELOCATED_OFFSET: u64 = 0x0;
 
-pub fn init_backtrace(elf_data: &'static [u8]) {
+pub fn init(elf_data: &'static [u8]) {
   ELF_DATA.call_once(|| elf_data);
-}
-
-pub fn init_backtrace_context() {
   ELF_BIN.call_once(|| {
     let elf_data = ELF_DATA.get().expect("ELF_DATA was not initialized");
     let elf_binary =
       elfloader::ElfBinary::new("kernel", &elf_data).expect("Can't parse kernel binary.");
     elf_binary
   });
-
   let elf_binary = ELF_BIN.get().expect("ELF_BIN was not initialized");
-  if let Some(context) = new_ctxt(&elf_binary) {
+  if let Some(context) = load_context(&elf_binary) {
     unsafe {
       ELF_CONTEXT = Some(context);
     }
   }
 }
 
-fn new_ctxt(file: &elfloader::ElfBinary) -> Option<Context> {
+fn load_context(file: &elfloader::ElfBinary) -> Option<Context> {
   let endian = gimli::RunTimeEndian::Little;
 
   fn load_section<S, Endian>(elf: &elfloader::ElfBinary, endian: Endian) -> S
@@ -159,12 +115,12 @@ fn backtrace_format(
   relocated_offset: u64,
   count: usize,
   frame: &backtracer::Frame,
-) -> bool {
+) {
   let ip = frame.ip();
   println!("frame #{:<2} - {:#02$x}", count, ip as usize, 20);
   let mut resolved = false;
 
-  backtracer::resolve(context, relocated_offset, ip, |symbol| {
+  let r = backtracer::resolve(context, relocated_offset, ip, |symbol| {
     if !resolved {
       resolved = true;
     } else {
@@ -190,31 +146,13 @@ fn backtrace_format(
     println!();
   });
 
+  match r {
+    Ok(_) => {}
+    Err(_) => { println!(" - <resolve error>"); }
+  }
+
   if !resolved {
     println!(" - <no info>");
-  }
-  true
-}
-
-#[inline(always)]
-pub fn backtrace() {
-  unsafe {
-    if ELF_CONTEXT.is_none() {
-      println!("ELF_CONTEXT was not initialized");
-      backtrace_no_resolve();
-      return;
-    }
-  }
-  println!("Backtrace:");
-
-  let relocated_offset = RELOCATED_OFFSET;
-
-  let mut count = 0;
-  unsafe {
-    backtracer::trace(|frame| {
-      count += 1;
-      backtrace_format(ELF_CONTEXT.as_ref(), relocated_offset, count, frame)
-    });
   }
 }
 
@@ -231,7 +169,7 @@ pub fn panic_impl(info: &PanicInfo) -> ! {
     println!();
   }
 
-  // backtrace();
+  backtrace(None);
 
   loop {}
 }

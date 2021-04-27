@@ -1,7 +1,7 @@
 use crate::fs::{BLOCK_SIZE, SIGNATURE, VERSION};
 use core::{fmt, slice, mem};
 use core::ops::{Deref, DerefMut};
-use core::str::FromStr;
+
 
 /// The header of the filesystem
 #[derive(Clone, Copy)]

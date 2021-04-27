@@ -254,7 +254,7 @@ impl PageTableTrait for Riscv64PageTable {
   }
 
   fn remove_page(&self, va: usize) -> Result<(), crate::lib::page_table::Error> {
-    if let Some(pte) = self.lookup_page(va) {
+    if let Some(_pte) = self.lookup_page(va) {
       self.unmap(va);
       crate::arch::Arch::invalidate_tlb();
       Ok(())

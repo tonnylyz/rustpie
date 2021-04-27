@@ -29,8 +29,8 @@ use crate::lib::core::CoreTrait;
 use crate::lib::interrupt::InterruptController;
 use lib::page_table::PageTableTrait;
 use lib::page_table::PageTableEntryAttrTrait;
-use spin::Mutex;
-use core::ops::Deref;
+
+
 
 pub fn core_id() -> CoreId {
   crate::arch::Arch::core_id()
@@ -90,10 +90,8 @@ pub unsafe fn main(core_id: arch::CoreId) -> ! {
     extern "C" {
       static KERNEL_ELF: [u8; 0x40000000];
     }
-    panic::init_backtrace(&KERNEL_ELF);
-    println!("init_backtrace ok");
-    panic::init_backtrace_context();
-    println!("init_backtrace_context ok");
+    panic::init(&KERNEL_ELF);
+    println!("panic init ok");
   }
 
   if core_id == 0 {
@@ -131,7 +129,7 @@ pub unsafe fn main(core_id: arch::CoreId) -> ! {
 
 
     for uf in virtio_mmio.to_user_frames().iter() {
-      a.page_table().insert_page(0x8_0000_0000 + uf.pa(), uf.clone(), lib::page_table::EntryAttribute::user_device());
+      a.page_table().insert_page(0x8_0000_0000 + uf.pa(), uf.clone(), lib::page_table::EntryAttribute::user_device()).unwrap();
     }
     for i in virtio_mmio.interrupts.iter() {
       crate::driver::INTERRUPT_CONTROLLER.enable(*i);

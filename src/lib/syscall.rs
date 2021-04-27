@@ -1,7 +1,6 @@
 use SyscallValue::*;
 
 use crate::arch::{ArchPageTableEntry, ArchPageTableEntryTrait, ContextFrameTrait, PAGE_SIZE, Address};
-use crate::config::CONFIG_USER_LIMIT;
 use crate::lib::round_down;
 use crate::lib::address_space::AddressSpace;
 use crate::lib::core::{CoreTrait, current};
@@ -17,7 +16,6 @@ pub enum Error {
   InvalidArgumentError = 1,
   _OutOfProcessError,
   OutOfMemoryError,
-  MemoryLimitError,
   MemoryNotMappedError,
   NotReceivingError,
   InternalError,
@@ -39,14 +37,6 @@ impl core::convert::From<crate::lib::page_table::Error> for Error {
   }
 }
 
-impl core::convert::From<crate::lib::address_space::Error> for Error {
-  fn from(e: crate::lib::address_space::Error) -> Self {
-    match e {
-      _ => { InternalError }
-    }
-  }
-}
-
 impl Into<SyscallResult> for SyscallValue {
   fn into(self) -> SyscallResult {
     Ok(self)
@@ -59,7 +49,6 @@ pub enum SyscallValue {
   U32(u32),
   U16(u16),
   ISize(isize),
-  USize(usize),
 }
 
 pub type SyscallResult = Result<SyscallValue, Error>;
@@ -371,16 +360,16 @@ pub fn syscall() {
         SyscallValue::ISize(i) => {
           ctx.set_syscall_return_value(i as usize);
         }
-        SyscallValue::USize(u) => {
-          ctx.set_syscall_return_value(u as usize);
-        }
       }
-      // if num != 1 {
-      //   println!("#{}\t{} t{} Ok {:x}", num, SYSCALL_NAMES[num], tid, ctx.syscall_argument(0));
-      // }
+
+      if cfg!(debug_assertions) && num != 1 {
+        println!("#{}\t{} t{} Ok {:x}", num, SYSCALL_NAMES[num], tid, ctx.syscall_argument(0));
+      }
     }
     Err(err) => {
-      // println!("#{}\t{} t{} Err {:x?}", num, SYSCALL_NAMES[num], tid, err);
+      if cfg!(debug_assertions) {
+        println!("#{}\t{} t{} Err {:x?}", num, SYSCALL_NAMES[num], tid, err);
+      }
       ctx.set_syscall_return_value(usize::MAX);
     }
   }

@@ -112,6 +112,7 @@ impl Node {
         self.mode & Node::MODE_TYPE == Node::MODE_DIR
     }
 
+    #[allow(dead_code)]
     pub fn is_file(&self) -> bool {
         self.mode & Node::MODE_TYPE == Node::MODE_FILE
     }
@@ -145,6 +146,7 @@ impl Node {
         perm & op == op
     }
 
+    #[allow(dead_code)]
     pub fn size(&self) -> u64 {
         self.extents
             .iter()

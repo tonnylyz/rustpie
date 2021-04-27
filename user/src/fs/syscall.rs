@@ -1,6 +1,7 @@
-use crate::itc::*;
-use crate::syscall::{SYS_OPEN, O_RDONLY, SYS_READ, SYS_LSEEK};
 use spin::Once;
+
+use crate::itc::*;
+use crate::syscall::*;
 
 pub static FS_SERVER_TID: Once<u16> = Once::new();
 
@@ -22,16 +23,13 @@ pub struct File {
   handle: usize,
 }
 
+#[allow(dead_code)]
 #[derive(Copy, Clone, Debug, Eq, PartialEq)]
 pub enum SeekFrom {
   Start(u64),
   End(i64),
   Current(i64),
 }
-
-pub const SEEK_SET: usize = 0;
-pub const SEEK_END: usize = 1;
-pub const SEEK_CUR: usize = 2;
 
 impl File {
 
@@ -85,9 +83,9 @@ impl File {
       };
     msg.d =
       match pos {
-        SeekFrom::Start(u) => {SEEK_SET}
-        SeekFrom::End(i) => {SEEK_END}
-        SeekFrom::Current(i) => {SEEK_CUR}
+        SeekFrom::Start(_u) => {SEEK_SET}
+        SeekFrom::End(_i) => {SEEK_END}
+        SeekFrom::Current(_i) => {SEEK_CUR}
       };
     loop {
       if msg.send_to(server_tid()) == 0 {

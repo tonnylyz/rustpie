@@ -1,6 +1,6 @@
 use crate::fs::mount::scheme::FileScheme;
-use crate::fs::{VirtioClient, DiskCache, FileSystem, IS_UMT, FS_SERVER_TID, File, SeekFrom};
-use crate::syscall::{Error, Packet, Scheme, SYS_OPEN, O_RDONLY, thread_alloc, get_tid, thread_destroy};
+use crate::fs::{VirtioClient, FileSystem, IS_UMT, FS_SERVER_TID, File, SeekFrom};
+use crate::syscall::{Packet, Scheme, thread_alloc, get_tid, thread_destroy};
 use alloc::string::String;
 use core::sync::atomic::Ordering;
 use crate::itc::*;
@@ -22,7 +22,7 @@ pub fn server() {
         }
         let mut packet = Packet::default();
 
-        let mut msg = ItcMessage::receive();
+        let msg = ItcMessage::receive();
         packet.a = msg.1.a;
         packet.b = msg.1.b;
         packet.c = msg.1.c;

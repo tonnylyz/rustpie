@@ -518,7 +518,7 @@ impl<D: Disk> Scheme for FileScheme<D> {
 
     fn fevent(&self, id: usize, _flags: EventFlags) -> Result<EventFlags> {
         let files = self.files.borrow_mut();
-        if let Some(file) = files.get(&id) {
+        if let Some(_file) = files.get(&id) {
             // EPERM is returned for files that are always readable or writable
             Err(Error::new(EPERM))
         } else {

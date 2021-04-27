@@ -11,6 +11,7 @@ pub struct ExNode {
 }
 
 impl ExNode {
+    #[allow(dead_code)]
     pub fn default() -> ExNode {
         ExNode {
             prev: 0,
@@ -19,6 +20,7 @@ impl ExNode {
         }
     }
 
+    #[allow(dead_code)]
     pub fn size(&self) -> u64 {
         self.extents
             .iter()

@@ -1,38 +1,37 @@
+use register::*;
+
 use crate::config::*;
 
 use super::vm_descriptor::*;
+use crate::arch::EntryLike;
 
-const CONFIG_READ_ONLY_LEVEL_3_PAGE_TABLE_TOP: usize = 0x40_0000_0000;
-// 1 GB
 const CONFIG_READ_ONLY_LEVEL_3_PAGE_TABLE_BTM: usize = 0x3f_c000_0000;
-// 1 GB
 const CONFIG_READ_ONLY_LEVEL_2_PAGE_TABLE_BTM: usize = 0x3f_c000_0000 - 0x20_0000;
-// 2 MB
 const CONFIG_READ_ONLY_LEVEL_1_PAGE_TABLE_BTM: usize = 0x3f_c000_0000 - 0x20_0000 - 0x1000; // 4 KB
 
-fn read_directory_entry(l1_index: usize) -> u64 {
+fn read_directory_entry(l1_index: usize) -> usize {
   let ppte = CONFIG_READ_ONLY_LEVEL_1_PAGE_TABLE_BTM + l1_index * 8;
-  unsafe { (ppte as *const u64).read_volatile() }
+  unsafe { (ppte as *const usize).read_volatile() }
 }
 
-fn read_level_1_entry(l1_index: usize, l2_index: usize) -> u64 {
+fn read_level_1_entry(l1_index: usize, l2_index: usize) -> usize {
   let ppte = CONFIG_READ_ONLY_LEVEL_2_PAGE_TABLE_BTM + l1_index * PAGE_SIZE + l2_index * 8;
-  unsafe { (ppte as *const u64).read_volatile() }
+  unsafe { (ppte as *const usize).read_volatile() }
 }
 
-fn read_level_2_entry(l1_index: usize, l2_index: usize, l3_index: usize) -> u64 {
+fn read_level_2_entry(l1_index: usize, l2_index: usize, l3_index: usize) -> usize {
   let ppte = CONFIG_READ_ONLY_LEVEL_3_PAGE_TABLE_BTM + l1_index * PAGE_SIZE * 512 + l2_index * PAGE_SIZE + l3_index * 8;
-  unsafe { (ppte as *const u64).read_volatile() }
+  unsafe { (ppte as *const usize).read_volatile() }
 }
 
-fn read_page_table_entry(va: usize) -> Option<u64> {
+fn read_page_table_entry(va: usize) -> Option<usize> {
   let l1x = (va >> PAGE_TABLE_L1_SHIFT) & (PAGE_SIZE / WORD_SIZE - 1);
   let l2x = (va >> PAGE_TABLE_L2_SHIFT) & (PAGE_SIZE / WORD_SIZE - 1);
   let l3x = (va >> PAGE_TABLE_L3_SHIFT) & (PAGE_SIZE / WORD_SIZE - 1);
-  if read_directory_entry(l1x) & 0b11 != 0 {
-    if read_level_1_entry(l1x, l2x) & 0b11 != 0 {
+  if read_directory_entry(l1x) & 0b1 != 0 {
+    if read_level_1_entry(l1x, l2x) & 0b1 != 0 {
       let r = read_level_2_entry(l1x, l2x, l3x);
-      if r & 0b11 != 0 {
+      if r & 0b1 != 0 {
         Some(r)
       } else {
         None
@@ -45,164 +44,137 @@ fn read_page_table_entry(va: usize) -> Option<u64> {
   }
 }
 
-#[derive(Copy, Clone, Debug)]
-pub struct EntryAttribute {
-  pub executable: bool,
-  pub writable: bool,
-  pub copy_on_write: bool,
-  pub shared: bool,
-}
-
-impl EntryAttribute {
-  #[allow(dead_code)]
-  pub const fn default() -> Self {
-    EntryAttribute {
-      executable: true,
-      writable: true,
-      copy_on_write: false,
-      shared: false,
-    }
-  }
-  #[allow(dead_code)]
-  pub const fn executable() -> Self {
-    EntryAttribute {
-      executable: true,
-      writable: false,
-      copy_on_write: false,
-      shared: false,
-    }
-  }
-  #[allow(dead_code)]
-  pub const fn writable() -> Self {
-    EntryAttribute {
-      executable: false,
-      writable: true,
-      copy_on_write: false,
-      shared: false,
-    }
-  }
-  #[allow(dead_code)]
-  pub const fn copy_on_write() -> Self {
-    EntryAttribute {
-      executable: false,
-      writable: false,
-      copy_on_write: true,
-      shared: false,
-    }
-  }
-  #[allow(dead_code)]
-  pub const fn shared() -> Self {
-    EntryAttribute {
-      executable: false,
-      writable: false,
-      copy_on_write: false,
-      shared: true,
-    }
-  }
-}
-
-impl core::ops::Add<EntryAttribute> for EntryAttribute {
-  type Output = EntryAttribute;
-
-  fn add(self, rhs: EntryAttribute) -> Self::Output {
-    EntryAttribute {
-      executable: self.executable || rhs.executable,
-      writable: self.writable || rhs.writable,
-      copy_on_write: self.copy_on_write || rhs.copy_on_write,
-      shared: self.shared || rhs.shared,
-    }
-  }
-}
-
-
-impl core::ops::Sub<EntryAttribute> for EntryAttribute {
-  type Output = EntryAttribute;
-
-  fn sub(self, rhs: EntryAttribute) -> Self::Output {
-    EntryAttribute {
-      executable: self.executable && !rhs.executable,
-      writable: self.writable && !rhs.writable,
-      copy_on_write: self.copy_on_write && !rhs.copy_on_write,
-      shared: self.shared && !rhs.shared,
-    }
-  }
-}
-
 #[derive(Clone, Copy, Debug)]
-pub struct ArchEntryAttribute(u64);
+pub struct Entry(usize);
 
-impl ArchEntryAttribute {
-  pub fn new(value: u64) -> Self { ArchEntryAttribute(value) }
-  pub fn to_usize(&self) -> usize { self.0 as usize }
-}
-
-impl core::convert::From<EntryAttribute> for ArchEntryAttribute {
-  fn from(pte: EntryAttribute) -> Self {
-    ArchEntryAttribute(
-      (PAGE_DESCRIPTOR::USER::True
-        + PAGE_DESCRIPTOR::R::True
-        + if pte.writable {
-        PAGE_DESCRIPTOR::W::True
-      } else {
-        PAGE_DESCRIPTOR::W::False
-      } + if pte.executable {
-        PAGE_DESCRIPTOR::X::True
-      } else {
-        PAGE_DESCRIPTOR::X::False
-      } + if pte.copy_on_write {
-        PAGE_DESCRIPTOR::COW::True
-      } else {
-        PAGE_DESCRIPTOR::COW::False
-      } + if pte.shared {
-        PAGE_DESCRIPTOR::LIB::True
-      } else {
-        PAGE_DESCRIPTOR::LIB::False
-      }).value
-    )
+impl Default for Entry {
+  fn default() -> Self {
+    Entry::attr(true, true, false, false)
   }
 }
 
-impl core::convert::From<ArchEntryAttribute> for EntryAttribute {
-  fn from(apte: ArchEntryAttribute) -> Self {
-    use register::*;
-    let reg = LocalRegisterCopy::<u64, PAGE_DESCRIPTOR::Register>::new(apte.0);
-    EntryAttribute {
-      executable: reg.is_set(PAGE_DESCRIPTOR::X),
-      writable: reg.is_set(PAGE_DESCRIPTOR::W),
-      copy_on_write: reg.is_set(PAGE_DESCRIPTOR::COW),
-      shared: reg.is_set(PAGE_DESCRIPTOR::LIB),
+impl Entry {
+  pub fn attr(writable: bool, executable: bool, copy_on_write: bool, shared: bool) -> Self {
+    Entry((PAGE_DESCRIPTOR::USER::True
+      + PAGE_DESCRIPTOR::R::True
+      + if writable {
+      PAGE_DESCRIPTOR::W::True
+    } else {
+      PAGE_DESCRIPTOR::W::False
+    } + if executable {
+      PAGE_DESCRIPTOR::X::True
+    } else {
+      PAGE_DESCRIPTOR::X::False
+    } + if copy_on_write {
+      PAGE_DESCRIPTOR::COW::True
+    } else {
+      PAGE_DESCRIPTOR::COW::False
+    } + if shared {
+      PAGE_DESCRIPTOR::LIB::True
+    } else {
+      PAGE_DESCRIPTOR::LIB::False
+    }).value as usize)
+  }
+
+  pub fn reg(&self) -> LocalRegisterCopy<u64, PAGE_DESCRIPTOR::Register> {
+    LocalRegisterCopy::new(self.0 as u64)
+  }
+}
+
+const PTE_ATTR_MASK: usize = 0x3ff;
+
+impl EntryLike for Entry {
+  fn executable(&self) -> bool {
+    self.reg().is_set(PAGE_DESCRIPTOR::X)
+  }
+
+  fn writable(&self) -> bool {
+    self.reg().is_set(PAGE_DESCRIPTOR::W)
+  }
+
+  fn copy_on_write(&self) -> bool {
+    self.reg().is_set(PAGE_DESCRIPTOR::COW)
+  }
+
+  fn shared(&self) -> bool {
+    self.reg().is_set(PAGE_DESCRIPTOR::LIB)
+  }
+
+  fn set_executable(&mut self, b: bool) {
+    if b {
+      self.0 |= (PAGE_DESCRIPTOR::X::True).value as usize;
+    } else {
+      self.0 &= !(PAGE_DESCRIPTOR::X::True).value as usize;
     }
   }
+
+  fn set_writable(&mut self, b: bool) {
+    if b {
+      self.0 |= (PAGE_DESCRIPTOR::W::True).value as usize;
+    } else {
+      self.0 &= !(PAGE_DESCRIPTOR::W::True).value as usize;
+    }
+  }
+
+  fn set_copy_on_write(&mut self, b: bool) {
+    if b {
+      self.0 |= (PAGE_DESCRIPTOR::COW::True).value as usize;
+    } else {
+      self.0 &= !(PAGE_DESCRIPTOR::COW::True).value as usize;
+    }
+  }
+
+  fn set_shared(&mut self, b: bool) {
+    if b {
+      self.0 |= (PAGE_DESCRIPTOR::LIB::True).value as usize;
+    } else {
+      self.0 &= !(PAGE_DESCRIPTOR::LIB::True).value as usize;
+    }
+  }
+
+  fn address(&self) -> usize {
+    (self.0 >> 10) << 12
+  }
+
+  fn set_address(&mut self, addr: usize) {
+    let ppn = addr >> 12;
+    self.0 &= PTE_ATTR_MASK;
+    self.0 |= ppn << 10;
+  }
+
+  fn attribute(&self) -> usize {
+    self.0 | PTE_ATTR_MASK
+  }
+
+  fn set_attribute(&mut self, attr: usize) {
+    self.0 &= !PTE_ATTR_MASK;
+    self.0 |= attr & PTE_ATTR_MASK;
+  }
+
+  fn is_valid(&self) -> bool {
+    self.reg().is_set(PAGE_DESCRIPTOR::VALID)
+  }
+
+  fn is_table(&self) -> bool {
+    self.is_valid() && self.reg().matches_all(PAGE_DESCRIPTOR::R::False)
+    && self.reg().matches_all(PAGE_DESCRIPTOR::W::False)
+    && self.reg().matches_all(PAGE_DESCRIPTOR::X::False)
+  }
+
+  fn is_page(&self) -> bool {
+    self.is_valid() && self.reg().is_set(PAGE_DESCRIPTOR::USER) && !self.is_table()
+  }
 }
 
-#[allow(dead_code)]
-pub const PTE_DEFAULT: EntryAttribute = EntryAttribute::default();
-#[allow(dead_code)]
-pub const PTE_X: EntryAttribute = EntryAttribute::executable();
-#[allow(dead_code)]
-pub const PTE_W: EntryAttribute = EntryAttribute::writable();
-#[allow(dead_code)]
-pub const PTE_COW: EntryAttribute = EntryAttribute::copy_on_write();
-#[allow(dead_code)]
-pub const PTE_LIB: EntryAttribute = EntryAttribute::shared();
-
-pub fn va2pa(va: usize) -> Option<usize> {
+pub fn query(va: usize) -> Option<Entry> {
   if let Some(pte) = read_page_table_entry(va) {
-    Some(((pte as usize >> 10) << 12) | (va & 0xFFF))
+    Some(Entry(pte))
   } else {
     None
   }
 }
 
-pub fn query(va: usize) -> Option<EntryAttribute> {
-  if let Some(pte) = read_page_table_entry(va) {
-    Some(EntryAttribute::from(ArchEntryAttribute(pte)))
-  } else {
-    None
-  }
-}
-
-pub fn traverse<F>(limit: usize, f: F) where F: Fn(usize, EntryAttribute) -> () {
+pub fn traverse<F>(limit: usize, f: F) where F: Fn(usize, Entry) -> () {
   for l1x in 0..(PAGE_SIZE / WORD_SIZE) {
     let l1e = read_directory_entry(l1x);
     if l1e & 0b1 == 0 || l1e & (1 << 4) == 0 {
@@ -224,7 +196,7 @@ pub fn traverse<F>(limit: usize, f: F) where F: Fn(usize, EntryAttribute) -> () 
         }
         let l3e = read_level_2_entry(l1x, l2x, l3x);
         if l3e & 0b1 != 0 {
-          f(va, EntryAttribute::from(ArchEntryAttribute(l3e)));
+          f(va, Entry(l3e));
         }
       }
     }

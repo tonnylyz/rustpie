@@ -12,9 +12,6 @@ const PLIC_SUPERVISOR_PRIORITY_ADDR: usize = PLIC_BASE_ADDR + 0x201000;
 const PLIC_SUPERVISOR_CLAIM_ADDR: usize = PLIC_BASE_ADDR + 0x201004;
 // by 0x2000
 
-const PLIC_IRQ_VIRTIO: Interrupt = 1;
-const PLIC_IRQ_UART: Interrupt = 10;
-
 pub struct Plic;
 
 impl InterruptController for Plic {

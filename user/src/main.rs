@@ -10,7 +10,6 @@
 extern crate alloc;
 extern crate rlibc;
 
-
 #[macro_use]
 mod print;
 

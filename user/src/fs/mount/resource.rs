@@ -200,7 +200,7 @@ impl Fmap {
         // Memory provided to fmap must be page aligned and sized
         let align = 4096;
         // let address = memalign(align, ((map.size + align - 1) / align) * align);
-        let address = valloc(((map.size + align - 1) / align));
+        let address = valloc((map.size + align - 1) / align);
         if address.is_null() {
             return Err(Error::new(ENOMEM));
         }
@@ -246,13 +246,11 @@ impl Fmap {
 
 impl Drop for Fmap {
     fn drop(&mut self) {
-        unsafe {
-            // extern "C" {
-            //     fn free(ptr: *mut u8);
-            // }
-            //
-            // free(self.data.as_mut_ptr());
-        }
+        // extern "C" {
+        //     fn free(ptr: *mut u8);
+        // }
+        //
+        // free(self.data.as_mut_ptr());
     }
 }
 

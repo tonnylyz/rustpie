@@ -3,18 +3,20 @@ mod flag;
 mod data;
 mod scheme;
 mod number;
+mod constant;
 
 pub use result::*;
 pub use flag::*;
 pub use data::*;
 pub use scheme::*;
 pub use number::*;
+pub use constant::*;
+
 
 use crate::arch::page_table::*;
 use core::slice;
 use core::mem;
-
-
+use crate::arch::EntryLike;
 
 
 extern "C" {
@@ -61,14 +63,12 @@ pub fn event_handler(asid: u16, value: usize, sp: usize, event: usize) -> isize 
   unsafe { syscall_6(asid, value, sp, event) }
 }
 
-pub fn mem_alloc(asid: u16, va: usize, attr: EntryAttribute) -> isize {
-  let attr = ArchEntryAttribute::from(attr).to_usize();
-  unsafe { syscall_7(asid, va, attr) }
+pub fn mem_alloc(asid: u16, va: usize, attr: Entry) -> isize {
+  unsafe { syscall_7(asid, va, attr.attribute()) }
 }
 
-pub fn mem_map(src_asid: u16, src_va: usize, dst_asid: u16, dst_va: usize, attr: EntryAttribute) -> isize {
-  let attr = ArchEntryAttribute::from(attr).to_usize();
-  unsafe { syscall_8(src_asid, src_va, dst_asid, dst_va, attr) }
+pub fn mem_map(src_asid: u16, src_va: usize, dst_asid: u16, dst_va: usize, attr: Entry) -> isize {
+  unsafe { syscall_8(src_asid, src_va, dst_asid, dst_va, attr.attribute()) }
 }
 
 pub fn mem_unmap(asid: u16, va: usize) -> isize {
@@ -93,9 +93,8 @@ pub fn ipc_receive(dst_va: usize) {
   unsafe { syscall_13(dst_va); }
 }
 
-pub fn ipc_can_send(asid: u16, value: usize, src_va: usize, attr: EntryAttribute) -> isize {
-  let attr = ArchEntryAttribute::from(attr).to_usize();
-  unsafe { syscall_14(asid, value, src_va, attr) }
+pub fn ipc_can_send(asid: u16, value: usize, src_va: usize, attr: Entry) -> isize {
+  unsafe { syscall_14(asid, value, src_va, attr.attribute()) }
 }
 
 pub fn itc_receive(msg_ptr: usize) -> usize {

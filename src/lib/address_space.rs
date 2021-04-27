@@ -34,10 +34,7 @@ impl AddressSpace {
   pub fn page_table(&self) -> &PageTable {
     &self.0.page_table
   }
-  pub fn destroy(&self) {
-    self.0.page_table.destroy();
-    free(self);
-  }
+
   pub fn event_register(&self, event: Event, entry: usize, sp: usize) {
     let mut handlers = self.0.event_handlers.lock();
     handlers.push((event, entry, sp));
@@ -56,10 +53,6 @@ impl AddressSpace {
 struct Pool {
   bitmap: BitMap,
   allocated: Vec<AddressSpace>,
-}
-
-pub enum Error {
-  AddressSpaceNotFound,
 }
 
 fn make_user_page_table() -> PageTable {
@@ -83,17 +76,6 @@ impl Pool {
     AddressSpace(arc)
   }
 
-  fn free(&mut self, p: &AddressSpace) -> Result<(), Error> {
-    if self.allocated.contains(p) {
-      self.allocated.retain(|_p| _p.asid() != p.asid());
-      let mut map = ADDRESS_SPACE_MAP.get().unwrap().lock();
-      map.remove(&p.asid());
-      self.bitmap.clear((p.asid() - 1) as usize);
-      Ok(())
-    } else {
-      Err(Error::AddressSpaceNotFound)
-    }
-  }
 }
 
 static ADDRESS_SPACE_MAP: spin::Once<Mutex<BTreeMap<Asid, Arc<Inner>>>> = spin::Once::new();
@@ -113,14 +95,6 @@ pub fn alloc() -> AddressSpace {
   let mut pool = POOL.lock();
   let r = pool.alloc();
   r
-}
-
-pub fn free(p: &AddressSpace) {
-  let mut pool = POOL.lock();
-  match pool.free(p) {
-    Ok(_) => {}
-    Err(_) => { println!("process_pool: free: process not found") }
-  }
 }
 
 pub fn lookup(asid: Asid) -> Option<AddressSpace> {
