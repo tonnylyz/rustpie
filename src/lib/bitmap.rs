@@ -1,43 +1,40 @@
-const BITMAP_SIZE: usize = 65536;
-const BITMAP_ATOMIC_SIZE: usize = 64;
+use core::mem::size_of;
 
-type BitmapAtomicType = u64;
+pub struct BitMap<const S: usize>([usize; S]);
 
-pub struct BitMap([BitmapAtomicType; BITMAP_SIZE / BITMAP_ATOMIC_SIZE]);
-
-impl BitMap {
+impl<const S: usize> BitMap<S> {
   pub const fn new() -> Self {
-    BitMap([0; BITMAP_SIZE / BITMAP_ATOMIC_SIZE])
+    BitMap::<S>([0; S])
   }
 
   pub fn set(&mut self, index: usize) {
-    let i = index / BITMAP_ATOMIC_SIZE;
-    let shift = index % BITMAP_ATOMIC_SIZE;
-    self.0[i] |= (1usize << shift) as BitmapAtomicType;
+    let i = index / size_of::<usize>();
+    let shift = index % size_of::<usize>();
+    self.0[i] |= 1usize << shift;
   }
 
   pub fn clear(&mut self, index: usize) {
-    let i = index / BITMAP_ATOMIC_SIZE;
-    let shift = index % BITMAP_ATOMIC_SIZE;
-    self.0[i] &= !(1usize << shift) as BitmapAtomicType;
+    let i = index / size_of::<usize>();
+    let shift = index % size_of::<usize>();
+    self.0[i] &= !(1usize << shift);
   }
 
   #[allow(dead_code)]
   pub fn is_set(&self, index: usize) -> bool {
-    let i = index / BITMAP_ATOMIC_SIZE;
-    let shift = index % BITMAP_ATOMIC_SIZE;
-    (self.0[i] >> shift as BitmapAtomicType) & 0b1 == 0b1
+    let i = index / size_of::<usize>();
+    let shift = index % size_of::<usize>();
+    (self.0[i] >> shift) & 0b1 == 0b1
   }
 
   pub fn alloc(&mut self) -> usize {
-    for i in 0..(BITMAP_SIZE / BITMAP_ATOMIC_SIZE) {
+    for i in 0..(S / size_of::<usize>()) {
       let atom = self.0[i];
-      if atom == BitmapAtomicType::MAX {
+      if atom == usize::MAX {
         continue;
       }
-      for shift in 0..BITMAP_ATOMIC_SIZE {
-        if (atom >> shift as BitmapAtomicType) & 0b1 == 0 {
-          let index = i * BITMAP_ATOMIC_SIZE + shift;
+      for shift in 0..size_of::<usize>() {
+        if (atom >> shift) & 0b1 == 0 {
+          let index = i * size_of::<usize>() + shift;
           self.set(index);
           return index;
         }

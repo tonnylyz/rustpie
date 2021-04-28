@@ -1,10 +1,11 @@
 use riscv::{asm::*, regs::*};
 
 use crate::arch::Address;
+use core::mem::size_of;
 
-pub const PAGE_SIZE: usize = 4096;
 pub const PAGE_SHIFT: usize = 12;
-pub const MACHINE_SIZE: usize = 8;
+pub const PAGE_SIZE: usize = 1 << PAGE_SHIFT;
+pub const MACHINE_SIZE: usize = size_of::<usize>();
 
 const PA2KVA: usize = 0xFFFF_FFFF_0000_0000;
 const KVA2PA: usize = 0xFFFF_FFFF;

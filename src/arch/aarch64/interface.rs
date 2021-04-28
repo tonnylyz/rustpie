@@ -2,10 +2,11 @@ use cortex_a::{asm::*, regs::*};
 
 use crate::arch::Address;
 use crate::board::BOARD_CORE_NUMBER;
+use core::mem::size_of;
 
-pub const PAGE_SIZE: usize = 4096;
 pub const PAGE_SHIFT: usize = 12;
-pub const MACHINE_SIZE: usize = 8;
+pub const PAGE_SIZE: usize = 1 << PAGE_SHIFT;
+pub const MACHINE_SIZE: usize = size_of::<usize>();
 
 const PA2KVA: usize = 0xFFFF_FF80_0000_0000;
 const KVA2PA: usize = 0x0000_007F_FFFF_FFFF;

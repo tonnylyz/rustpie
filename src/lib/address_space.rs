@@ -8,6 +8,7 @@ use crate::arch::PageTable;
 use crate::lib::bitmap::BitMap;
 use crate::lib::event::Event;
 use crate::lib::page_table::PageTableTrait;
+use core::mem::size_of;
 
 pub type Asid = u16;
 
@@ -51,7 +52,7 @@ impl AddressSpace {
 }
 
 struct Pool {
-  bitmap: BitMap,
+  bitmap: BitMap<{ Asid::MAX as usize / size_of::<usize>() }>,
   allocated: Vec<AddressSpace>,
 }
 

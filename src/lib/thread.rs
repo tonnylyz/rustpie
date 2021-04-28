@@ -8,6 +8,7 @@ use crate::arch::{ContextFrame, ContextFrameTrait, CoreId};
 use crate::lib::address_space::AddressSpace;
 use crate::lib::bitmap::BitMap;
 use crate::lib::core::CoreTrait;
+use core::mem::size_of;
 
 pub type Tid = u16;
 
@@ -130,7 +131,7 @@ impl Thread {
 }
 
 struct ThreadPool {
-  bitmap: BitMap,
+  bitmap: BitMap<{ Tid::MAX as usize / size_of::<usize>() }>,
   allocated: Vec<Thread>,
 }
 

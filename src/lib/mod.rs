@@ -14,7 +14,6 @@ pub mod thread;
 pub mod bitmap;
 pub mod core;
 pub mod interrupt;
-pub mod itc;
 pub mod barrier;
 pub mod stack;
 // pub mod fatfs;

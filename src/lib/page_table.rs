@@ -1,6 +1,6 @@
 use core::fmt::{Display, Formatter};
 
-use crate::arch::{Address, AddressSpaceId, PAGE_SHIFT};
+use crate::arch::{AddressSpaceId, PAGE_SHIFT};
 use crate::mm::UserFrame;
 
 pub trait PageTableEntryAttrTrait {
@@ -164,8 +164,6 @@ impl Entry {
     self.pa
   }
   pub fn ppn(&self) -> usize { self.pa >> PAGE_SHIFT }
-  #[allow(dead_code)]
-  pub fn kva(&self) -> usize { self.pa.pa2kva() }
 }
 
 impl Display for Entry {
