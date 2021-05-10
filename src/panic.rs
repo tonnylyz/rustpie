@@ -7,12 +7,12 @@ use addr2line::gimli;
 use backtracer;
 use spin::Once;
 
-use crate::lib::core::CoreTrait;
+use crate::lib::cpu::CoreTrait;
 use crate::lib::traits::*;
 
 #[allow(dead_code)]
 pub fn exception_trace() {
-  let ctx = crate::lib::core::current().context();
+  let ctx = crate::lib::cpu::current().context();
   #[cfg(target_arch = "aarch64")]
     let frame_zero = backtracer::EntryPoint::new(
     ctx.gpr(29) as u64,

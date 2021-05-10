@@ -7,7 +7,7 @@ use spin::Mutex;
 use crate::arch::PageTable;
 use crate::lib::bitmap::BitMap;
 use crate::lib::event::Event;
-use crate::lib::page_table::PageTableTrait;
+use crate::mm::page_table::PageTableTrait;
 use core::mem::size_of;
 
 pub type Asid = u16;

@@ -1,7 +1,7 @@
 use core::ops::Range;
 
 use crate::arch::PAGE_SIZE;
-use crate::lib::round_up;
+use crate::util::round_up;
 use crate::lib::traits::*;
 
 // non paged memory in kernel (kernel heap memory)

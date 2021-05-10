@@ -48,13 +48,14 @@ mod lib;
 mod mm;
 mod config;
 mod panic;
+mod util;
 
 use arch::CoreId;
 use lib::traits::*;
-use lib::core::CoreTrait;
+use lib::cpu::CoreTrait;
 use lib::interrupt::InterruptController;
-use lib::page_table::PageTableTrait;
-use lib::page_table::PageTableEntryAttrTrait;
+use mm::page_table::PageTableTrait;
+use mm::page_table::PageTableEntryAttrTrait;
 
 pub fn core_id() -> CoreId {
   crate::arch::Arch::core_id()
@@ -107,7 +108,7 @@ pub unsafe fn main(core_id: arch::CoreId) -> ! {
   }
   board::init_per_core();
 
-  crate::lib::core::current().create_idle_thread();
+  crate::lib::cpu::current().create_idle_thread();
   println!("init core {}", core_id);
   if core_id == 0 {
     extern "C" {
@@ -132,7 +133,7 @@ pub unsafe fn main(core_id: arch::CoreId) -> ! {
 
     page_table.insert_page(config::CONFIG_USER_STACK_TOP - arch::PAGE_SIZE,
                            mm::UserFrame::new_memory(mm::page_pool::alloc()),
-                           lib::page_table::EntryAttribute::user_default()).unwrap();
+                           mm::page_table::EntryAttribute::user_default()).unwrap();
     let t = crate::lib::thread::new_user(entry, config::CONFIG_USER_STACK_TOP, INIT_ARG, a.clone(), None);
     t.set_status(crate::lib::thread::Status::TsRunnable);
 
@@ -152,20 +153,20 @@ pub unsafe fn main(core_id: arch::CoreId) -> ! {
 
 
     for uf in virtio_mmio.to_user_frames().iter() {
-      a.page_table().insert_page(0x8_0000_0000 + uf.pa(), uf.clone(), lib::page_table::EntryAttribute::user_device()).unwrap();
+      a.page_table().insert_page(0x8_0000_0000 + uf.pa(), uf.clone(), mm::page_table::EntryAttribute::user_device()).unwrap();
     }
     for i in virtio_mmio.interrupts.iter() {
       crate::driver::INTERRUPT_CONTROLLER.enable(*i);
     }
   }
 
-  lib::barrier::barrier();
-  crate::lib::core::current().schedule();
+  util::barrier();
+  crate::lib::cpu::current().schedule();
 
   extern {
     fn pop_context_first(ctx: usize, core_id: usize) -> !;
   }
-  let t = crate::lib::core::current().running_thread().unwrap();
+  let t = crate::lib::cpu::current().running_thread().unwrap();
   let ctx = t.context();
   pop_context_first(&ctx as *const _ as usize, core_id);
 }

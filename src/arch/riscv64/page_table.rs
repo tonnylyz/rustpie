@@ -2,7 +2,7 @@ use riscv::regs::*;
 
 use crate::arch::*;
 use crate::config::*;
-use crate::lib::page_table::{Entry, EntryAttribute, Error, PageTableEntryAttrTrait, PageTableTrait};
+use crate::mm::page_table::{Entry, EntryAttribute, Error, PageTableEntryAttrTrait, PageTableTrait};
 use crate::mm::{PageFrame, UserFrame};
 use crate::lib::traits::*;
 
@@ -254,13 +254,13 @@ impl PageTableTrait for Riscv64PageTable {
     }
   }
 
-  fn remove_page(&self, va: usize) -> Result<(), crate::lib::page_table::Error> {
+  fn remove_page(&self, va: usize) -> Result<(), crate::mm::page_table::Error> {
     if let Some(_pte) = self.lookup_page(va) {
       self.unmap(va);
       crate::arch::Arch::invalidate_tlb();
       Ok(())
     } else {
-      Err(crate::lib::page_table::Error::AddressNotMappedError)
+      Err(crate::mm::page_table::Error::AddressNotMappedError)
     }
   }
 

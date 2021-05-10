@@ -7,7 +7,7 @@
 use cortex_a::{barrier, regs::*};
 
 use crate::arch::ContextFrame;
-use crate::lib::core::CoreTrait;
+use crate::lib::cpu::CoreTrait;
 
 global_asm!(include_str!("exception.S"));
 
@@ -39,37 +39,35 @@ unsafe extern "C" fn current_el_spx_serror(ctx: *mut ContextFrame) {
 
 #[no_mangle]
 unsafe extern "C" fn lower_aarch64_synchronous(ctx: *mut ContextFrame) {
-  use crate::lib::isr::*;
-  let core = crate::lib::core::current();
+  let core = crate::lib::cpu::current();
   core.set_context(ctx);
   if ESR_EL1.matches_all(ESR_EL1::EC::SVC64) {
-    Isr::system_call();
+    crate::lib::syscall::syscall();
   } else if ESR_EL1.matches_all(ESR_EL1::EC::InstrAbortLowerEL) | ESR_EL1.matches_all(ESR_EL1::EC::DataAbortLowerEL) {
-    Isr::page_fault();
+    crate::mm::page_fault::handle();
   } else {
     let ec = ESR_EL1.read(ESR_EL1::EC);
     println!("lower_aarch64_synchronous: ec {:06b}", ec);
     println!("{}", *ctx);
-    Isr::default();
+    crate::lib::exception::handle();
   }
   core.clear_context();
 }
 
 #[no_mangle]
 unsafe extern "C" fn lower_aarch64_irq(ctx: *mut ContextFrame) {
-  use crate::lib::isr::*;
   use crate::lib::interrupt::*;
-  let core = crate::lib::core::current();
+  let core = crate::lib::cpu::current();
   core.set_context(ctx);
   use crate::driver::{INTERRUPT_CONTROLLER, gic::INT_TIMER};
   let irq = INTERRUPT_CONTROLLER.fetch();
   match irq {
     Some(INT_TIMER) => {
-      Isr::timer_interrupt();
+      crate::lib::timer::interrupt();
     }
     Some(i) => {
       if i >= 32 {
-        Isr::external_interrupt(i);
+        crate::lib::device::interrupt(i);
       } else {
         panic!("GIC unhandled SGI PPI")
       }
@@ -86,10 +84,9 @@ unsafe extern "C" fn lower_aarch64_irq(ctx: *mut ContextFrame) {
 
 #[no_mangle]
 unsafe extern "C" fn lower_aarch64_serror(ctx: *mut ContextFrame) {
-  use crate::lib::isr::*;
-  let core = crate::lib::core::current();
+  let core = crate::lib::cpu::current();
   core.set_context(ctx);
-  Isr::default();
+  crate::lib::exception::handle();
   core.clear_context();
 }
 

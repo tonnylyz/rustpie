@@ -3,7 +3,7 @@ use alloc::vec::Vec;
 use spin::Mutex;
 
 use crate::arch::*;
-use crate::lib::page_table::{Entry, EntryAttribute, Error, PageTableEntryAttrTrait, PageTableTrait};
+use crate::mm::page_table::{Entry, EntryAttribute, Error, PageTableEntryAttrTrait, PageTableTrait};
 use crate::mm::{PageFrame, UserFrame};
 
 use super::vm_descriptor::*;
@@ -225,13 +225,13 @@ impl PageTableTrait for Aarch64PageTable {
     }
   }
 
-  fn remove_page(&self, va: usize) -> Result<(), crate::lib::page_table::Error> {
+  fn remove_page(&self, va: usize) -> Result<(), crate::mm::page_table::Error> {
     if let Some(_) = self.lookup_page(va) {
       self.unmap(va);
       crate::arch::Arch::invalidate_tlb();
       Ok(())
     } else {
-      Err(crate::lib::page_table::Error::AddressNotMappedError)
+      Err(crate::mm::page_table::Error::AddressNotMappedError)
     }
   }
 

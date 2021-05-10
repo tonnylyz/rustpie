@@ -7,7 +7,7 @@ use spin::Mutex;
 use crate::arch::{ContextFrame, CoreId};
 use crate::lib::address_space::AddressSpace;
 use crate::lib::bitmap::BitMap;
-use crate::lib::core::CoreTrait;
+use crate::lib::cpu::CoreTrait;
 use core::mem::size_of;
 use crate::lib::traits::*;
 
@@ -112,9 +112,9 @@ impl Thread {
   }
 
   pub fn destroy(&self) {
-    if let Some(t) = crate::lib::core::current().running_thread() {
+    if let Some(t) = crate::lib::cpu::current().running_thread() {
       if self.0.tid == t.tid() {
-        crate::lib::core::current().set_running_thread(None);
+        crate::lib::cpu::current().set_running_thread(None);
       }
     }
     free(self)

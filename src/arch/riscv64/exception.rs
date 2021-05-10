@@ -1,8 +1,7 @@
 use riscv::regs::*;
 
 use crate::lib::traits::*;
-use crate::lib::core::CoreTrait;
-use crate::lib::isr::{InterruptServiceRoutine, Isr};
+use crate::lib::cpu::CoreTrait;
 use crate::panic::exception_trace;
 use crate::lib::interrupt::InterruptController;
 use crate::arch::ContextFrame;
@@ -39,7 +38,7 @@ static mut PANIC: bool = false;
 #[no_mangle]
 unsafe extern "C" fn exception_entry(ctx: *mut ContextFrame) {
   let from_kernel = SSTATUS.is_set(SSTATUS::SPP);
-  let core = crate::lib::core::current();
+  let core = crate::lib::cpu::current();
   core.set_context(ctx);
   if PANIC {
     loop {}
@@ -57,46 +56,40 @@ unsafe extern "C" fn exception_entry(ctx: *mut ContextFrame) {
       INTERRUPT_USER_SOFTWARE => panic!("Interrupt::UserSoft"),
       INTERRUPT_SUPERVISOR_SOFTWARE => panic!("Interrupt::SupervisorSoft"),
       INTERRUPT_USER_TIMER => panic!("Interrupt::UserTimer"),
-      INTERRUPT_SUPERVISOR_TIMER => Isr::timer_interrupt(),
+      INTERRUPT_SUPERVISOR_TIMER => crate::lib::timer::interrupt(),
       INTERRUPT_USER_EXTERNAL => panic!("Interrupt::UserExternal"),
       INTERRUPT_SUPERVISOR_EXTERNAL => {
         let plic = &crate::driver::INTERRUPT_CONTROLLER;
         if let Some(int) = plic.fetch() {
-          Isr::external_interrupt(int);
+          crate::lib::device::interrupt(int);
           plic.finish(int);
         } else {
           println!("PLIC report no irq");
         }
-      },
+      }
       _ => panic!("Interrupt::Unknown"),
     }
   } else {
     match code {
-      EXCEPTION_INSTRUCTION_ADDRESS_MISALIGNED => panic!("Exception::InstructionMisaligned"),
-      EXCEPTION_INSTRUCTION_ACCESS_FAULT => panic!("Exception::InstructionFault"),
-      EXCEPTION_ILLEGAL_INSTRUCTION => Isr::default(),
-      EXCEPTION_BREAKPOINT => panic!("Exception::Breakpoint"),
-      EXCEPTION_LOAD_ADDRESS_MISALIGNED => panic!("Exception::LoadMisaligned"),
-      EXCEPTION_LOAD_ACCESS_FAULT =>  {
-        println!("STVAL {:016x}", STVAL.get());
-        panic!("Exception::LoadFault")
-      },
-      EXCEPTION_STORE_ADDRESS_MISALIGNED => panic!("Exception::StoreMisaligned"),
-      EXCEPTION_STORE_ACCESS_FAULT => {
-        println!("STVAL {:016x}", STVAL.get());
-        panic!("Exception::StoreFault")
-      }
+      EXCEPTION_INSTRUCTION_ADDRESS_MISALIGNED
+      | EXCEPTION_INSTRUCTION_ACCESS_FAULT
+      | EXCEPTION_ILLEGAL_INSTRUCTION
+      | EXCEPTION_BREAKPOINT
+      | EXCEPTION_LOAD_ADDRESS_MISALIGNED
+      | EXCEPTION_LOAD_ACCESS_FAULT
+      | EXCEPTION_STORE_ADDRESS_MISALIGNED
+      | EXCEPTION_STORE_ACCESS_FAULT => crate::lib::exception::handle(),
       EXCEPTION_ENVIRONMENT_CALL_FROM_USER_MODE => {
         // Note: we need to set epc to next instruction before doing system call
         //       pay attention to yield and process_alloc
         let pc = core.context_mut().exception_pc();
         core.context_mut().set_exception_pc(pc + 4);
-        Isr::system_call();
+        crate::lib::syscall::syscall();
       }
-      EXCEPTION_INSTRUCTION_PAGE_FAULT => Isr::page_fault(),
-      EXCEPTION_LOAD_PAGE_FAULT => Isr::page_fault(),
-      EXCEPTION_STORE_PAGE_FAULT => Isr::page_fault(),
-      _ => { panic!("Exception::Unknown") }
+      EXCEPTION_INSTRUCTION_PAGE_FAULT
+      | EXCEPTION_LOAD_PAGE_FAULT
+      | EXCEPTION_STORE_PAGE_FAULT => crate::mm::page_fault::handle(),
+      _ => panic!("Exception::Unknown")
     }
   }
   core.clear_context();
