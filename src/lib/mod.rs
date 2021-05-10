@@ -16,8 +16,7 @@ pub mod core;
 pub mod interrupt;
 pub mod barrier;
 pub mod stack;
-// pub mod fatfs;
 pub mod device;
 pub mod event;
-
-
+pub mod traits;
+pub mod mmio;

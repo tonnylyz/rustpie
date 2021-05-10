@@ -1,4 +1,4 @@
-use crate::driver::mmio::*;
+use crate::lib::mmio::*;
 use crate::lib::interrupt::InterruptController;
 
 // platform level interrupt controller

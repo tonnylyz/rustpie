@@ -1,6 +1,6 @@
 use riscv::{asm::*, regs::*};
 
-use crate::arch::Address;
+use crate::lib::traits::*;
 use core::mem::size_of;
 
 pub const PAGE_SHIFT: usize = 12;
@@ -33,7 +33,7 @@ pub type CoreId = usize;
 
 pub struct Riscv64Arch;
 
-impl crate::arch::ArchTrait for Riscv64Arch {
+impl ArchTrait for Riscv64Arch {
   fn exception_init() {
     super::exception::init();
   }

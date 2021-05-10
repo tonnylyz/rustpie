@@ -3,7 +3,7 @@ use core::sync::atomic::{AtomicBool, Ordering};
 
 use spin::Mutex;
 
-use crate::arch::{Address, ArchTrait};
+use crate::lib::traits::*;
 use crate::lib::interrupt::InterruptController;
 
 pub const BOARD_CORE_NUMBER: usize = 1;

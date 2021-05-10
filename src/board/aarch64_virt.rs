@@ -1,8 +1,8 @@
 use core::ops::Range;
 
-use crate::arch::Address;
 use crate::driver::gic::INT_TIMER;
 use crate::lib::interrupt::InterruptController;
+use crate::Address;
 
 pub const BOARD_CORE_NUMBER: usize = 1;
 pub const BOARD_NORMAL_MEMORY_RANGE: Range<usize> = 0x4000_0000..0x8000_0000;

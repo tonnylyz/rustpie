@@ -26,19 +26,17 @@ pub fn fork() -> i32 {
   if asid == u16::MAX && tid == u16::MAX {
     println!("address_space_alloc error");
     -1
+  } else if asid == 0 {
+    // set_self_ipc(get_asid(0));
+    0
   } else {
-    if asid == 0 {
-      // set_self_ipc(get_asid(0));
-      0
-    } else {
-      traverse(TRAVERSE_LIMIT, |va, attr| {
-        duplicate_page(asid, va, attr)
-      });
-      mem_alloc(asid, EXCEPTION_STACK_TOP - PAGE_SIZE, Entry::default());
-      event_handler(asid, asm_page_fault_handler as usize, EXCEPTION_STACK_TOP, 0);
-      thread_set_status(tid, ThreadStatus::TsRunnable);
-      asid as i32
-    }
+    traverse(TRAVERSE_LIMIT, |va, attr| {
+      duplicate_page(asid, va, attr)
+    });
+    mem_alloc(asid, EXCEPTION_STACK_TOP - PAGE_SIZE, Entry::default());
+    event_handler(asid, asm_page_fault_handler as usize, EXCEPTION_STACK_TOP, 0);
+    thread_set_status(tid, ThreadStatus::TsRunnable);
+    asid as i32
   }
 }
 

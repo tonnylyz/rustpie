@@ -1,4 +1,4 @@
-use crate::driver::mmio::*;
+use crate::lib::mmio::*;
 
 // Note: NS16550A uart driver from
 // https://github.com/michaeljclark/riscv-probe/blob/master/libfemto/drivers/ns16550a.c

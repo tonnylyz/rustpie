@@ -1,12 +1,12 @@
 use SyscallValue::*;
 
-use crate::arch::{ArchPageTableEntry, ArchPageTableEntryTrait, ContextFrameTrait, PAGE_SIZE, Address};
+use crate::arch::{ArchPageTableEntry, PAGE_SIZE};
 use crate::lib::round_down;
 use crate::lib::address_space::AddressSpace;
 use crate::lib::core::{CoreTrait, current};
 use crate::lib::event::Event;
 use crate::lib::page_table::{Entry, PageTableEntryAttrTrait, PageTableTrait};
-
+use crate::lib::traits::*;
 use self::Error::*;
 use crate::lib::thread::Status::{TsNotRunnable, TsRunnable};
 use core::mem::size_of;

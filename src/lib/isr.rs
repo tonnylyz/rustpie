@@ -1,12 +1,14 @@
 use core::mem::size_of;
 
-use crate::arch::{Address, ArchTrait, ContextFrame, ContextFrameTrait, PAGE_SIZE};
+use crate::arch::{ContextFrame, PAGE_SIZE};
 use crate::config::CONFIG_USER_LIMIT;
 use crate::driver::{Interrupt};
 use crate::lib::core::{CoreTrait, current};
 use crate::lib::event::Event;
 use crate::lib::page_table::PageTableTrait;
 use crate::lib::round_down;
+
+use crate::lib::traits::*;
 
 pub trait InterruptServiceRoutine {
   fn system_call();

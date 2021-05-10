@@ -1,4 +1,5 @@
 use core::fmt::Formatter;
+use crate::ContextFrameTrait;
 
 #[repr(C)]
 #[derive(Copy, Clone, Debug)]
@@ -24,7 +25,7 @@ impl core::fmt::Display for Aarch64ContextFrame {
   }
 }
 
-impl crate::arch::traits::ContextFrameTrait for Aarch64ContextFrame {
+impl ContextFrameTrait for Aarch64ContextFrame {
   fn new(pc: usize, sp: usize, arg: usize, privileged: bool) -> Self {
     use cortex_a::regs::*;
     let mut r = Aarch64ContextFrame {

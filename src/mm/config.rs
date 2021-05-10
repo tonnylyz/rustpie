@@ -1,7 +1,8 @@
 use core::ops::Range;
 
-use crate::arch::{Address, PAGE_SIZE};
+use crate::arch::PAGE_SIZE;
 use crate::lib::round_up;
+use crate::lib::traits::*;
 
 // non paged memory in kernel (kernel heap memory)
 pub const CONFIG_NON_PAGED_MEMORY_SIZE: usize = 0xf00_0000;

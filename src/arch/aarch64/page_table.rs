@@ -8,6 +8,8 @@ use crate::mm::{PageFrame, UserFrame};
 
 use super::vm_descriptor::*;
 
+use crate::lib::traits::*;
+
 pub const PAGE_TABLE_L1_SHIFT: usize = 30;
 pub const PAGE_TABLE_L2_SHIFT: usize = 21;
 pub const PAGE_TABLE_L3_SHIFT: usize = 12;

@@ -59,7 +59,7 @@ impl core::fmt::Display for Riscv64ContextFrame {
   }
 }
 
-impl crate::arch::traits::ContextFrameTrait for Riscv64ContextFrame {
+impl crate::lib::traits::ContextFrameTrait for Riscv64ContextFrame {
   fn new(pc: usize, sp: usize, arg: usize, privileged: bool) -> Self {
     let mut r = Riscv64ContextFrame {
       gpr: [0xdeadbeef_deadbeef; 32],

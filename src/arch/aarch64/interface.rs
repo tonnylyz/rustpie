@@ -1,8 +1,9 @@
 use cortex_a::{asm::*, regs::*};
 
-use crate::arch::Address;
 use crate::board::BOARD_CORE_NUMBER;
 use core::mem::size_of;
+
+use crate::lib::traits::*;
 
 pub const PAGE_SHIFT: usize = 12;
 pub const PAGE_SIZE: usize = 1 << PAGE_SHIFT;
@@ -34,7 +35,7 @@ pub type CoreId = usize;
 
 pub struct Aarch64Arch;
 
-impl crate::arch::ArchTrait for Aarch64Arch {
+impl ArchTrait for Aarch64Arch {
   fn exception_init() {
     super::exception::init();
   }

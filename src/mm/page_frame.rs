@@ -2,7 +2,8 @@ use alloc::sync::Arc;
 
 use rlibc::memset;
 
-use crate::arch::{Address, PAGE_SIZE};
+use crate::arch::PAGE_SIZE;
+use crate::lib::traits::*;
 
 #[derive(Debug)]
 pub struct PageFrame {

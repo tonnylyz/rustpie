@@ -4,11 +4,12 @@ use alloc::vec::Vec;
 
 use spin::Mutex;
 
-use crate::arch::{ContextFrame, ContextFrameTrait, CoreId};
+use crate::arch::{ContextFrame, CoreId};
 use crate::lib::address_space::AddressSpace;
 use crate::lib::bitmap::BitMap;
 use crate::lib::core::CoreTrait;
 use core::mem::size_of;
+use crate::lib::traits::*;
 
 pub type Tid = u16;
 

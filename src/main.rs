@@ -17,29 +17,50 @@ extern crate rlibc;
 #[macro_use]
 mod misc;
 
+#[cfg(target_arch = "aarch64")]
+#[path = "arch/aarch64/mod.rs"]
 mod arch;
+
+#[cfg(target_arch = "riscv64")]
+#[path = "arch/riscv64/mod.rs"]
+mod arch;
+
+#[cfg(feature = "aarch64_virt")]
+#[path = "board/aarch64_virt.rs"]
 mod board;
+
+#[cfg(feature = "riscv64_virt")]
+#[path = "board/riscv64_virt.rs"]
+mod board;
+
+#[cfg(feature = "aarch64_virt")]
+#[path = "driver/aarch64_virt/mod.rs"]
 mod driver;
+
+#[cfg(feature = "riscv64_virt")]
+#[path = "driver/riscv64_virt/mod.rs"]
+mod driver;
+
+#[cfg(all(feature = "aarch64_virt", feature = "riscv64_virt"))]
+compile_error!("features `aarch64_virt` and `riscv64_virt` are mutually exclusive");
+
 mod lib;
 mod mm;
 mod config;
 mod panic;
 
-use crate::arch::ArchTrait;
-pub use crate::arch::CoreId;
-use crate::lib::core::CoreTrait;
-use crate::lib::interrupt::InterruptController;
+use arch::CoreId;
+use lib::traits::*;
+use lib::core::CoreTrait;
+use lib::interrupt::InterruptController;
 use lib::page_table::PageTableTrait;
 use lib::page_table::PageTableEntryAttrTrait;
-
-
 
 pub fn core_id() -> CoreId {
   crate::arch::Arch::core_id()
 }
 
 fn clear_bss() {
-  use arch::Address;
   use rlibc::memset;
   extern "C" {
     fn BSS_START();

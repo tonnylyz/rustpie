@@ -4,6 +4,7 @@ use crate::arch::*;
 use crate::config::*;
 use crate::lib::page_table::{Entry, EntryAttribute, Error, PageTableEntryAttrTrait, PageTableTrait};
 use crate::mm::{PageFrame, UserFrame};
+use crate::lib::traits::*;
 
 use super::vm_descriptor::*;
 use super::vm_descriptor::TABLE_DESCRIPTOR;

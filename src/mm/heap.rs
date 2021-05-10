@@ -1,7 +1,6 @@
 // rCore buddy system allocator
 use buddy_system_allocator::LockedHeap;
-
-use crate::arch::Address;
+use crate::lib::traits::*;
 
 #[global_allocator]
 static HEAP_ALLOCATOR: LockedHeap = LockedHeap::empty();

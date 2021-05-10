@@ -7,8 +7,8 @@ use addr2line::gimli;
 use backtracer;
 use spin::Once;
 
-use crate::arch::ContextFrameTrait;
 use crate::lib::core::CoreTrait;
+use crate::lib::traits::*;
 
 #[allow(dead_code)]
 pub fn exception_trace() {
