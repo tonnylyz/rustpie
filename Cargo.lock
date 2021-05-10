@@ -5,6 +5,7 @@ version = 3
 [[package]]
 name = "addr2line"
 version = "0.9.0"
+source = "git+https://github.com/tonnylyz/addr2line#a86ab8b8fe9d90b6f0f2b39b900e06f3cb464d72"
 dependencies = [
  "fallible-iterator",
  "gimli",
@@ -26,12 +27,13 @@ dependencies = [
 [[package]]
 name = "backtracer"
 version = "0.0.2"
+source = "git+https://github.com/tonnylyz/backtracer#a6bb609ed6bbb524815b0996236cd4eacc3f0706"
 dependencies = [
  "addr2line",
  "cfg-if 0.1.10",
  "cortex-a",
  "log",
- "riscv 0.1.0",
+ "riscv",
 ]
 
 [[package]]
@@ -70,6 +72,7 @@ checksum = "baf1de4339761588bc0619e3cbc0120ee582ebb74b53b4efbf79117bd2da40fd"
 [[package]]
 name = "cortex-a"
 version = "5.1.6"
+source = "git+https://github.com/tonnylyz/cortex-a#d70ed998be2bcff3aebacdb2e279aede855f65c4"
 dependencies = [
  "register 1.0.2",
 ]
@@ -175,13 +178,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "riscv"
-version = "0.1.0"
-dependencies = [
- "register 0.5.1",
-]
-
-[[package]]
 name = "rlibc"
 version = "1.0.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -203,7 +199,7 @@ dependencies = [
  "cortex-a",
  "elfloader",
  "register 1.0.2",
- "riscv 0.1.0 (git+https://github.com/tonnylyz/riscv)",
+ "riscv",
  "rlibc",
  "spin 0.9.0",
  "xmas-elf",
