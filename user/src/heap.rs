@@ -1,7 +1,7 @@
 use buddy_system_allocator::LockedHeap;
 
 use crate::config::{HEAP_BTM, PAGE_SIZE};
-use crate::syscall::mem_alloc;
+use crate::microcall::mem_alloc;
 use crate::arch::page_table::Entry;
 
 #[global_allocator]

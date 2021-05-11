@@ -1,6 +1,6 @@
 use spin::{Once, Mutex};
 use crate::config::PAGE_SIZE;
-use crate::syscall::mem_alloc;
+use crate::microcall::mem_alloc;
 use crate::arch::page_table::Entry;
 
 static VALLOC_BASE: Once<Mutex<usize>> = Once::new();

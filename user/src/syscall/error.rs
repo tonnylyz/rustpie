@@ -1,27 +1,24 @@
-
-pub type Result<T, E = Error> = core::result::Result<T, E>;
+use core::{fmt, result};
 
 #[derive(Eq, PartialEq)]
 pub struct Error {
   pub errno: i32,
 }
 
-#[allow(dead_code)]
-pub enum ThreadStatus {
-  TsRunnable = 1,
-  TsNotRunnable = 2,
-}
+pub type Result<T, E = Error> = result::Result<T, E>;
 
 impl Error {
   pub fn new(errno: i32) -> Error {
     Error { errno: errno }
   }
+
   pub fn mux(result: Result<usize>) -> usize {
     match result {
       Ok(value) => value,
       Err(error) => -error.errno as usize,
     }
   }
+
   pub fn demux(value: usize) -> Result<usize> {
     let errno = -(value as i32);
     if errno >= 1 && errno < STR_ERROR.len() as i32 {
@@ -29,6 +26,22 @@ impl Error {
     } else {
       Ok(value)
     }
+  }
+
+  pub fn text(&self) -> &'static str {
+    STR_ERROR.get(self.errno as usize).map(|&x| x).unwrap_or("Unknown Error")
+  }
+}
+
+impl fmt::Debug for Error {
+  fn fmt(&self, f: &mut fmt::Formatter) -> result::Result<(), fmt::Error> {
+    f.write_str(self.text())
+  }
+}
+
+impl fmt::Display for Error {
+  fn fmt(&self, f: &mut fmt::Formatter) -> result::Result<(), fmt::Error> {
+    f.write_str(self.text())
   }
 }
 

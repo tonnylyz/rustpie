@@ -1,4 +1,3 @@
-
 use bitflags::bitflags as inner_bitflags;
 // from redox_syscall flag.rs
 macro_rules! bitflags {
@@ -31,6 +30,39 @@ macro_rules! bitflags {
         )+
     }
 }
+
+bitflags! {
+    pub struct CloneFlags: usize {
+        const CLONE_VM = 0x100;
+        const CLONE_FS = 0x200;
+        const CLONE_FILES = 0x400;
+        const CLONE_SIGHAND = 0x800;
+        const CLONE_VFORK = 0x4000;
+        const CLONE_THREAD = 0x10000;
+        const CLONE_STACK = 0x1000_0000;
+    }
+}
+
+pub const CLOCK_REALTIME: usize = 1;
+pub const CLOCK_MONOTONIC: usize = 4;
+
+bitflags! {
+    pub struct EventFlags: usize {
+        const EVENT_NONE = 0;
+        const EVENT_READ = 1;
+        const EVENT_WRITE = 2;
+    }
+}
+
+pub const F_DUPFD: usize = 0;
+pub const F_GETFD: usize = 1;
+pub const F_SETFD: usize = 2;
+pub const F_GETFL: usize = 3;
+pub const F_SETFL: usize = 4;
+
+pub const FUTEX_WAIT: usize = 0;
+pub const FUTEX_WAKE: usize = 1;
+pub const FUTEX_REQUEUE: usize = 2;
 
 bitflags! {
     pub struct MapFlags: usize {
@@ -78,10 +110,7 @@ pub const O_SYMLINK: usize =    0x4000_0000;
 pub const O_NOFOLLOW: usize =   0x8000_0000;
 pub const O_ACCMODE: usize =    O_RDONLY | O_WRONLY | O_RDWR;
 
-bitflags! {
-    pub struct EventFlags: usize {
-        const EVENT_NONE = 0;
-        const EVENT_READ = 1;
-        const EVENT_WRITE = 2;
-    }
-}
+
+pub const SEEK_SET: usize = 0;
+pub const SEEK_CUR: usize = 1;
+pub const SEEK_END: usize = 2;

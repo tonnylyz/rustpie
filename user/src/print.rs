@@ -1,7 +1,7 @@
 use core::fmt;
-
-use crate::syscall::{putc, thread_destroy};
 use spin::Mutex;
+
+use crate::microcall::{putc, thread_destroy};
 
 macro_rules! print {
     ($($arg:tt)*) => ($crate::print::print_arg(format_args!($($arg)*)));

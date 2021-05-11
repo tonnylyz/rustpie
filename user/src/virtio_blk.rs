@@ -6,9 +6,9 @@ use register::*;
 use register::mmio::*;
 use spin::{Mutex, Once};
 
-use crate::syscall::*;
+use crate::microcall::*;
 use crate::itc::*;
-use crate::arch::Address;
+use crate::traits::Address;
 use crate::config::PAGE_SIZE;
 use crate::mem::valloc;
 
@@ -386,8 +386,6 @@ pub fn irq() {
       match *req.status {
         VIRTIO_BLK_S_OK => {
           {
-
-            use crate::syscall::*;
             let r = itc_send(req.src, 0, 0, 0, 0);
             if r != 0 {
               println!("[BLK][IRQ] client not receiving!");

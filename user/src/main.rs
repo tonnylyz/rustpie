@@ -13,7 +13,14 @@ extern crate rlibc;
 #[macro_use]
 mod print;
 
+#[cfg(target_arch = "aarch64")]
+#[path = "arch/aarch64/mod.rs"]
 mod arch;
+
+#[cfg(target_arch = "riscv64")]
+#[path = "arch/riscv64/mod.rs"]
+mod arch;
+
 mod config;
 mod page_fault;
 #[allow(dead_code)]
@@ -24,19 +31,19 @@ mod virtio_blk;
 mod itc;
 mod fs;
 mod mem;
-
-use crate::page_fault::{set_page_fault_handler, page_fault_handler};
-use crate::syscall::thread_destroy;
+mod traits;
+#[allow(dead_code)]
+mod microcall;
 
 #[no_mangle]
 fn _start(arg: usize) -> ! {
-  set_page_fault_handler(page_fault_handler as usize);
+  page_fault::init();
   heap::init();
   match arg {
     0 => { fork::test() }
     1 => { virtio_blk::server() }
     _ => {}
   }
-  thread_destroy(0);
+  microcall::thread_destroy(0);
   loop {};
 }

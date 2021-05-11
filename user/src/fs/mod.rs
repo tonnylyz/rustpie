@@ -5,7 +5,7 @@ mod header;
 mod node;
 mod disk;
 mod mount;
-mod syscall;
+mod export;
 
 pub use mount::server::server;
 
@@ -16,7 +16,7 @@ pub use self::filesystem::FileSystem;
 pub use self::header::Header;
 pub use self::node::Node;
 
-pub use self::syscall::*;
+pub use self::export::*;
 
 use core::sync::atomic::AtomicUsize;
 

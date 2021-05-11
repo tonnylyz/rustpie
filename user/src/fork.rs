@@ -1,7 +1,7 @@
 use crate::arch::page_table::*;
 use crate::config::*;
-use crate::syscall::*;
-use crate::arch::EntryLike;
+use crate::microcall::*;
+use crate::traits::EntryLike;
 
 fn duplicate_page(asid: u16, va: usize, pte: Entry) {
   if pte.shared() {

@@ -1,5 +1,5 @@
 use crate::config::*;
-use crate::arch::EntryLike;
+use crate::traits::EntryLike;
 
 use super::vm_descriptor::*;
 use register::*;

@@ -1,15 +1,4 @@
-#[cfg(target_arch = "aarch64")]
-pub use self::aarch64::*;
-#[cfg(target_arch = "riscv64")]
-pub use self::riscv64::*;
-
-
-#[cfg(target_arch = "aarch64")]
-mod aarch64;
-
-#[cfg(target_arch = "riscv64")]
-mod riscv64;
-
+use crate::config::PAGE_SIZE;
 
 pub trait Address {
   fn va2pa(&self) -> usize;
@@ -37,12 +26,10 @@ pub trait EntryLike {
   fn is_page(&self) -> bool;
 }
 
-use crate::config::PAGE_SIZE;
-
 impl Address for usize {
-  // #[cfg(target_arch = "aarch64")]
+
   fn va2pa(&self) -> usize {
-    match self::page_table::query(*self) {
+    match crate::arch::page_table::query(*self) {
       None => { 0 }
       Some(pte) => {
         pte.address() | (*self & (PAGE_SIZE - 1))

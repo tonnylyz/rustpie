@@ -3,7 +3,7 @@ use register::*;
 use crate::config::*;
 
 use super::vm_descriptor::*;
-use crate::arch::EntryLike;
+use crate::traits::EntryLike;
 
 const CONFIG_READ_ONLY_LEVEL_3_PAGE_TABLE_BTM: usize = 0x3f_c000_0000;
 const CONFIG_READ_ONLY_LEVEL_2_PAGE_TABLE_BTM: usize = 0x3f_c000_0000 - 0x20_0000;

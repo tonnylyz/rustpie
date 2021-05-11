@@ -2,8 +2,8 @@ use rlibc::memcpy;
 
 use crate::arch::page_table::*;
 use crate::config::*;
-use crate::syscall::*;
-use crate::arch::EntryLike;
+use crate::traits::EntryLike;
+use crate::microcall::*;
 
 pub fn page_fault_handler(va: usize) {
   assert_eq!(va % PAGE_SIZE, 0);
@@ -49,4 +49,8 @@ pub fn set_page_fault_handler(handler: usize) {
     }
     page_fault_handler_stub = handler;
   }
+}
+
+pub fn init() {
+  set_page_fault_handler(page_fault_handler as usize);
 }
