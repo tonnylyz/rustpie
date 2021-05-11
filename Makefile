@@ -1,53 +1,74 @@
-.PHONY: all emu-aarch64 emu-riscv64 debug-aarch64 debug-riscv64 clean dependencies aarch64.bin riscv64.bin user/aarch64.elf user/riscv64.elf
 
-all: aarch64.bin riscv64.bin
+ARCH ?= aarch64
+PROFILE ?= debug
+USER_PROFILE ?= debug
 
-user/aarch64.elf:
-	make -C user -B aarch64.elf
+# NOTE: this is to deal with `(signal: 11, SIGSEGV: invalid memory reference)`
+# https://github.com/rust-lang/rust/issues/73677
+RUSTFLAGS := -C llvm-args=-global-isel=false
 
-aarch64.bin: user/aarch64.elf
-	RUSTFLAGS="-C llvm-args=-global-isel=false" \
-	cargo build --target src/targets/aarch64.json --features aarch64_virt -Z build-std=core,alloc
-	rust-objcopy target/aarch64/debug/rustpi -O binary aarch64.bin
-	rust-objdump -d target/aarch64/debug/rustpi > target/aarch64/debug/rustpi.asm
+# NOTE: generate frame pointer for every function
+export RUSTFLAGS := ${RUSTFLAGS} -C force-frame-pointers=yes
 
-user/riscv64.elf:
-	make -C user -B riscv64.elf
+ifeq (${PROFILE}, release)
+CARGO_FLAGS = --release
+endif
 
-riscv64.bin: user/riscv64.elf
-	RUSTFLAGS="-C llvm-args=-global-isel=false -C force-frame-pointers=yes" \
-	cargo build --target src/targets/riscv64.json --features riscv64_virt -Z build-std=core,alloc
-	rust-objcopy target/riscv64/debug/rustpi -O binary riscv64.bin
-	rust-objdump -d target/riscv64/debug/rustpi > target/riscv64/debug/rustpi.asm
+ifeq (${USER_PROFILE}, release)
+CARGO_FLAGS = --features user_release
+endif
 
-emu-aarch64: aarch64.bin
+USER_IMAGE := user/target/${ARCH}/${USER_PROFILE}/rustpi-user
+
+KERNEL := target/${ARCH}/${PROFILE}/rustpi
+
+.PHONY: all emu debug dependencies ${USER_IMAGE} clean
+
+all: ${KERNEL} ${KERNEL}.bin ${KERNEL}.asm
+
+${KERNEL}: ${USER_IMAGE}
+	cargo build --target src/targets/${ARCH}.json --features ${ARCH}_virt -Z build-std=core,alloc ${CARGO_FLAGS}
+
+${USER_IMAGE}:
+	make ARCH=${ARCH} USER_PROFILE=${USER_PROFILE} -C user
+
+${KERNEL}.bin: ${KERNEL}
+	rust-objcopy $< -O binary $@
+
+${KERNEL}.asm: ${KERNEL}
+	rust-objdump -d $< > $@
+
+
+QEMU_DISK_OPTIONS := -drive file=disk.img,if=none,format=raw,id=x0 \
+					 -device virtio-blk-device,drive=x0,bus=virtio-mmio-bus.0 \
+                     -global virtio-mmio.force-legacy=false
+
+
+emu: ${KERNEL}.bin
+ifeq (${ARCH}, aarch64)
 	qemu-system-aarch64 -M virt,virtualization=on -cpu cortex-a53 -smp 4 -m 2048 -kernel $< -serial stdio -display none \
- 		-device loader,file=target/aarch64/debug/rustpi,addr=0x80000000,force-raw=on \
-		-drive file=disk.img,if=none,format=raw,id=x0 -device virtio-blk-device,drive=x0,bus=virtio-mmio-bus.0 \
-		-global virtio-mmio.force-legacy=false
-
-emu-riscv64: riscv64.bin
+ 		-device loader,file=${KERNEL},addr=0x80000000,force-raw=on \
+		${QEMU_DISK_OPTIONS}
+else
 	qemu-system-riscv64 -M virt -smp 4 -m 2048 -bios default -kernel $< -serial stdio -display none \
-		-device loader,file=target/riscv64/debug/rustpi,addr=0xc0000000,force-raw=on \
-		-drive file=disk.img,if=none,format=raw,id=x0 -device virtio-blk-device,drive=x0,bus=virtio-mmio-bus.0 \
-		-global virtio-mmio.force-legacy=false
+		-device loader,file=${KERNEL},addr=0xc0000000,force-raw=on \
+		${QEMU_DISK_OPTIONS}
+endif
 
-debug-aarch64: aarch64.bin
+debug: ${KERNEL}.bin
+ifeq (${ARCH}, aarch64)
 	qemu-system-aarch64 -M virt,virtualization=on -cpu cortex-a53 -smp 4 -m 2048 -kernel $< -serial stdio -display none -s -S \
-		-device loader,file=target/aarch64/debug/rustpi,addr=0x80000000,force-raw=on \
-		-drive file=disk.img,if=none,format=raw,id=x0 -device virtio-blk-device,drive=x0,bus=virtio-mmio-bus.0 \
-		-global virtio-mmio.force-legacy=false
-
-debug-riscv64: riscv64.bin
+		-device loader,file=${KERNEL},addr=0x80000000,force-raw=on \
+		-${QEMU_DISK_OPTIONS}
+else
 	qemu-system-riscv64 -M virt -smp 4 -m 2048 -bios default -kernel $< -serial stdio -display none -s -S \
-		-device loader,file=target/riscv64/debug/rustpi,addr=0xc0000000,force-raw=on \
-		-drive file=disk.img,if=none,format=raw,id=x0 -device virtio-blk-device,drive=x0,bus=virtio-mmio-bus.0 \
-		-global virtio-mmio.force-legacy=false
+		-device loader,file=${KERNEL},addr=0xc0000000,force-raw=on \
+		${QEMU_DISK_OPTIONS}
+endif
 
 clean:
 	-cargo clean
-	-rm *.bin
-	-make -C user clean
+	make -C user clean
 
 dependencies:
 	rustup component add rust-src

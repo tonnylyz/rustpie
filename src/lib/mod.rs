@@ -1,7 +1,6 @@
 pub mod print;
 pub mod address_space;
 pub mod elf;
-pub mod user_image;
 pub mod scheduler;
 pub mod syscall;
 pub mod thread;

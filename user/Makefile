@@ -1,12 +1,19 @@
-.PHONY: all clean
 
-all: aarch64.elf riscv64.elf
+ARCH ?= aarch64
+USER_PROFILE ?= debug
 
-%.elf:
-	RUSTFLAGS="-C llvm-args=-global-isel=false" \
-	cargo build --target targets/$(basename $@).json -Z build-std=core,alloc
-	ln -sf target/$(basename $@)/debug/rustpi-user $@
+ifeq (${USER_PROFILE}, release)
+CARGO_FLAGS = --release
+else
+CARGO_FLAGS =
+endif
+
+USER_IMAGE := target/${ARCH}/${USER_PROFILE}/rustpi-user
+
+.PHONY: all clean ${USER_IMAGE}
+
+${USER_IMAGE}:
+	cargo build --target targets/${ARCH}.json -Z build-std=core,alloc ${CARGO_FLAGS}
 
 clean:
 	-cargo clean
-	-rm *.elf

@@ -119,10 +119,24 @@ pub unsafe fn main(core_id: arch::CoreId) -> ! {
   }
 
   if core_id == 0 {
+
     #[cfg(target_arch = "aarch64")]
-      let (a, entry) = lib::address_space::load_image(&lib::user_image::_binary_user_aarch64_elf_start);
+    #[cfg(not(feature = "user_release"))]
+      let bin = include_bytes!("../user/target/aarch64/debug/rustpi-user");
+
+    #[cfg(target_arch = "aarch64")]
+      #[cfg(feature = "user_release")]
+      let bin = include_bytes!("../user/target/aarch64/release/rustpi-user");
+
     #[cfg(target_arch = "riscv64")]
-      let (a, entry) = lib::address_space::load_image(&lib::user_image::_binary_user_riscv64_elf_start);
+      #[cfg(not(feature = "user_release"))]
+      let bin = include_bytes!("../user/target/riscv64/debug/rustpi-user");
+
+    #[cfg(target_arch = "riscv64")]
+      #[cfg(feature = "user_release")]
+      let bin = include_bytes!("../user/target/riscv64/release/rustpi-user");
+
+    let (a, entry) = lib::address_space::load_image(bin);
 
     // Note: `arg` is used to start different programs:
     //    0 - fktest: a `fork` test

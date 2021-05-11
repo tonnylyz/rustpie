@@ -3,7 +3,6 @@ name = "rustpi"
 version = "0.1.0"
 edition = "2018"
 authors = ["tonnylyz <lyztonny@gmail.com>"]
-build = "build.rs"
 
 [dependencies]
 rlibc = "1.0.0"
@@ -29,3 +28,4 @@ riscv = { git = "https://github.com/tonnylyz/riscv" }
 default = []
 aarch64_virt = []
 riscv64_virt = []
+user_release = []
