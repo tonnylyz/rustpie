@@ -1,7 +1,5 @@
 use alloc::sync::Arc;
 
-use rlibc::memset;
-
 use crate::arch::PAGE_SIZE;
 use crate::lib::traits::*;
 
@@ -28,7 +26,7 @@ impl PageFrame {
 
   pub fn zero(&self) {
     unsafe {
-      memset(self.kva() as *mut u8, 0, PAGE_SIZE);
+      core::ptr::write_bytes(self.kva() as *mut u8, 0, PAGE_SIZE);
     }
   }
 

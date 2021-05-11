@@ -32,7 +32,6 @@ const fn invalid_entry() -> PageDirectoryEntry { 0 }
 pub struct PageDirectory([PageDirectoryEntry; ENTRY_PER_PAGE]);
 
 #[no_mangle]
-#[link_section = ".text.start"]
 pub unsafe extern "C" fn populate_page_table(pt: &mut PageDirectory) {
   use crate::board::*;
   const ONE_GIGABYTE: usize = 0x4000_0000;
@@ -51,7 +50,6 @@ pub unsafe extern "C" fn populate_page_table(pt: &mut PageDirectory) {
 }
 
 #[no_mangle]
-#[link_section = ".text.start"]
 pub unsafe extern "C" fn mmu_init(pt: &PageDirectory) {
   use cortex_a::regs::*;
   use cortex_a::*;

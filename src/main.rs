@@ -50,7 +50,8 @@ mod config;
 mod panic;
 mod util;
 
-use arch::CoreId;
+use core::mem::size_of;
+use arch::{CoreId,ContextFrame};
 use lib::traits::*;
 use lib::cpu::CoreTrait;
 use lib::interrupt::InterruptController;
@@ -62,19 +63,16 @@ pub fn core_id() -> CoreId {
 }
 
 fn clear_bss() {
-  use rlibc::memset;
   extern "C" {
     fn BSS_START();
     fn BSS_END();
   }
   let start = (BSS_START as usize).pa2kva();
   let end = (BSS_END as usize).pa2kva();
-  unsafe { memset(start as *mut u8, 0, end - start); }
+  unsafe { core::ptr::write_bytes(start as *mut u8, 0, end - start); }
 }
 
 fn static_check() {
-  use arch::ContextFrame;
-  use core::mem::size_of;
   // Note: size of ContextFrame needs to be synced with `arch/*/exception.S`
   if cfg!(target_arch = "aarch64") {
     assert_eq!(size_of::<ContextFrame>(), 0x110);
@@ -119,9 +117,8 @@ pub unsafe fn main(core_id: arch::CoreId) -> ! {
   }
 
   if core_id == 0 {
-
     #[cfg(target_arch = "aarch64")]
-    #[cfg(not(feature = "user_release"))]
+      #[cfg(not(feature = "user_release"))]
       let bin = include_bytes!("../user/target/aarch64/debug/rustpi-user");
 
     #[cfg(target_arch = "aarch64")]
@@ -153,13 +150,13 @@ pub unsafe fn main(core_id: arch::CoreId) -> ! {
 
     use crate::lib::device::*;
     #[cfg(target_arch = "aarch64")]
-    let virtio_mmio = Device::new(vec![
+      let virtio_mmio = Device::new(vec![
       0x0a000000..0x0a000200
     ], vec![
       0x10 + 32
     ]);
     #[cfg(target_arch = "riscv64")]
-    let virtio_mmio = Device::new(vec![
+      let virtio_mmio = Device::new(vec![
       0x10001000..0x10002000
     ], vec![
       0x01
