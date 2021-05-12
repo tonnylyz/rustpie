@@ -51,7 +51,7 @@ mod panic;
 mod util;
 
 use core::mem::size_of;
-use arch::{CoreId,ContextFrame};
+use arch::{CoreId, ContextFrame};
 use lib::traits::*;
 use lib::cpu::CoreTrait;
 use lib::interrupt::InterruptController;
@@ -148,26 +148,13 @@ pub unsafe fn main(core_id: arch::CoreId) -> ! {
     let t = crate::lib::thread::new_user(entry, config::CONFIG_USER_STACK_TOP, INIT_ARG, a.clone(), None);
     t.set_status(crate::lib::thread::Status::TsRunnable);
 
-    use crate::lib::device::*;
-    #[cfg(target_arch = "aarch64")]
-      let virtio_mmio = Device::new(vec![
-      0x0a000000..0x0a000200
-    ], vec![
-      0x10 + 32
-    ]);
-    #[cfg(target_arch = "riscv64")]
-      let virtio_mmio = Device::new(vec![
-      0x10001000..0x10002000
-    ], vec![
-      0x01
-    ]);
-
-
-    for uf in virtio_mmio.to_user_frames().iter() {
-      a.page_table().insert_page(0x8_0000_0000 + uf.pa(), uf.clone(), mm::page_table::EntryAttribute::user_device()).unwrap();
-    }
-    for i in virtio_mmio.interrupts.iter() {
-      crate::driver::INTERRUPT_CONTROLLER.enable(*i);
+    for device in board::devices() {
+      for uf in device.to_user_frames().iter() {
+        a.page_table().insert_page(0x8_0000_0000 + uf.pa(), uf.clone(), mm::page_table::EntryAttribute::user_device()).unwrap();
+      }
+      for i in device.interrupts.iter() {
+        crate::driver::INTERRUPT_CONTROLLER.enable(*i);
+      }
     }
   }
 

@@ -1,5 +1,3 @@
-use rlibc::memcpy;
-
 use crate::arch::page_table::*;
 use crate::config::*;
 use crate::traits::EntryLike;
@@ -22,7 +20,7 @@ pub fn page_fault_handler(va: usize) {
     }
     mem_alloc(0, va_tmp, Entry::default());
     unsafe {
-      memcpy(va_tmp as *mut u8, va as *mut u8, PAGE_SIZE);
+      core::ptr::copy_nonoverlapping(va_tmp as *mut u8, va as *mut u8, PAGE_SIZE);
     }
     let mut new_attr = pte;
     new_attr.set_writable(true);

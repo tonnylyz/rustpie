@@ -23,9 +23,11 @@ cortex-a = { git = "https://github.com/tonnylyz/cortex-a" }
 [target.'cfg(target_arch = "riscv64")'.dependencies]
 riscv = { git = "https://github.com/tonnylyz/riscv" }
 
-
 [features]
 default = []
 aarch64_virt = []
 riscv64_virt = []
 user_release = []
+
+[profile.release]
+debug = true

@@ -10,16 +10,19 @@ use crate::lib::cpu::CoreTrait;
 
 #[derive(Debug)]
 pub struct Device {
+  pub name: &'static str,
   pub registers: Vec<Range<usize>>,
   pub interrupts: Vec<Interrupt>,
 }
 
 impl Device {
-  pub fn new(registers: Vec<Range<usize>>,
-             interrupts: Vec<Interrupt>) -> Self {
-    Device{
+  pub fn new(
+    name: &'static str, registers: Vec<Range<usize>>,
+    interrupts: Vec<Interrupt>) -> Self {
+    Device {
+      name,
       registers,
-      interrupts
+      interrupts,
     }
   }
 

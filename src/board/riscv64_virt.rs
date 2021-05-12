@@ -5,8 +5,10 @@ use spin::Mutex;
 
 use crate::lib::traits::*;
 use crate::lib::interrupt::InterruptController;
+use alloc::vec::Vec;
+use crate::lib::device::Device;
 
-pub const BOARD_CORE_NUMBER: usize = 1;
+pub const BOARD_CORE_NUMBER: usize = 4;
 pub const BOARD_NORMAL_MEMORY_RANGE: Range<usize> = 0x8000_0000..0xc000_0000;
 #[allow(dead_code)]
 pub const BOARD_DEVICE_MEMORY_RANGE: Range<usize> = 0x0000_0000..0x8000_0000;
@@ -51,4 +53,18 @@ pub unsafe extern "C" fn hart_spin(core_id: usize) {
   }
   while !HART_SPIN.load(Ordering::Relaxed) {}
   crate::main(core_id);
+}
+
+pub fn devices() -> Vec<Device> {
+  vec![
+    Device::new(
+      "virtio_blk",
+      vec![
+        0x10001000..0x10002000
+      ],
+      vec![
+        0x01
+      ]),
+
+  ]
 }
