@@ -5,6 +5,7 @@
 #![feature(alloc_error_handler)]
 #![feature(panic_info_message)]
 #![feature(format_args_nl)]
+#![feature(box_syntax)]
 
 #[macro_use]
 extern crate alloc;
@@ -34,6 +35,9 @@ mod mem;
 mod traits;
 #[allow(dead_code)]
 mod microcall;
+mod thread;
+mod thread_sys;
+mod thread_parker;
 
 #[no_mangle]
 fn _start(arg: usize) -> ! {
