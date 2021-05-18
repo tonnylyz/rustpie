@@ -93,14 +93,9 @@ impl Builder {
       // Similarly, the `sys` implementation must guarantee that no references to the closure
       // exist after the thread has terminated, which is signaled by `Thread::join`
       // returning.
-      native: unsafe {
-        Some(imp::Thread::new(
-          stack_size,
-          core::mem::transmute::<Box<dyn FnOnce() + 'a>, Box<dyn FnOnce() + 'static>>(
-            Box::new(main),
-          ),
-        )?)
-      },
+      native: Some(imp::Thread::new(
+        stack_size,
+        core::mem::transmute::<Box<dyn FnOnce() + 'a>, Box<dyn FnOnce() + 'static>>(Box::new(main)))?),
       thread: my_thread,
       packet: Packet(my_packet),
     }))
@@ -255,6 +250,9 @@ unsafe impl<T> Sync for JoinHandle<T> {}
 impl<T> JoinHandle<T> {
   pub fn thread(&self) -> &Thread {
     &self.0.thread
+  }
+  pub fn native(&self) -> u16 {
+    self.0.native.as_ref().unwrap().id()
   }
   pub fn join(mut self) -> Result<T> {
     self.0.join()

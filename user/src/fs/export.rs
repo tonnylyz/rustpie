@@ -1,17 +1,6 @@
-use spin::Once;
-
 use crate::itc::*;
 use crate::syscall::*;
-
-pub static FS_SERVER_TID: Once<u16> = Once::new();
-
-fn server_tid() -> u16 {
-  loop {
-    if let Some(tid) = FS_SERVER_TID.get() {
-      break *tid;
-    }
-  }
-}
+use crate::root::Server::RedoxFs;
 
 pub enum Error {
   NONE
@@ -39,11 +28,7 @@ impl File {
     msg.b = path.as_ref().as_ptr() as usize;
     msg.c = path.as_ref().len();
     msg.d = O_RDONLY;
-    loop {
-      if msg.send_to(server_tid()) == 0 {
-        break;
-      }
-    }
+    msg.send_to_server(RedoxFs);
     let (_tid, msg) = ItcMessage::receive();
     let err = crate::syscall::Error::demux(msg.a);
     match err {
@@ -58,11 +43,7 @@ impl File {
     msg.b = self.handle;
     msg.c = buf.as_ptr() as usize;
     msg.d = buf.len();
-    loop {
-      if msg.send_to(server_tid()) == 0 {
-        break;
-      }
-    }
+    msg.send_to_server(RedoxFs);
     let (_tid, msg) = ItcMessage::receive();
     let err = crate::syscall::Error::demux(msg.a);
     match err {
@@ -87,11 +68,7 @@ impl File {
         SeekFrom::End(_i) => {SEEK_END}
         SeekFrom::Current(_i) => {SEEK_CUR}
       };
-    loop {
-      if msg.send_to(server_tid()) == 0 {
-        break;
-      }
-    }
+    msg.send_to_server(RedoxFs);
     let (_tid, msg) = ItcMessage::receive();
     let err = crate::syscall::Error::demux(msg.a);
     match err {

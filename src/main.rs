@@ -138,7 +138,7 @@ pub unsafe fn main(core_id: arch::CoreId) -> ! {
     // Note: `arg` is used to start different programs:
     //    0 - fktest: a `fork` test
     //    1 - virtio_blk server
-    const INIT_ARG: usize = 1;
+    const INIT_ARG: usize = 3;
 
     let page_table = a.page_table();
 

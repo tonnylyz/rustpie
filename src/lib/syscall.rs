@@ -8,8 +8,10 @@ use crate::lib::event::Event;
 use crate::mm::page_table::{Entry, PageTableEntryAttrTrait, PageTableTrait};
 use crate::lib::traits::*;
 use self::Error::*;
-use crate::lib::thread::Status::{TsNotRunnable, TsRunnable};
+use crate::lib::thread::Status::{TsNotRunnable, TsRunnable, TsWaitForInterrupt};
 use core::mem::size_of;
+use crate::lib::event::Event::Interrupt;
+use crate::lib::interrupt::INTERRUPT_WAIT;
 
 #[derive(Debug)]
 pub enum Error {
@@ -91,6 +93,7 @@ pub trait SyscallTrait {
   fn ipc_can_send(pid: u16, value: usize, src_va: usize, perm: usize) -> SyscallResult;
   fn itc_receive(msg_ptr: usize) -> SyscallResult;
   fn itc_send(tid: u16, a: usize, b: usize, c: usize, d: usize) -> SyscallResult;
+  fn thread_wait(event: usize) -> SyscallResult;
 }
 
 pub struct Syscall;
@@ -160,21 +163,34 @@ impl SyscallTrait for Syscall {
   }
 
   fn event_handler(asid: u16, entry: usize, sp: usize, event: usize) -> SyscallResult {
-    let e = match event {
-      0 => Event::PageFault,
-      x => Event::Interrupt(x),
-    };
+    let e= event.into();
     let a = lookup_as(asid)?;
     a.event_register(e, entry, sp);
 
-    if asid == 0 && event != 0 {
-      // register an interrupt event for current thread
-      match crate::lib::interrupt::INTERRUPT_WAIT.add(current().running_thread().unwrap().clone(), event) {
-        Ok(_) => { return OK; }
-        Err(_) => { return Err(InternalError); }
+    if asid != 0 {
+      OK
+    } else {
+      if let Interrupt(i) = e {
+        // register an interrupt event for current thread
+        let t = current().running_thread().unwrap().clone();
+        return match INTERRUPT_WAIT.add_yield(t.clone(), i) {
+          Ok(_) => {
+            t.set_status(TsWaitForInterrupt);
+            Self::thread_yield();
+            OK
+          }
+          Err(super::interrupt::Error::AlreadyWaiting) => {
+            INTERRUPT_WAIT.remove(i);
+            OK
+          }
+          _ => {
+            Err(InternalError)
+          }
+        }
+      } else {
+        Err(InvalidArgumentError)
       }
     }
-    OK
   }
 
   fn mem_alloc(asid: u16, va: usize, attr: usize) -> SyscallResult {
@@ -301,7 +317,7 @@ impl SyscallTrait for Syscall {
       ((va + 3 * size_of::<usize>()) as *mut usize).write_volatile(d);
     }
     if target.status() != TsNotRunnable {
-      println!("recv thread runnable?");
+      // println!("recv thread runnable?");
       return Err(InternalError);
     }
     let mut ctx = target.context();
@@ -309,6 +325,11 @@ impl SyscallTrait for Syscall {
     target.set_context(ctx);
     target.set_status(TsRunnable);
     Ok(ISize(0))
+  }
+
+  fn thread_wait(event: usize) -> SyscallResult {
+
+    Self::thread_yield()
   }
 }
 

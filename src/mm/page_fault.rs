@@ -22,7 +22,7 @@ pub fn handle() {
   let addr = crate::arch::Arch::fault_address();
   let va = round_down(addr, PAGE_SIZE);
   if va >= CONFIG_USER_LIMIT {
-    println!("isr: page_fault: va >= CONFIG_USER_LIMIT, process killed");
+    println!("isr: page_fault: {:016x} >= CONFIG_USER_LIMIT, process killed", va);
     return;
   }
   if p.event_handler(Event::PageFault).is_none() {

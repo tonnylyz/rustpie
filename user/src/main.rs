@@ -6,6 +6,7 @@
 #![feature(panic_info_message)]
 #![feature(format_args_nl)]
 #![feature(box_syntax)]
+#![feature(const_btree_new)]
 
 #[macro_use]
 extern crate alloc;
@@ -38,16 +39,14 @@ mod microcall;
 mod thread;
 mod thread_sys;
 mod thread_parker;
+mod thread_stack;
+mod root;
 
 #[no_mangle]
 fn _start(arg: usize) -> ! {
   page_fault::init();
   heap::init();
-  match arg {
-    0 => { fork::test() }
-    1 => { virtio_blk::server() }
-    _ => {}
-  }
+  root::main(arg);
   microcall::thread_destroy(0);
   loop {};
 }

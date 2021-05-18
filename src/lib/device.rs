@@ -3,10 +3,10 @@ use core::ops::Range;
 
 use crate::arch::PAGE_SIZE;
 use crate::driver::Interrupt;
-use crate::util::round_down;
-use crate::mm::UserFrame;
-use crate::lib::event::Event;
 use crate::lib::cpu::CoreTrait;
+use crate::lib::event::Event;
+use crate::mm::UserFrame;
+use crate::util::round_down;
 
 #[derive(Debug)]
 pub struct Device {
@@ -35,29 +35,5 @@ impl Device {
       }
     }
     result
-  }
-}
-
-pub fn interrupt(int: Interrupt) {
-  println!("[IRQ] external {}", int);
-  match crate::lib::interrupt::INTERRUPT_WAIT.get(int) {
-    None => { println!("[IRQ] irq not registered"); }
-    Some(t) => {
-      match t.address_space() {
-        None => { panic!("kernel thread interrupt?") }
-        Some(a) => {
-          match a.event_handler(Event::Interrupt(int)) {
-            None => { println!("[IRQ] no event handler") }
-            Some((pc, sp)) => {
-              let nt = crate::lib::thread::new_user(pc, sp, int, a.clone(), None);
-              nt.set_status(crate::lib::thread::Status::TsRunnable);
-
-              crate::driver::timer::next();
-              crate::lib::cpu::current().schedule();
-            }
-          }
-        }
-      }
-    }
   }
 }

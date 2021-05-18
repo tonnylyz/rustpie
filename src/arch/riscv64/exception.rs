@@ -61,7 +61,7 @@ unsafe extern "C" fn exception_entry(ctx: *mut ContextFrame) {
       INTERRUPT_SUPERVISOR_EXTERNAL => {
         let plic = &crate::driver::INTERRUPT_CONTROLLER;
         if let Some(int) = plic.fetch() {
-          crate::lib::device::interrupt(int);
+          crate::lib::interrupt::interrupt(int);
           plic.finish(int);
         } else {
           println!("PLIC report no irq");

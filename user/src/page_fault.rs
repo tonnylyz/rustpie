@@ -28,6 +28,7 @@ pub fn page_fault_handler(va: usize) {
     mem_map(0, va_tmp, 0, va, new_attr);
     mem_unmap(0, va_tmp);
   } else {
+    // TODO: check with thread_stack
     mem_alloc(0, va, Entry::default());
   }
 }

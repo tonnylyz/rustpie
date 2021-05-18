@@ -1,7 +1,6 @@
 use alloc::boxed::Box;
 use crate::config::PAGE_SIZE;
 use core::time::Duration;
-use crate::mem::valloc;
 use crate::microcall::*;
 
 pub const DEFAULT_MIN_STACK_SIZE: usize = 2 * 1024 * 1024;
@@ -21,14 +20,15 @@ impl Thread {
     let stack_size = core::cmp::max(stack, min_stack_size());
 
     assert_eq!(stack_size % PAGE_SIZE, 0);
-    let sp = valloc(stack_size / PAGE_SIZE);
 
-    let native = thread_alloc(thread_start as usize, sp as usize + stack_size, p as *mut _ as usize);
+    let stack = crate::thread_stack::Stack::new();
+    let native = thread_alloc(thread_start as usize, stack.top(), p as *mut _ as usize);
 
     extern "C" fn thread_start(main: usize) -> usize {
       unsafe {
         Box::from_raw(main as *mut Box<dyn FnOnce()>)();
       }
+      crate::microcall::thread_destroy(0);
       0
     }
 
@@ -69,7 +69,6 @@ impl Thread {
 impl Drop for Thread {
   fn drop(&mut self) {
     // pthread_detach
-    unimplemented!()
   }
 }
 

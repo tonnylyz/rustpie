@@ -1,26 +1,16 @@
 use crate::fs::{Disk, BLOCK_SIZE};
 use crate::syscall::*;
-use crate::virtio_blk::{BLK_SERVER};
 use crate::config::PAGE_SIZE;
 use crate::itc::ItcMessage;
 use crate::mem::valloc;
 use rlibc::memcpy;
+use crate::root::Server::VirtioBlk;
 
-pub struct VirtioClient {
-    server_tid: u16,
-}
+pub struct VirtioClient;
 
 impl VirtioClient {
     pub fn new() -> VirtioClient {
-        loop {
-            // Wait for block server
-            if BLK_SERVER.get().is_some() {
-                break;
-            }
-        }
-        VirtioClient {
-            server_tid: *BLK_SERVER.get().unwrap(),
-        }
+        VirtioClient
     }
 }
 
@@ -32,15 +22,15 @@ impl Disk for VirtioClient {
         let sector = (block as usize) * 8;
         let count = 8;
         let buf = unsafe { core::slice::from_raw_parts_mut(tmp, PAGE_SIZE) };
-        let r = ItcMessage {
+        ItcMessage {
             a: sector,
             b: count,
             c: buf.as_mut_ptr() as usize,
             d: 0
-        }.send_to(self.server_tid);
-        assert_eq!(r, 0);
+        }.send_to_server(VirtioBlk);
         let msg = ItcMessage::receive();
         // assert_eq!(msg.0, self.server_tid);
+        println!("[FS] VirtoClient RX {:x?}", msg);
         assert_eq!(msg.1.a, 0);
         unsafe { memcpy(buffer.as_mut_ptr(), tmp, PAGE_SIZE); }
         Ok(buffer.len())

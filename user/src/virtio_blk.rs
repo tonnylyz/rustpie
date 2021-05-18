@@ -4,13 +4,15 @@ use core::mem::size_of;
 
 use register::*;
 use register::mmio::*;
-use spin::{Mutex, Once};
+use spin::Mutex;
 
 use crate::microcall::*;
 use crate::itc::*;
 use crate::traits::Address;
-use crate::config::PAGE_SIZE;
-use crate::mem::valloc;
+
+
+use crate::root::server_set_busy;
+use crate::root::Server::VirtioBlk;
 
 #[cfg(target_arch = "aarch64")]
 const VIRTIO_MMIO_BASE: usize = 0x8_0000_0000 + 0x0a000000;
@@ -358,7 +360,7 @@ const VIRTIO_BLK_S_OK: u8 = 0;
 const VIRTIO_BLK_S_IOERR: u8 = 1;
 const VIRTIO_BLK_S_UNSUPP: u8 = 2;
 
-pub fn irq() {
+fn irq() {
   let mmio = &VIRTIO_MMIO;
   let status = mmio.InterruptStatus.get();
   if status & 0b01 != 0 {
@@ -368,7 +370,7 @@ pub fn irq() {
     let mut disk = DISK.lock();
     let used = &ring.device;
 
-    println!("[BLK][IRQ] last used {} used {}", disk.last_used, used.idx);
+    // println!("[BLK][IRQ] last used {} used {}", disk.last_used, used.idx);
     loop {
       if disk.last_used == used.idx {
         break;
@@ -386,9 +388,12 @@ pub fn irq() {
       match *req.status {
         VIRTIO_BLK_S_OK => {
           {
-            let r = itc_send(req.src, 0, 0, 0, 0);
-            if r != 0 {
-              println!("[BLK][IRQ] client not receiving!");
+            println!("[BLK] {:x?}", req);
+            loop {
+              let r = itc_send(req.src, 0, 0, 0, 0);
+              if r == 0 {
+                break;
+              }
             }
           }
           // println!("ok {:#x?}", req);
@@ -412,39 +417,32 @@ pub fn irq() {
     println!("[BLK][IRQ] Configuration Change Notification not handled!");
   }
   mmio.InterruptACK.set(status);
-  println!("[BLK][IRQ] irq handled by user server");
-  thread_destroy(0);
+  // println!("[BLK][IRQ] irq handled by user server");
 }
 
-pub static BLK_SERVER: Once<u16> = Once::new();
-
-pub fn server() {
-
-  init();
-  println!("[BLK] virtio_blk server started t{}", get_tid());
-
-  let stack = valloc(16);
-  thread_alloc(crate::fs::server as usize, stack as usize + 16 * PAGE_SIZE, 0);
-
-  let stack = valloc(16);
-
+fn wait_for_irq() {
   #[cfg(target_arch = "aarch64")]
-    event_handler(0, irq as usize, stack as usize + 16 * PAGE_SIZE, 0x10 + 32);
+    event_handler(0, 0, 0, 0x10 + 32);
 
   #[cfg(target_arch = "riscv64")]
-    event_handler(0, irq as usize, stack as usize + 16 * PAGE_SIZE, 0x01);
+    event_handler(0, 0, 0, 0x01);
+}
 
-  BLK_SERVER.call_once(|| get_tid());
+pub fn server() {
+  init();
+  println!("[BLK] server started t{}", get_tid());
+
   loop {
-
-    let mut msg = ItcMessage::default();
-    let client_tid = itc_receive(&mut msg as *mut _ as usize) as u16;
-    println!("[BLK] receive request t{} a:{:x} b:{:x} c:{:x} d:{:x}", client_tid, msg.a, msg.b, msg.c, msg.d);
+    server_set_busy(VirtioBlk, false);
+    let (client_tid, msg) = ItcMessage::receive();
+    server_set_busy(VirtioBlk, true);
+    println!("[BLK] RX {:x?}", (client_tid, msg));
     let sector = msg.a;
     let count = msg.b;
     let buf = msg.c;
     let op = if msg.d == 0 { Operation::Read } else { Operation::Write };
-
     io(sector, count, buf, op, client_tid);
+    wait_for_irq();
+    irq();
   }
 }

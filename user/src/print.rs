@@ -1,7 +1,7 @@
 use core::fmt;
 use spin::Mutex;
 
-use crate::microcall::{putc, thread_destroy};
+use crate::microcall::{putc, thread_destroy, get_tid};
 
 macro_rules! print {
     ($($arg:tt)*) => ($crate::print::print_arg(format_args!($($arg)*)));
@@ -37,9 +37,9 @@ pub fn print_arg(args: fmt::Arguments) {
 fn panic_handler(info: &core::panic::PanicInfo) -> ! {
   if let Some(m) = info.message() {
     if let Some(l) = info.location() {
-      println!("\nuser panic: {} \n {}", m, l);
+      println!("[USER][panic] t{} {} \n {}", get_tid(), m, l);
     } else {
-      println!("\nuser panic: {}", m);
+      println!("[USER][panic] t{} {}", get_tid(), m);
     }
   } else {
     println!("\nuser panic!");

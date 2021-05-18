@@ -7,7 +7,7 @@ mod disk;
 mod mount;
 mod export;
 
-pub use mount::server::server;
+pub use mount::server::{server};
 
 pub use self::disk::{Disk, DiskCache, VirtioClient};
 pub use self::ex_node::ExNode;
@@ -18,9 +18,6 @@ pub use self::node::Node;
 
 pub use self::export::*;
 
-use core::sync::atomic::AtomicUsize;
-
 pub const BLOCK_SIZE: u64 = 4096;
 pub const SIGNATURE: &'static [u8; 8] = b"RedoxFS\0";
 pub const VERSION: u64 = 4;
-pub static IS_UMT: AtomicUsize = AtomicUsize::new(0);

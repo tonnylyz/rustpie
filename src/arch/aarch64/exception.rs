@@ -1,9 +1,3 @@
-// SPDX-License-Identifier: MIT OR Apache-2.0
-//
-// Copyright (c) 2018-2020 Andre Richter <andre.o.richter@gmail.com>
-
-//! Exception handling.
-
 use cortex_a::{barrier, regs::*};
 
 use crate::arch::ContextFrame;
@@ -67,7 +61,7 @@ unsafe extern "C" fn lower_aarch64_irq(ctx: *mut ContextFrame) {
     }
     Some(i) => {
       if i >= 32 {
-        crate::lib::device::interrupt(i);
+        crate::lib::interrupt::interrupt(i);
       } else {
         panic!("GIC unhandled SGI PPI")
       }
