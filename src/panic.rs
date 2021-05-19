@@ -28,7 +28,7 @@ pub fn exception_trace() {
 
 #[inline(always)]
 fn backtrace(frame_zero: Option<backtracer::EntryPoint>) {
-  println!("Backtrace:");
+  info!("Backtrace:");
   let mut count = 0;
   match frame_zero {
     None => {
@@ -117,7 +117,7 @@ fn backtrace_format(
   frame: &backtracer::Frame,
 ) {
   let ip = frame.ip();
-  println!("frame #{:<2} - {:#02$x}", count, ip as usize, 20);
+  info!("frame #{:<2} - {:#02$x}", count, ip as usize, 20);
   let mut resolved = false;
 
   let r = backtracer::resolve(context, relocated_offset, ip, |symbol| {
@@ -140,8 +140,6 @@ fn backtrace_format(
           }
         }
       }
-    } else {
-      //println!(" - <unknown>");
     }
     println!();
   });

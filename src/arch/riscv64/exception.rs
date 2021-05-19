@@ -48,7 +48,7 @@ unsafe extern "C" fn exception_entry(ctx: *mut ContextFrame) {
   let code = (cause & 0xf) as usize;
   if from_kernel && !irq {
     PANIC = true;
-    println!("[kernel exception] {:x} irq:{} code:{} \n{}", cause, irq, code, *ctx);
+    error!("[kernel exception] {:x} irq:{} code:{} \n{}", cause, irq, code, *ctx);
     exception_trace();
   }
   if irq {
@@ -64,7 +64,7 @@ unsafe extern "C" fn exception_entry(ctx: *mut ContextFrame) {
           crate::lib::interrupt::interrupt(int);
           plic.finish(int);
         } else {
-          println!("PLIC report no irq");
+          warn!("PLIC report no irq");
         }
       }
       _ => panic!("Interrupt::Unknown"),

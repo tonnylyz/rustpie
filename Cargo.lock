@@ -154,7 +154,7 @@ dependencies = [
 [[package]]
 name = "riscv"
 version = "0.1.0"
-source = "git+https://github.com/tonnylyz/riscv#fb56a2ef4d518e575d9edb13c7b1b1b54bbd4233"
+source = "git+https://github.com/tonnylyz/riscv#f3e306c1bcbf0b1681ee2f266bdb832c0b511062"
 dependencies = [
  "register 0.5.1",
 ]

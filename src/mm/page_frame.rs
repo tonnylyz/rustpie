@@ -63,6 +63,6 @@ impl UserFrame {
 
 impl Drop for PageFrame {
   fn drop(&mut self) {
-    println!("drop frame {:016x}", self.pa);
+    trace!("drop frame {:016x}", self.pa);
   }
 }

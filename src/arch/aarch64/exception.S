@@ -36,45 +36,44 @@
 vectors:
 
 // Current exception level with SP_EL0.
-.org 0x000
     VECTOR current_el_sp0_synchronous
-.org 0x080
+.balign 0x80
     VECTOR current_el_sp0_irq
-.org 0x100
+.balign 0x80
     VECTOR_DISABLED
-.org 0x180
+.balign 0x80
     VECTOR_DISABLED
 
 // Current exception level with SP_ELx, x > 0.
-.org 0x200
+.balign 0x80
     VECTOR current_el_spx_synchronous
-.org 0x280
+.balign 0x80
     VECTOR_DISABLED
-.org 0x300
+.balign 0x80
     VECTOR_DISABLED // FIQ
-.org 0x380
+.balign 0x80
     VECTOR current_el_spx_serror
 
 // Lower exception level, aarch64
-.org 0x400
+.balign 0x80
     VECTOR lower_aarch64_synchronous
-.org 0x480
+.balign 0x80
     VECTOR lower_aarch64_irq
-.org 0x500
+.balign 0x80
     VECTOR_DISABLED // FIQ
-.org 0x580
+.balign 0x80
     VECTOR lower_aarch64_serror
 
 // Lower exception level, aarch32
-.org 0x600
+.balign 0x80
     VECTOR_DISABLED
-.org 0x680
+.balign 0x80
     VECTOR_DISABLED
-.org 0x700
+.balign 0x80
     VECTOR_DISABLED
-.org 0x780
+.balign 0x80
     VECTOR_DISABLED
-.org 0x800
+.balign 0x80
 
 .global pop_context_first
 pop_context_first:

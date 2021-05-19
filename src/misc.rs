@@ -14,13 +14,13 @@ macro_rules! println {
 #[lang = "eh_personality"]
 #[no_mangle]
 pub extern fn rust_eh_personality() {
-  println!("rust_eh_personality called");
+  error!("rust_eh_personality called");
   loop {}
 }
 
 #[allow(non_snake_case)]
 #[no_mangle]
 pub extern fn _Unwind_Resume() {
-  println!("_Unwind_Resume called");
+  error!("_Unwind_Resume called");
   loop {}
 }

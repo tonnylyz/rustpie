@@ -22,12 +22,12 @@ pub fn handle() {
   let addr = crate::arch::Arch::fault_address();
   let va = round_down(addr, PAGE_SIZE);
   if va >= CONFIG_USER_LIMIT {
-    println!("isr: page_fault: {:016x} >= CONFIG_USER_LIMIT, process killed", va);
+    warn!("isr: page_fault: {:016x} >= CONFIG_USER_LIMIT, process killed", va);
     return;
   }
   if p.event_handler(Event::PageFault).is_none() {
-    println!("isr: page_fault: {:016x}", addr);
-    println!("isr: page_fault: process has no handler, process killed");
+    warn!("isr: page_fault: {:016x}", addr);
+    warn!("isr: page_fault: process has no handler, process killed");
     return;
   }
   let (entry, stack_top) = p.event_handler(Event::PageFault).unwrap();
@@ -36,7 +36,7 @@ pub fn handle() {
   match page_table.lookup_user_page(stack_btm) {
     Some(uf) => {
       if va == stack_btm {
-        println!("isr: page_fault: fault on exception stack, process killed");
+        warn!("isr: page_fault: fault on exception stack, process killed");
         return;
       }
       let ctx = current().context_mut();
@@ -50,7 +50,7 @@ pub fn handle() {
       return;
     }
     None => {
-      println!("isr: page_fault: exception stack not valid, process killed");
+      warn!("isr: page_fault: exception stack not valid, process killed");
       return;
     }
   }

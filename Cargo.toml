@@ -12,7 +12,7 @@ spin = "0.9.0"
 xmas-elf = "0.7.0"
 elfloader = "0.11.0"
 cfg-if = "1.0.0"
-log = "0.4"
+log = "0.4.5"
 
 addr2line = { git = "https://github.com/tonnylyz/addr2line", default-features = false, features = ["alloc", "rustc-demangle"] }
 
@@ -21,6 +21,7 @@ cortex-a = { git = "https://github.com/tonnylyz/cortex-a" }
 
 [target.'cfg(target_arch = "riscv64")'.dependencies]
 riscv = { git = "https://github.com/tonnylyz/riscv" }
+#riscv = { path = "../riscv" }
 
 [features]
 default = []

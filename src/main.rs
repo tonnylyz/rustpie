@@ -17,6 +17,9 @@ extern crate rlibc;
 #[macro_use]
 mod misc;
 
+#[macro_use]
+extern crate log;
+
 #[cfg(target_arch = "aarch64")]
 #[path = "arch/aarch64/mod.rs"]
 mod arch;
@@ -50,6 +53,7 @@ mod config;
 mod panic;
 mod util;
 mod backtracer;
+mod logger;
 
 use core::mem::size_of;
 use arch::{CoreId, ContextFrame};
@@ -88,33 +92,32 @@ fn static_check() {
 pub unsafe fn main(core_id: arch::CoreId) -> ! {
   crate::arch::Arch::exception_init();
   if core_id == 0 {
-    println!("RUSTPI");
     clear_bss();
     board::init();
-    println!("board init ok");
     static_check();
     mm::heap::init();
-    println!("heap init ok");
+    logger::init();
+    info!("heap init ok");
     mm::page_pool::init();
-    println!("page pool init ok");
+    info!("page pool init ok");
     lib::address_space::init();
-    println!("process pool init ok");
+    info!("process pool init ok");
     lib::thread::init();
-    println!("thread pool init ok");
+    info!("thread pool init ok");
 
     board::launch_other_cores();
-    println!("launched other cores");
+    info!("launched other cores");
   }
   board::init_per_core();
 
   crate::lib::cpu::current().create_idle_thread();
-  println!("init core {}", core_id);
+  info!("init core {}", core_id);
   if core_id == 0 {
     extern "C" {
       static KERNEL_ELF: [u8; 0x40000000];
     }
     panic::init(&KERNEL_ELF);
-    println!("panic init ok");
+    info!("panic init ok");
   }
 
   if core_id == 0 {

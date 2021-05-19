@@ -35,10 +35,9 @@ pub fn load(src: &'static [u8], page_table: &PageTable) -> Result<usize, Error> 
       let file_end = va + file_size;
       let mem_size = program_header.mem_size() as usize;
       let mem_end = va + mem_size;
-      // println!("{:016x} {:016x} {:016x} {:016x} {:016x}", va, file_size, file_end, mem_size, mem_end);
 
       if va % PAGE_SIZE != 0 {
-        println!("[ELF][WARNING] Ignore unaligned section@{:016x}", va);
+        warn!("[ELF][WARNING] Ignore unaligned section@{:016x}", va);
         continue;
       }
 
@@ -49,7 +48,7 @@ pub fn load(src: &'static [u8], page_table: &PageTable) -> Result<usize, Error> 
         frame.zero();
         let frame_slice = frame.as_mut_slice();
         let uf = crate::mm::UserFrame::new_memory(frame);
-        // println!("mapping {:016x} -> {:08x}", i, uf.pa());
+        trace!("mapping {:016x} -> {:08x}", i, uf.pa());
         page_table.insert_page(i, uf, EntryAttribute::user_default())?;
         let offset = program_header.offset() as usize + (i - va);
         copy(src, offset, frame_slice, 0, PAGE_SIZE);
@@ -60,7 +59,7 @@ pub fn load(src: &'static [u8], page_table: &PageTable) -> Result<usize, Error> 
         let frame = crate::mm::page_pool::alloc();
         frame.zero();
         let uf = crate::mm::UserFrame::new_memory(frame);
-        // println!("allocating {:016x} -> {:08x}", i, uf.pa());
+        trace!("allocating {:016x} -> {:08x}", i, uf.pa());
         page_table.insert_page(i, uf, EntryAttribute::user_default())?;
 
         i += PAGE_SIZE;

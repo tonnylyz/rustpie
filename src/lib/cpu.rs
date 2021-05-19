@@ -94,7 +94,7 @@ impl CoreTrait for Core {
         self.run(self.idle_thread())
       }
       Some(t) => {
-        // println!("[CORE{}] run t{}", core_id(), t.tid());
+        // trace!("[CORE{}] run t{}", core_id(), t.tid());
         self.run(t);
       }
     }

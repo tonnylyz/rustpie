@@ -302,12 +302,12 @@ impl SyscallTrait for Syscall {
     let va = uf.pa().pa2kva() + (msg_ptr % PAGE_SIZE);
     if va % size_of::<usize>() != 0 {
       // check alignment
-      println!("msg_ptr does not align");
+      warn!("msg_ptr does not align");
       return Err(InternalError);
     }
     if va + 4 * size_of::<usize>() > uf.pa().pa2kva() + PAGE_SIZE {
       // must inside one page
-      println!("msg_ptr cross page border");
+      warn!("msg_ptr cross page border");
       return Err(InternalError);
     }
     unsafe {
@@ -317,7 +317,7 @@ impl SyscallTrait for Syscall {
       ((va + 3 * size_of::<usize>()) as *mut usize).write_volatile(d);
     }
     if target.status() != TsNotRunnable {
-      // println!("recv thread runnable?");
+      // trace!("recv thread runnable?");
       return Err(InternalError);
     }
     let mut ctx = target.context();
@@ -363,7 +363,7 @@ pub fn syscall() {
     15 => Syscall::itc_receive(arg(0)),
     16 => Syscall::itc_send(arg(0) as u16, arg(1), arg(2), arg(3), arg(4)),
     _ => {
-      println!("system call: unrecognized system call number");
+      warn!("system call: unrecognized system call number");
       Err(super::syscall::Error::InvalidArgumentError)
     }
   };
@@ -383,14 +383,12 @@ pub fn syscall() {
         }
       }
 
-      if cfg!(debug_assertions) && num != 1 {
-        println!("#{}\t{} t{} Ok {:x}", num, SYSCALL_NAMES[num], tid, ctx.syscall_argument(0));
+      if num != 1 {
+        trace!("#{}\t{} t{} Ok {:x}", num, SYSCALL_NAMES[num], tid, ctx.syscall_argument(0));
       }
     }
     Err(err) => {
-      if cfg!(debug_assertions) {
-        println!("#{}\t{} t{} Err {:x?}", num, SYSCALL_NAMES[num], tid, err);
-      }
+      trace!("#{}\t{} t{} Err {:x?}", num, SYSCALL_NAMES[num], tid, err);
       ctx.set_syscall_return_value(usize::MAX);
     }
   }

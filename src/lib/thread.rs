@@ -218,7 +218,7 @@ pub fn free(t: &Thread) {
   let mut pool = THREAD_POOL.lock();
   match pool.free(t) {
     Ok(_) => {}
-    Err(_) => { println!("thread_pool: free: thread not found") }
+    Err(_) => { error!("thread_pool: free: thread not found") }
   }
 }
 
