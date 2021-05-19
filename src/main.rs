@@ -49,6 +49,7 @@ mod mm;
 mod config;
 mod panic;
 mod util;
+mod backtracer;
 
 use core::mem::size_of;
 use arch::{CoreId, ContextFrame};

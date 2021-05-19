@@ -10,11 +10,10 @@ register = "1.0.2"
 buddy_system_allocator = "0.7.0"
 spin = "0.9.0"
 xmas-elf = "0.7.0"
-#fatfs = { version = "0.3.5", features = ["core_io", "alloc"], default-features = false }
-#core_io = "0.1"
-
 elfloader = "0.11.0"
-backtracer = { git = "https://github.com/tonnylyz/backtracer" }
+cfg-if = "1.0.0"
+log = "0.4"
+
 addr2line = { git = "https://github.com/tonnylyz/addr2line", default-features = false, features = ["alloc", "rustc-demangle"] }
 
 [target.'cfg(target_arch = "aarch64")'.dependencies]

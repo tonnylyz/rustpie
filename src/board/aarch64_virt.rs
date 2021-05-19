@@ -20,6 +20,7 @@ pub fn init_per_core() {
   crate::driver::INTERRUPT_CONTROLLER.init();
   crate::driver::INTERRUPT_CONTROLLER.enable(INT_TIMER);
   crate::driver::timer::init();
+  panic!()
 }
 
 pub fn launch_other_cores() {

@@ -25,18 +25,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "backtracer"
-version = "0.0.2"
-source = "git+https://github.com/tonnylyz/backtracer#a6bb609ed6bbb524815b0996236cd4eacc3f0706"
-dependencies = [
- "addr2line",
- "cfg-if 0.1.10",
- "cortex-a",
- "log",
- "riscv",
-]
-
-[[package]]
 name = "bitflags"
 version = "1.2.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -56,12 +44,6 @@ name = "byteorder"
 version = "1.4.3"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "14c189c53d098945499cdfa7ecc63567cf3886b3332b312a5b4585d8d3a6a610"
-
-[[package]]
-name = "cfg-if"
-version = "0.1.10"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "4785bdd1c96b2a846b2bd7cc02e86b6b3dbf14e7e53446c4f54c92a361040822"
 
 [[package]]
 name = "cfg-if"
@@ -136,7 +118,7 @@ version = "0.4.14"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "51b9bbe6c47d51fc3e1a9b945965946b4c44142ab8792c50835a980d362c2710"
 dependencies = [
- "cfg-if 1.0.0",
+ "cfg-if",
 ]
 
 [[package]]
@@ -194,10 +176,11 @@ name = "rustpi"
 version = "0.1.0"
 dependencies = [
  "addr2line",
- "backtracer",
  "buddy_system_allocator",
+ "cfg-if",
  "cortex-a",
  "elfloader",
+ "log",
  "register 1.0.2",
  "riscv",
  "rlibc",

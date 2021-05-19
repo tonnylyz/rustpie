@@ -4,11 +4,11 @@ use core::panic::PanicInfo;
 use addr2line;
 use addr2line::Context;
 use addr2line::gimli;
-use backtracer;
 use spin::Once;
 
 use crate::lib::cpu::CoreTrait;
 use crate::lib::traits::*;
+use crate::backtracer;
 
 #[allow(dead_code)]
 pub fn exception_trace() {
