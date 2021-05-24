@@ -44,6 +44,20 @@ fn panic_handler(info: &core::panic::PanicInfo) -> ! {
   } else {
     println!("\nuser panic!");
   }
-  thread_destroy(0);
+  // thread_destroy(0);
+  loop {}
+}
+
+#[lang = "eh_personality"]
+#[no_mangle]
+pub extern fn rust_eh_personality() {
+  println!("rust_eh_personality called");
+  loop {}
+}
+
+#[allow(non_snake_case)]
+#[no_mangle]
+pub extern fn _Unwind_Resume() {
+  println!("_Unwind_Resume");
   loop {}
 }

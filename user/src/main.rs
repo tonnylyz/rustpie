@@ -7,6 +7,7 @@
 #![feature(format_args_nl)]
 #![feature(box_syntax)]
 #![feature(const_btree_new)]
+#![feature(lang_items)]
 
 #[macro_use]
 extern crate alloc;

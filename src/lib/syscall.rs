@@ -163,6 +163,7 @@ impl SyscallTrait for Syscall {
   }
 
   fn event_handler(asid: u16, entry: usize, sp: usize, event: usize) -> SyscallResult {
+    // trace!("event_handler {} {:x} {:x} {}", asid, entry, sp, event);
     let e= event.into();
     let a = lookup_as(asid)?;
     a.event_register(e, entry, sp);
@@ -188,7 +189,7 @@ impl SyscallTrait for Syscall {
           }
         }
       } else {
-        Err(InvalidArgumentError)
+        OK
       }
     }
   }
@@ -384,11 +385,11 @@ pub fn syscall() {
       }
 
       if num != 1 {
-        trace!("#{}\t{} t{} Ok {:x}", num, SYSCALL_NAMES[num], tid, ctx.syscall_argument(0));
+        trace!("#{} {} t{} Ok {:x}", num, SYSCALL_NAMES[num], tid, ctx.syscall_argument(0));
       }
     }
     Err(err) => {
-      trace!("#{}\t{} t{} Err {:x?}", num, SYSCALL_NAMES[num], tid, err);
+      trace!("#{} {} t{} Err {:x?}", num, SYSCALL_NAMES[num], tid, err);
       ctx.set_syscall_return_value(usize::MAX);
     }
   }

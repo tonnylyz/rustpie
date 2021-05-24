@@ -7,6 +7,7 @@ use crate::config::CONFIG_USER_LIMIT;
 use crate::mm::page_table::PageTableTrait;
 
 use core::mem::size_of;
+use crate::core_id;
 
 pub fn handle() {
   let t = current().running_thread();
@@ -21,6 +22,7 @@ pub fn handle() {
 
   let addr = crate::arch::Arch::fault_address();
   let va = round_down(addr, PAGE_SIZE);
+  trace!("thread t{} core {} page fault {:x}", t.tid(), core_id(), va);
   if va >= CONFIG_USER_LIMIT {
     warn!("isr: page_fault: {:016x} >= CONFIG_USER_LIMIT, process killed", va);
     return;

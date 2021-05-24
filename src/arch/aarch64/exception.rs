@@ -1,7 +1,8 @@
 use cortex_a::{barrier, regs::*};
 
 use crate::arch::ContextFrame;
-use crate::lib::cpu::CoreTrait;
+use crate::lib::cpu::{CoreTrait, current};
+use crate::core_id;
 
 global_asm!(include_str!("exception.S"));
 
@@ -41,7 +42,11 @@ unsafe extern "C" fn lower_aarch64_synchronous(ctx: *mut ContextFrame) {
     crate::mm::page_fault::handle();
   } else {
     let ec = ESR_EL1.read(ESR_EL1::EC);
-    error!("lower_aarch64_synchronous: ec {:06b} \n {}", ec, *ctx);
+    error!("lower_aarch64_synchronous: ec {:06b} \n{}", ec, ctx.read());
+    error!("thread t{} core{}", current().running_thread().unwrap().tid(), core_id());
+    // if let Some(t) = current().running_thread() {
+    //   info!("{:#x?}", t);
+    // }
     crate::lib::exception::handle();
   }
   core.clear_context();

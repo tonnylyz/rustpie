@@ -1,5 +1,7 @@
+.equ SIZE_OF_CONTEXT_FRAME, 0x110
+
 .macro VECTOR handler
-    sub	sp, sp, #0x110 // size of ContextFrame
+    sub	sp, sp, #SIZE_OF_CONTEXT_FRAME
     stp x0, x1,  [sp, #(0 * 16)]
     stp x2, x3,  [sp, #(1 * 16)]
     stp x4, x5,  [sp, #(2 * 16)]
@@ -31,50 +33,7 @@
     b      1b
 .endm
 
-.align 11
-.global vectors
-vectors:
-
-// Current exception level with SP_EL0.
-    VECTOR current_el_sp0_synchronous
-.balign 0x80
-    VECTOR current_el_sp0_irq
-.balign 0x80
-    VECTOR_DISABLED
-.balign 0x80
-    VECTOR_DISABLED
-
-// Current exception level with SP_ELx, x > 0.
-.balign 0x80
-    VECTOR current_el_spx_synchronous
-.balign 0x80
-    VECTOR_DISABLED
-.balign 0x80
-    VECTOR_DISABLED // FIQ
-.balign 0x80
-    VECTOR current_el_spx_serror
-
-// Lower exception level, aarch64
-.balign 0x80
-    VECTOR lower_aarch64_synchronous
-.balign 0x80
-    VECTOR lower_aarch64_irq
-.balign 0x80
-    VECTOR_DISABLED // FIQ
-.balign 0x80
-    VECTOR lower_aarch64_serror
-
-// Lower exception level, aarch32
-.balign 0x80
-    VECTOR_DISABLED
-.balign 0x80
-    VECTOR_DISABLED
-.balign 0x80
-    VECTOR_DISABLED
-.balign 0x80
-    VECTOR_DISABLED
-.balign 0x80
-
+.text
 .global pop_context_first
 pop_context_first:
     mov sp, x0
@@ -102,5 +61,53 @@ pop_context:
     ldp x26,x27, [sp, #(13 * 16)]
     ldp x28,x29, [sp, #(14 * 16)]
     ldr x30, [sp, #(15 * 16)]
-    add	sp, sp, #0x110 // size of ContextFrame
+    add	sp, sp, #SIZE_OF_CONTEXT_FRAME
     eret
+
+.section .text.vector
+.global vectors
+vectors:
+.align 11
+
+// Current exception level with SP_EL0.
+.org 0x000
+    VECTOR current_el_sp0_synchronous
+.org 0x080
+    VECTOR current_el_sp0_irq
+.org 0x100
+    VECTOR_DISABLED
+.org 0x180
+    VECTOR_DISABLED
+
+// Current exception level with SP_ELx, x > 0.
+.org 0x200
+    VECTOR current_el_spx_synchronous
+.org 0x280
+    VECTOR_DISABLED
+.org 0x300
+    VECTOR_DISABLED // FIQ
+.org 0x380
+    VECTOR current_el_spx_serror
+
+// Lower exception level, aarch64
+.org 0x400
+    VECTOR lower_aarch64_synchronous
+.org 0x480
+    VECTOR lower_aarch64_irq
+.org 0x500
+    VECTOR_DISABLED // FIQ
+.org 0x580
+    VECTOR lower_aarch64_serror
+
+// Lower exception level, aarch32
+.org 0x600
+    VECTOR_DISABLED
+.org 0x680
+    VECTOR_DISABLED
+.org 0x700
+    VECTOR_DISABLED
+.org 0x780
+    VECTOR_DISABLED
+.org 0x800
+
+.end

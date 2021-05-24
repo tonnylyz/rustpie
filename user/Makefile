@@ -13,7 +13,8 @@ USER_IMAGE := target/${ARCH}/${USER_PROFILE}/rustpi-user
 .PHONY: all clean ${USER_IMAGE}
 
 ${USER_IMAGE}:
-	cargo build --target targets/${ARCH}.json -Z build-std=core,alloc ${CARGO_FLAGS}
+	cargo build --target src/targets/${ARCH}.json -Z build-std=core,alloc ${CARGO_FLAGS}
+	rust-objdump -d ${USER_IMAGE} > ${USER_IMAGE}.asm
 
 clean:
 	-cargo clean

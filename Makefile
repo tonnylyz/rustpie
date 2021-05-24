@@ -38,33 +38,21 @@ ${KERNEL}.bin: ${KERNEL}
 ${KERNEL}.asm: ${KERNEL}
 	rust-objdump -d $< > $@
 
+ifeq (${ARCH}, aarch64)
+QEMU_CMD := qemu-system-aarch64 -M virt -cpu cortex-a53 -device loader,file=${KERNEL},addr=0x80000000,force-raw=on
+endif
+ifeq (${ARCH}, riscv64)
+QEMU_CMD := qemu-system-riscv64 -M virt -bios default -device loader,file=${KERNEL},addr=0xc0000000,force-raw=on
+endif
 
-QEMU_DISK_OPTIONS := -drive file=disk.img,if=none,format=raw,id=x0 \
-					 -device virtio-blk-device,drive=x0,bus=virtio-mmio-bus.0 \
-                     -global virtio-mmio.force-legacy=false
-
+QEMU_DISK_OPTIONS := -drive file=disk.img,if=none,format=raw,id=x0 -device virtio-blk-device,drive=x0,bus=virtio-mmio-bus.0 -global virtio-mmio.force-legacy=false
+QEMU_COMMON_OPTIONS := -serial stdio -display none -smp 4 -m 2048
 
 emu: ${KERNEL}.bin
-ifeq (${ARCH}, aarch64)
-	qemu-system-aarch64 -M virt,virtualization=on -cpu cortex-a53 -smp 4 -m 2048 -kernel $< -serial stdio -display none \
- 		-device loader,file=${KERNEL},addr=0x80000000,force-raw=on \
-		${QEMU_DISK_OPTIONS}
-else
-	qemu-system-riscv64 -M virt -smp 4 -m 2048 -bios default -kernel $< -serial stdio -display none \
-		-device loader,file=${KERNEL},addr=0xc0000000,force-raw=on \
-		${QEMU_DISK_OPTIONS}
-endif
+	${QEMU_CMD} ${QEMU_COMMON_OPTIONS} ${QEMU_DISK_OPTIONS} -kernel $<
 
 debug: ${KERNEL}.bin
-ifeq (${ARCH}, aarch64)
-	qemu-system-aarch64 -M virt,virtualization=on -cpu cortex-a53 -smp 4 -m 2048 -kernel $< -serial stdio -display none -s -S \
-		-device loader,file=${KERNEL},addr=0x80000000,force-raw=on \
-		-${QEMU_DISK_OPTIONS}
-else
-	qemu-system-riscv64 -M virt -smp 4 -m 2048 -bios default -kernel $< -serial stdio -display none -s -S \
-		-device loader,file=${KERNEL},addr=0xc0000000,force-raw=on \
-		${QEMU_DISK_OPTIONS}
-endif
+	${QEMU_CMD} ${QEMU_COMMON_OPTIONS} ${QEMU_DISK_OPTIONS} -kernel $< -s -S
 
 clean:
 	-cargo clean

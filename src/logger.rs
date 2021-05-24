@@ -1,7 +1,10 @@
 use log::{Record, Level, Metadata};
 use log::{SetLoggerError, LevelFilter};
+use spin::Mutex;
 
 struct SimpleLogger;
+
+static LOCK: Mutex<()> = Mutex::new(());
 
 impl log::Log for SimpleLogger {
   fn enabled(&self, metadata: &Metadata) -> bool {
@@ -9,6 +12,7 @@ impl log::Log for SimpleLogger {
   }
 
   fn log(&self, record: &Record) {
+    let lock = LOCK.lock();
     if self.enabled(record.metadata()) {
       match record.level() {
         Level::Error =>
@@ -28,6 +32,7 @@ impl log::Log for SimpleLogger {
       print!(" {}", record.args());
       println!();
     }
+    drop(lock);
   }
 
   fn flush(&self) {}
