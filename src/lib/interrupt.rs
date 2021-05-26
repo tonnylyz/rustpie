@@ -4,7 +4,6 @@ use spin::Mutex;
 
 use crate::driver::Interrupt;
 use crate::lib::cpu::CoreTrait;
-use crate::lib::event::Event;
 use crate::lib::thread::Thread;
 use crate::lib::thread::Status::{TsRunnable, TsWaitForInterrupt};
 

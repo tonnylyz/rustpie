@@ -52,6 +52,13 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "baf1de4339761588bc0619e3cbc0120ee582ebb74b53b4efbf79117bd2da40fd"
 
 [[package]]
+name = "common"
+version = "0.1.0"
+dependencies = [
+ "cfg-if",
+]
+
+[[package]]
 name = "cortex-a"
 version = "5.1.6"
 source = "git+https://github.com/tonnylyz/cortex-a#d70ed998be2bcff3aebacdb2e279aede855f65c4"
@@ -178,6 +185,7 @@ dependencies = [
  "addr2line",
  "buddy_system_allocator",
  "cfg-if",
+ "common",
  "cortex-a",
  "elfloader",
  "log",

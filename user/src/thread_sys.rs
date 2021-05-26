@@ -1,5 +1,5 @@
 use alloc::boxed::Box;
-use crate::config::PAGE_SIZE;
+use crate::constants::PAGE_SIZE;
 use core::time::Duration;
 use crate::microcall::*;
 

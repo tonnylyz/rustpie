@@ -4,7 +4,6 @@ use crate::arch::{ArchPageTableEntry, PAGE_SIZE};
 use crate::util::round_down;
 use crate::lib::address_space::AddressSpace;
 use crate::lib::cpu::{CoreTrait, current};
-use crate::lib::event::Event;
 use crate::mm::page_table::{Entry, PageTableEntryAttrTrait, PageTableTrait};
 use crate::lib::traits::*;
 use self::Error::*;
@@ -93,7 +92,6 @@ pub trait SyscallTrait {
   fn ipc_can_send(pid: u16, value: usize, src_va: usize, perm: usize) -> SyscallResult;
   fn itc_receive(msg_ptr: usize) -> SyscallResult;
   fn itc_send(tid: u16, a: usize, b: usize, c: usize, d: usize) -> SyscallResult;
-  fn thread_wait(event: usize) -> SyscallResult;
 }
 
 pub struct Syscall;
@@ -177,8 +175,7 @@ impl SyscallTrait for Syscall {
         return match INTERRUPT_WAIT.add_yield(t.clone(), i) {
           Ok(_) => {
             t.set_status(TsWaitForInterrupt);
-            Self::thread_yield();
-            OK
+            Self::thread_yield()
           }
           Err(super::interrupt::Error::AlreadyWaiting) => {
             INTERRUPT_WAIT.remove(i);
@@ -328,10 +325,6 @@ impl SyscallTrait for Syscall {
     Ok(ISize(0))
   }
 
-  fn thread_wait(event: usize) -> SyscallResult {
-
-    Self::thread_yield()
-  }
 }
 
 pub fn syscall() {

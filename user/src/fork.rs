@@ -1,5 +1,5 @@
 use crate::arch::page_table::*;
-use crate::config::*;
+use crate::constants::*;
 use crate::microcall::*;
 use crate::traits::EntryLike;
 
@@ -30,11 +30,11 @@ pub fn fork() -> i32 {
     // set_self_ipc(get_asid(0));
     0
   } else {
-    traverse(TRAVERSE_LIMIT, |va, attr| {
+    traverse(common::CONFIG_USER_STACK_TOP, |va, attr| {
       duplicate_page(asid, va, attr)
     });
-    mem_alloc(asid, EXCEPTION_STACK_TOP - PAGE_SIZE, Entry::default());
-    event_handler(asid, asm_page_fault_handler as usize, EXCEPTION_STACK_TOP, 0);
+    mem_alloc(asid, common::CONFIG_EXCEPTION_STACK_TOP - PAGE_SIZE, Entry::default());
+    event_handler(asid, asm_page_fault_handler as usize, common::CONFIG_EXCEPTION_STACK_TOP, 0);
     thread_set_status(tid, ThreadStatus::TsRunnable);
     asid as i32
   }

@@ -3,8 +3,6 @@ use core::ops::Range;
 
 use crate::arch::PAGE_SIZE;
 use crate::driver::Interrupt;
-use crate::lib::cpu::CoreTrait;
-use crate::lib::event::Event;
 use crate::mm::UserFrame;
 use crate::util::round_down;
 

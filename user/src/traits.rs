@@ -1,4 +1,4 @@
-use crate::config::PAGE_SIZE;
+use crate::constants::PAGE_SIZE;
 
 pub trait Address {
   fn va2pa(&self) -> usize;

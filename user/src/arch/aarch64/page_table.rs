@@ -1,13 +1,13 @@
-use crate::config::*;
+use crate::constants::*;
 use crate::traits::EntryLike;
 
 use super::vm_descriptor::*;
 use register::*;
 
-const RECURSIVE_PAGE_TABLE_BTM: usize = 0x3f_c000_0000;
+use common::CONFIG_RECURSIVE_PAGE_TABLE_BTM as RECURSIVE_PAGE_TABLE_BTM;
+
 const PTE_ADDR_MASK: usize = 0x0000_FFFF_FFFF_F000;
 const PTE_ATTR_MASK: usize = !PTE_ADDR_MASK;
-
 
 fn read_directory_entry(l1_index: usize) -> usize {
   let l1x = RECURSIVE_PAGE_TABLE_BTM >> PAGE_TABLE_L1_SHIFT;

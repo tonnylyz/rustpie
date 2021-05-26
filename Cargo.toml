@@ -14,6 +14,8 @@ elfloader = "0.11.0"
 cfg-if = "1.0.0"
 log = "0.4.5"
 
+common = { path = "common" }
+
 addr2line = { git = "https://github.com/tonnylyz/addr2line", default-features = false, features = ["alloc", "rustc-demangle"] }
 
 [target.'cfg(target_arch = "aarch64")'.dependencies]

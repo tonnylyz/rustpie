@@ -49,7 +49,6 @@ compile_error!("features `aarch64_virt` and `riscv64_virt` are mutually exclusiv
 
 mod lib;
 mod mm;
-mod config;
 mod panic;
 mod util;
 mod backtracer;
@@ -146,10 +145,10 @@ pub unsafe fn main(core_id: arch::CoreId) -> ! {
 
     let page_table = a.page_table();
 
-    page_table.insert_page(config::CONFIG_USER_STACK_TOP - arch::PAGE_SIZE,
+    page_table.insert_page(common::CONFIG_USER_STACK_TOP - arch::PAGE_SIZE,
                            mm::UserFrame::new_memory(mm::page_pool::alloc()),
                            mm::page_table::EntryAttribute::user_default()).unwrap();
-    let t = crate::lib::thread::new_user(entry, config::CONFIG_USER_STACK_TOP, INIT_ARG, a.clone(), None);
+    let t = crate::lib::thread::new_user(entry, common::CONFIG_USER_STACK_TOP, INIT_ARG, a.clone(), None);
     t.set_status(crate::lib::thread::Status::TsRunnable);
 
     for device in board::devices() {

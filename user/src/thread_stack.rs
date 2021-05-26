@@ -1,6 +1,6 @@
 use core::ops::Range;
 use spin::Mutex;
-use crate::config::PAGE_SIZE;
+use crate::constants::PAGE_SIZE;
 use crate::arch::page_table::Entry;
 use crate::microcall::mem_alloc;
 

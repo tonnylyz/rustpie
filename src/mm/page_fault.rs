@@ -3,7 +3,7 @@ use crate::lib::cpu::{CoreTrait, current};
 use crate::lib::traits::*;
 use crate::lib::event::Event;
 use crate::util::*;
-use crate::config::CONFIG_USER_LIMIT;
+use common::CONFIG_USER_LIMIT;
 use crate::mm::page_table::PageTableTrait;
 
 use core::mem::size_of;

@@ -1,15 +1,10 @@
 [package]
-name = "rustpi-user"
+name = "common"
 version = "0.1.0"
-edition = "2018"
 authors = ["tonnylyz <lyztonny@gmail.com>"]
+edition = "2018"
 
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [dependencies]
-rlibc = "1.0.0"
-register = "1.0.2"
-buddy_system_allocator = "0.7.0"
-spin = "0.9.0"
-bitflags = "1.1.0"
-common = { path = "../common" }
+cfg-if = "1.0.0"

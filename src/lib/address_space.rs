@@ -59,7 +59,7 @@ struct Pool {
 fn make_user_page_table() -> PageTable {
   let frame = crate::mm::page_pool::alloc();
   let page_table = PageTable::new(frame);
-  page_table.recursive_map(crate::config::CONFIG_RECURSIVE_PAGE_TABLE_BTM);
+  page_table.recursive_map(common::CONFIG_RECURSIVE_PAGE_TABLE_BTM);
   page_table
 }
 

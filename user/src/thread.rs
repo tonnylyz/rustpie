@@ -3,7 +3,7 @@ use core::cell::UnsafeCell;
 use alloc::boxed::Box;
 use core::any::Any;
 use alloc::string::String;
-use crate::config::PAGE_SIZE;
+use crate::constants::PAGE_SIZE;
 use crate::thread_sys as imp;
 use core::num::NonZeroU64;
 use crate::thread_parker::Parker;

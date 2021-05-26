@@ -24,7 +24,7 @@ mod arch;
 #[path = "arch/riscv64/mod.rs"]
 mod arch;
 
-mod config;
+mod constants;
 mod page_fault;
 #[allow(dead_code)]
 mod syscall;

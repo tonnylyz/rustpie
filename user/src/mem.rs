@@ -1,5 +1,5 @@
 use spin::{Once, Mutex};
-use crate::config::PAGE_SIZE;
+use crate::constants::PAGE_SIZE;
 use crate::microcall::mem_alloc;
 use crate::arch::page_table::Entry;
 

@@ -1,6 +1,6 @@
 use crate::fs::{Disk, BLOCK_SIZE};
 use crate::syscall::*;
-use crate::config::PAGE_SIZE;
+use crate::constants::PAGE_SIZE;
 use crate::itc::ItcMessage;
 use crate::mem::valloc;
 use rlibc::memcpy;

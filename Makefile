@@ -27,7 +27,7 @@ KERNEL := target/${ARCH}/${PROFILE}/rustpi
 all: ${KERNEL} ${KERNEL}.bin ${KERNEL}.asm
 
 ${KERNEL}: ${USER_IMAGE}
-	cargo build --target src/targets/${ARCH}.json --features ${ARCH}_virt -Z build-std=core,alloc ${CARGO_FLAGS}
+	cargo build --target src/target/${ARCH}.json --features ${ARCH}_virt -Z build-std=core,alloc ${CARGO_FLAGS}
 
 ${USER_IMAGE}:
 	make ARCH=${ARCH} USER_PROFILE=${USER_PROFILE} -C user

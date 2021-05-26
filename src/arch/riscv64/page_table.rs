@@ -1,7 +1,6 @@
 use riscv::regs::*;
 
 use crate::arch::*;
-use crate::config::*;
 use crate::mm::page_table::{Entry, EntryAttribute, Error, PageTableEntryAttrTrait, PageTableTrait};
 use crate::mm::{PageFrame, UserFrame};
 use crate::lib::traits::*;
@@ -171,8 +170,8 @@ impl PageTableTrait for Riscv64PageTable {
       let mut pages = self.pages.lock();
       pages.push(frame);
       drop(pages);
-      if va <= CONFIG_READ_ONLY_LEVEL_1_PAGE_TABLE_BTM {
-        self.map(CONFIG_READ_ONLY_LEVEL_2_PAGE_TABLE_BTM + va.l1x() * PAGE_SIZE, l1e.to_pa(), EntryAttribute::user_readonly());
+      if va <= common::CONFIG_READ_ONLY_LEVEL_1_PAGE_TABLE_BTM {
+        self.map(common::CONFIG_READ_ONLY_LEVEL_2_PAGE_TABLE_BTM + va.l1x() * PAGE_SIZE, l1e.to_pa(), EntryAttribute::user_readonly());
       }
       directory.set_entry(va.l1x(), l1e);
     }
@@ -183,8 +182,8 @@ impl PageTableTrait for Riscv64PageTable {
       let mut pages = self.pages.lock();
       pages.push(frame);
       drop(pages);
-      if va <= CONFIG_READ_ONLY_LEVEL_1_PAGE_TABLE_BTM {
-        self.map(CONFIG_READ_ONLY_LEVEL_3_PAGE_TABLE_BTM + va.l1x() * PAGE_SIZE * (PAGE_SIZE / MACHINE_SIZE) + va.l2x() * PAGE_SIZE, l2e.to_pa(), EntryAttribute::user_readonly());
+      if va <= common::CONFIG_READ_ONLY_LEVEL_1_PAGE_TABLE_BTM {
+        self.map(common::CONFIG_READ_ONLY_LEVEL_3_PAGE_TABLE_BTM + va.l1x() * PAGE_SIZE * (PAGE_SIZE / MACHINE_SIZE) + va.l2x() * PAGE_SIZE, l2e.to_pa(), EntryAttribute::user_readonly());
       }
       l1e.set_entry(va.l2x(), l2e);
     }
@@ -265,7 +264,7 @@ impl PageTableTrait for Riscv64PageTable {
   }
 
   fn recursive_map(&self, _va: usize) {
-    self.map(CONFIG_READ_ONLY_LEVEL_1_PAGE_TABLE_BTM, self.directory.pa(), EntryAttribute::user_readonly());
+    self.map(common::CONFIG_READ_ONLY_LEVEL_1_PAGE_TABLE_BTM, self.directory.pa(), EntryAttribute::user_readonly());
   }
 
   fn destroy(&self) {

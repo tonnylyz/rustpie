@@ -1,13 +1,13 @@
 use register::*;
 
-use crate::config::*;
+use crate::constants::*;
 
 use super::vm_descriptor::*;
 use crate::traits::EntryLike;
 
-const CONFIG_READ_ONLY_LEVEL_3_PAGE_TABLE_BTM: usize = 0x3f_c000_0000;
-const CONFIG_READ_ONLY_LEVEL_2_PAGE_TABLE_BTM: usize = 0x3f_c000_0000 - 0x20_0000;
-const CONFIG_READ_ONLY_LEVEL_1_PAGE_TABLE_BTM: usize = 0x3f_c000_0000 - 0x20_0000 - 0x1000; // 4 KB
+use common::CONFIG_READ_ONLY_LEVEL_3_PAGE_TABLE_BTM;
+use common::CONFIG_READ_ONLY_LEVEL_2_PAGE_TABLE_BTM;
+use common::CONFIG_READ_ONLY_LEVEL_1_PAGE_TABLE_BTM;
 
 fn read_directory_entry(l1_index: usize) -> usize {
   let ppte = CONFIG_READ_ONLY_LEVEL_1_PAGE_TABLE_BTM + l1_index * 8;
