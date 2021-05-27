@@ -28,24 +28,21 @@ mod arch;
 #[path = "arch/riscv64/mod.rs"]
 mod arch;
 
-#[cfg(feature = "aarch64_virt")]
+#[cfg(target_arch = "aarch64")]
 #[path = "board/aarch64_virt.rs"]
 mod board;
 
-#[cfg(feature = "riscv64_virt")]
+#[cfg(target_arch = "riscv64")]
 #[path = "board/riscv64_virt.rs"]
 mod board;
 
-#[cfg(feature = "aarch64_virt")]
+#[cfg(target_arch = "aarch64")]
 #[path = "driver/aarch64_virt/mod.rs"]
 mod driver;
 
-#[cfg(feature = "riscv64_virt")]
+#[cfg(target_arch = "riscv64")]
 #[path = "driver/riscv64_virt/mod.rs"]
 mod driver;
-
-#[cfg(all(feature = "aarch64_virt", feature = "riscv64_virt"))]
-compile_error!("features `aarch64_virt` and `riscv64_virt` are mutually exclusive");
 
 mod lib;
 mod mm;
@@ -137,7 +134,7 @@ pub unsafe fn main(core_id: arch::CoreId) -> ! {
       let bin = include_bytes!("../user/target/riscv64/release/rustpi-user");
 
     let (a, entry) = lib::address_space::load_image(bin);
-
+    info!("load_image ok");
     // Note: `arg` is used to start different programs:
     //    0 - fktest: a `fork` test
     //    1 - virtio_blk server
@@ -148,6 +145,7 @@ pub unsafe fn main(core_id: arch::CoreId) -> ! {
     page_table.insert_page(common::CONFIG_USER_STACK_TOP - arch::PAGE_SIZE,
                            mm::UserFrame::new_memory(mm::page_pool::alloc()),
                            mm::page_table::EntryAttribute::user_default()).unwrap();
+    info!("user stack ok");
     let t = crate::lib::thread::new_user(entry, common::CONFIG_USER_STACK_TOP, INIT_ARG, a.clone(), None);
     t.set_status(crate::lib::thread::Status::TsRunnable);
 
@@ -159,6 +157,7 @@ pub unsafe fn main(core_id: arch::CoreId) -> ! {
         crate::driver::INTERRUPT_CONTROLLER.enable(*i);
       }
     }
+    info!("device added to user space");
   }
 
   util::barrier();

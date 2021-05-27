@@ -1,7 +1,7 @@
 
 ARCH ?= aarch64
-PROFILE ?= debug
-USER_PROFILE ?= debug
+PROFILE ?= release
+USER_PROFILE ?= release
 
 # NOTE: this is to deal with `(signal: 11, SIGSEGV: invalid memory reference)`
 # https://github.com/rust-lang/rust/issues/73677
@@ -11,11 +11,11 @@ RUSTFLAGS := -C llvm-args=-global-isel=false
 export RUSTFLAGS := ${RUSTFLAGS} -C force-frame-pointers=yes
 
 ifeq (${PROFILE}, release)
-CARGO_FLAGS = --release
+CARGO_FLAGS := ${CARGO_FLAGS} --release
 endif
 
 ifeq (${USER_PROFILE}, release)
-CARGO_FLAGS = --features user_release
+CARGO_FLAGS := ${CARGO_FLAGS} --features user_release
 endif
 
 USER_IMAGE := user/target/${ARCH}/${USER_PROFILE}/rustpi-user
@@ -27,7 +27,7 @@ KERNEL := target/${ARCH}/${PROFILE}/rustpi
 all: ${KERNEL} ${KERNEL}.bin ${KERNEL}.asm
 
 ${KERNEL}: ${USER_IMAGE}
-	cargo build --target src/target/${ARCH}.json --features ${ARCH}_virt -Z build-std=core,alloc ${CARGO_FLAGS}
+	cargo build --target src/target/${ARCH}.json -Z build-std=core,alloc ${CARGO_FLAGS}
 
 ${USER_IMAGE}:
 	make ARCH=${ARCH} USER_PROFILE=${USER_PROFILE} -C user
