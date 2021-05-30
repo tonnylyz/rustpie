@@ -20,29 +20,32 @@ mod misc;
 #[macro_use]
 extern crate log;
 
-#[cfg(target_arch = "aarch64")]
-#[path = "arch/aarch64/mod.rs"]
-mod arch;
+#[macro_use]
+extern crate static_assertions;
 
-#[cfg(target_arch = "riscv64")]
-#[path = "arch/riscv64/mod.rs"]
-mod arch;
+cfg_if::cfg_if! {
+  if #[cfg(target_arch = "aarch64")] {
+    #[path = "arch/aarch64/mod.rs"]
+    mod arch;
+    #[path = "board/aarch64_virt.rs"]
+    mod board;
+    #[path = "driver/aarch64_virt/mod.rs"]
+    mod driver;
+    // Note: size of ContextFrame needs to be synced with `arch/*/exception.S`
+    assert_eq_size!([u8; 0x110], ContextFrame);
+  } else if #[cfg(target_arch = "riscv64")] {
+    #[path = "arch/riscv64/mod.rs"]
+    mod arch;
+    #[path = "board/riscv64_virt.rs"]
+    mod board;
+    #[path = "driver/riscv64_virt/mod.rs"]
+    mod driver;
+    assert_eq_size!([u8; 0x110], ContextFrame);
+  } else {
+    compile_error!("unsupported target_arch");
+  }
+}
 
-#[cfg(target_arch = "aarch64")]
-#[path = "board/aarch64_virt.rs"]
-mod board;
-
-#[cfg(target_arch = "riscv64")]
-#[path = "board/riscv64_virt.rs"]
-mod board;
-
-#[cfg(target_arch = "aarch64")]
-#[path = "driver/aarch64_virt/mod.rs"]
-mod driver;
-
-#[cfg(target_arch = "riscv64")]
-#[path = "driver/riscv64_virt/mod.rs"]
-mod driver;
 
 mod lib;
 mod mm;
@@ -73,24 +76,12 @@ fn clear_bss() {
   unsafe { core::ptr::write_bytes(start as *mut u8, 0, end - start); }
 }
 
-fn static_check() {
-  // Note: size of ContextFrame needs to be synced with `arch/*/exception.S`
-  if cfg!(target_arch = "aarch64") {
-    assert_eq!(size_of::<ContextFrame>(), 0x110);
-  } else if cfg!(target_arch = "riscv64") {
-    assert_eq!(size_of::<ContextFrame>(), 0x110);
-  } else {
-    panic!("unsupported arch");
-  }
-}
-
 #[no_mangle]
 pub unsafe fn main(core_id: arch::CoreId) -> ! {
   crate::arch::Arch::exception_init();
   if core_id == 0 {
     clear_bss();
     board::init();
-    static_check();
     mm::heap::init();
     logger::init();
     info!("heap init ok");
