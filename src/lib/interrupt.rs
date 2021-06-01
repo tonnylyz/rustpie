@@ -65,13 +65,13 @@ impl InterruptWait {
 }
 
 pub fn interrupt(int: Interrupt) {
-  info!("[IRQ] external {}", int);
+  info!("external {}", int);
   if let Some(t) = INTERRUPT_WAIT.get(int) {
     INTERRUPT_WAIT.remove(int);
     assert_eq!(t.status(), TsWaitForInterrupt);
     t.set_status(TsRunnable);
     crate::driver::timer::next();
-    crate::lib::cpu::current().schedule();
+    crate::current_cpu().schedule();
   } else {
     INTERRUPT_WAIT.add_happened(int);
   }

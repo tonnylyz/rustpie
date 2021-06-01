@@ -38,7 +38,7 @@ static mut PANIC: bool = false;
 #[no_mangle]
 unsafe extern "C" fn exception_entry(ctx: *mut ContextFrame) {
   let from_kernel = SSTATUS.is_set(SSTATUS::SPP);
-  let core = crate::lib::cpu::current();
+  let core = crate::current_cpu();
   core.set_context(ctx);
   if PANIC {
     loop {}

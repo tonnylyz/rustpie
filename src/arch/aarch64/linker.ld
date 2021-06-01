@@ -23,6 +23,7 @@ SECTIONS
         *(.bss.ipc)
         *(.bss*)
     }
+    . = ALIGN(4096);
     BSS_END = .;
 
     KERNEL_END = .;

@@ -99,7 +99,7 @@ pub struct Syscall;
 fn lookup_as(asid: u16) -> Result<AddressSpace, Error> {
   // TODO: check permission
   match if asid == 0 {
-    crate::lib::cpu::current().address_space()
+    crate::current_cpu().address_space()
   } else {
     crate::lib::address_space::lookup(asid)
   } {
@@ -121,26 +121,26 @@ impl SyscallTrait for Syscall {
   }
 
   fn get_asid(_tid: u16) -> SyscallResult {
-    match crate::lib::cpu::current().address_space() {
+    match crate::current_cpu().address_space() {
       None => { Err(InternalError) }
       Some(a) => { U16(a.asid()).into() }
     }
   }
 
   fn get_tid() -> SyscallResult {
-    match crate::lib::cpu::current().running_thread() {
+    match crate::current_cpu().running_thread() {
       None => { Err(InternalError) }
       Some(t) => { U16(t.tid()).into() }
     }
   }
 
   fn thread_yield() -> SyscallResult {
-    crate::lib::cpu::current().schedule();
+    crate::current_cpu().schedule();
     OK
   }
 
   fn thread_destroy(tid: u16) -> SyscallResult {
-    let current_thread = current().running_thread().unwrap();
+    let current_thread = crate::current_thread();
     if tid == 0 {
       current_thread.destroy();
       Syscall::thread_yield()
@@ -171,7 +171,7 @@ impl SyscallTrait for Syscall {
     } else {
       if let Interrupt(i) = e {
         // register an interrupt event for current thread
-        let t = current().running_thread().unwrap().clone();
+        let t = crate::current_thread().clone();
         return match INTERRUPT_WAIT.add_yield(t.clone(), i) {
           Ok(_) => {
             t.set_status(TsWaitForInterrupt);
@@ -238,7 +238,7 @@ impl SyscallTrait for Syscall {
 
   fn address_space_alloc() -> SyscallResult {
     let a = crate::lib::address_space::alloc();
-    let mut ctx = *crate::lib::cpu::current().context();
+    let mut ctx = *crate::current_cpu().context();
     ctx.set_syscall_return_value(0);
     let t = crate::lib::thread::new_user(0, 0, 0, a.clone(), current().running_thread());
     t.set_context(ctx);
@@ -247,7 +247,7 @@ impl SyscallTrait for Syscall {
   }
 
   fn thread_alloc(entry: usize, sp: usize, arg: usize) -> SyscallResult {
-    let t = crate::lib::cpu::current().running_thread().unwrap();
+    let t = crate::current_thread();
     let a = t.address_space().unwrap();
     let child_thread = crate::lib::thread::new_user(entry, sp, arg, a.clone(), current().running_thread());
     child_thread.set_status(crate::lib::thread::Status::TsRunnable);
@@ -281,7 +281,7 @@ impl SyscallTrait for Syscall {
     let t = current().running_thread().ok_or_else(|| InternalError)?;
     t.set_msg_ptr(msg_ptr);
     t.set_status(TsNotRunnable);
-    crate::lib::cpu::current().schedule();
+    crate::current_cpu().schedule();
 
     OK
   }
@@ -328,8 +328,8 @@ impl SyscallTrait for Syscall {
 }
 
 pub fn syscall() {
-  let ctx = crate::lib::cpu::current().context_mut();
-  let tid = current().running_thread().unwrap().tid();
+  let ctx = crate::current_cpu().context_mut();
+  let tid = crate::current_thread().tid();
   let arg = |i: usize| { ctx.syscall_argument(i) };
   let num = ctx.syscall_number();
   let scr = match num {

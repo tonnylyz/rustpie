@@ -40,11 +40,10 @@ struct SbiReturn {
 pub fn sbi_call(eid: u32, fid: u32, arg0: usize, arg1: usize, arg2: usize) -> Result<isize, Error> {
   let mut ret: SbiReturn = SbiReturn { error: 0, value: 0 };
   unsafe {
-    llvm_asm!("ecall"
-        : "={x10}" (ret.error), "={x11}" (ret.value)
-        : "{x10}" (arg0), "{x11}" (arg1), "{x12}" (arg2), "{x16}" (fid), "{x17}" (eid)
-        : "memory"
-        : "volatile");
+    asm!("ecall",
+         inlateout("x10") arg0 => ret.error,
+         inlateout("x11") arg1 => ret.value,
+         in("x12") arg2, in("x16") fid, in("x17") eid);
   }
   if ret.error == 0 {
     Ok(ret.value)

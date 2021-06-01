@@ -113,9 +113,9 @@ impl Thread {
   }
 
   pub fn destroy(&self) {
-    if let Some(t) = crate::lib::cpu::current().running_thread() {
+    if let Some(t) = crate::current_cpu().running_thread() {
       if self.0.tid == t.tid() {
-        crate::lib::cpu::current().set_running_thread(None);
+        crate::current_cpu().set_running_thread(None);
       }
     }
     free(self)

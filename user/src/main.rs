@@ -1,7 +1,6 @@
 #![no_std]
 #![no_main]
 #![feature(global_asm)]
-#![feature(llvm_asm)]
 #![feature(alloc_error_handler)]
 #![feature(panic_info_message)]
 #![feature(format_args_nl)]

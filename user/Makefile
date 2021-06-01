@@ -1,6 +1,6 @@
 
 ARCH ?= aarch64
-USER_PROFILE ?= debug
+USER_PROFILE ?= release
 
 ifeq (${USER_PROFILE}, release)
 CARGO_FLAGS = --release
@@ -14,7 +14,7 @@ USER_IMAGE := target/${ARCH}/${USER_PROFILE}/rustpi-user
 
 ${USER_IMAGE}:
 	cargo build --target src/target/${ARCH}.json -Z build-std=core,alloc ${CARGO_FLAGS}
-	rust-objdump -d ${USER_IMAGE} > ${USER_IMAGE}.asm
+	llvm-objdump -d ${USER_IMAGE} > ${USER_IMAGE}.asm
 
 clean:
 	-cargo clean

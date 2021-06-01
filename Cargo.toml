@@ -10,14 +10,11 @@ register = "1.0.2"
 buddy_system_allocator = "0.7.0"
 spin = "0.9.0"
 xmas-elf = "0.7.0"
-elfloader = "0.11.0"
 cfg-if = "1.0.0"
 log = "0.4.5"
 static_assertions = "1.1.0"
 
 common = { path = "common" }
-
-addr2line = { git = "https://github.com/tonnylyz/addr2line", default-features = false, features = ["alloc", "rustc-demangle"] }
 
 [target.'cfg(target_arch = "aarch64")'.dependencies]
 cortex-a = { git = "https://github.com/tonnylyz/cortex-a" }

@@ -1,7 +1,7 @@
 #![no_std]
 #![no_main]
 #![feature(global_asm)]
-#![feature(llvm_asm)]
+#![feature(asm)]
 #![feature(alloc_error_handler)]
 #![feature(panic_info_message)]
 #![feature(format_args_nl)]
@@ -51,7 +51,6 @@ mod lib;
 mod mm;
 mod panic;
 mod util;
-mod backtracer;
 mod logger;
 
 use core::mem::size_of;
@@ -62,25 +61,12 @@ use lib::interrupt::InterruptController;
 use mm::page_table::PageTableTrait;
 use mm::page_table::PageTableEntryAttrTrait;
 
-pub fn core_id() -> CoreId {
-  crate::arch::Arch::core_id()
-}
-
-fn clear_bss() {
-  extern "C" {
-    fn BSS_START();
-    fn BSS_END();
-  }
-  let start = (BSS_START as usize).pa2kva();
-  let end = (BSS_END as usize).pa2kva();
-  unsafe { core::ptr::write_bytes(start as *mut u8, 0, end - start); }
-}
+pub use util::*;
 
 #[no_mangle]
 pub unsafe fn main(core_id: arch::CoreId) -> ! {
   crate::arch::Arch::exception_init();
   if core_id == 0 {
-    clear_bss();
     board::init();
     mm::heap::init();
     logger::init();
@@ -97,15 +83,8 @@ pub unsafe fn main(core_id: arch::CoreId) -> ! {
   }
   board::init_per_core();
 
-  crate::lib::cpu::current().create_idle_thread();
+  current_cpu().create_idle_thread();
   info!("init core {}", core_id);
-  if core_id == 0 {
-    extern "C" {
-      static KERNEL_ELF: [u8; 0x40000000];
-    }
-    panic::init(&KERNEL_ELF);
-    info!("panic init ok");
-  }
 
   if core_id == 0 {
     #[cfg(target_arch = "aarch64")]
@@ -151,13 +130,12 @@ pub unsafe fn main(core_id: arch::CoreId) -> ! {
     info!("device added to user space");
   }
 
-  util::barrier();
-  crate::lib::cpu::current().schedule();
+  barrier();
+  current_cpu().schedule();
 
   extern {
     fn pop_context_first(ctx: usize, core_id: usize) -> !;
   }
-  let t = crate::lib::cpu::current().running_thread().unwrap();
-  let ctx = t.context();
+  let ctx = current_thread().context();
   pop_context_first(&ctx as *const _ as usize, core_id);
 }

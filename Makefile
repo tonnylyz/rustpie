@@ -33,19 +33,21 @@ ${USER_IMAGE}:
 	make ARCH=${ARCH} USER_PROFILE=${USER_PROFILE} -C user
 
 ${KERNEL}.bin: ${KERNEL}
-	rust-objcopy $< -O binary $@
+	llvm-objcopy $< -O binary $@
 
 ${KERNEL}.asm: ${KERNEL}
-	rust-objdump -d $< > $@
+	llvm-objdump -d $< > $@
 
 ifeq (${ARCH}, aarch64)
-QEMU_CMD := qemu-system-aarch64 -M virt -cpu cortex-a53 -device loader,file=${KERNEL},addr=0x80000000,force-raw=on
+QEMU_CMD := qemu-system-aarch64 -M virt -cpu cortex-a53
 endif
 ifeq (${ARCH}, riscv64)
-QEMU_CMD := qemu-system-riscv64 -M virt -bios default -device loader,file=${KERNEL},addr=0xc0000000,force-raw=on
+QEMU_CMD := qemu-system-riscv64 -M virt -bios default
 endif
 
-QEMU_DISK_OPTIONS := -drive file=disk.img,if=none,format=raw,id=x0 -device virtio-blk-device,drive=x0,bus=virtio-mmio-bus.0 -global virtio-mmio.force-legacy=false
+QEMU_DISK_OPTIONS := -drive file=disk.img,if=none,format=raw,id=x0 \
+					 -device virtio-blk-device,drive=x0,bus=virtio-mmio-bus.0 \
+					 -global virtio-mmio.force-legacy=false
 QEMU_COMMON_OPTIONS := -serial stdio -display none -smp 4 -m 2048
 
 emu: ${KERNEL}.bin
@@ -60,5 +62,3 @@ clean:
 
 dependencies:
 	rustup component add rust-src
-	rustup component add llvm-tools-preview
-	cargo install cargo-binutils

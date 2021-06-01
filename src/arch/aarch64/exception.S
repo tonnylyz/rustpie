@@ -22,7 +22,7 @@
     mrs x0, elr_el1
     mrs x1, sp_el0
     stp x0, x1,  [sp, #(16 * 16)]
-    mov fp, sp
+    mov fp, 0
     mov x0, sp
     bl  \handler
     b   pop_context
