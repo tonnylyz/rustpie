@@ -20,7 +20,6 @@ pub extern fn rust_eh_personality() {
 
 #[allow(non_snake_case)]
 #[no_mangle]
-pub extern fn _Unwind_Resume() {
-  error!("_Unwind_Resume called");
-  loop {}
+extern "C" fn _Unwind_Resume(arg: usize) -> ! {
+  crate::unwind::unwind_resume(arg)
 }

@@ -117,9 +117,8 @@ fn backtrace() {
   });
 }
 
-#[cfg_attr(target_os = "none", panic_handler)]
-#[no_mangle]
-pub fn panic_impl(info: &PanicInfo) -> ! {
+#[panic_handler]
+pub fn panic_entry_point(info: &PanicInfo) -> ! {
   if let Some(message) = info.message() {
     error!("PANIC: {}", message);
   }
@@ -130,5 +129,13 @@ pub fn panic_impl(info: &PanicInfo) -> ! {
   backtrace();
   info!("backtrace done");
 
+  match crate::unwind::start_unwinding(5) {
+    Ok(_) => {
+      warn!("BUG: start_unwinding() returned an Ok() value, which is unexpected because it means no unwinding actually occurred.");
+    }
+    Err(e) => {
+      error!("Task was unable to start unwinding procedure, error: {}.", e);
+    }
+  }
   loop {}
 }

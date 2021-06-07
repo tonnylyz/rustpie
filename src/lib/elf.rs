@@ -1,6 +1,7 @@
 use crate::arch::{PAGE_SIZE, PageTable};
 use crate::mm::page_table::{EntryAttribute, PageTableEntryAttrTrait, PageTableTrait};
 use crate::util::round_up;
+use xmas_elf::*;
 
 pub enum Error {
   ElfHeaderError,
@@ -21,7 +22,7 @@ fn copy(src: &[u8], src_offset: usize, dst: &mut [u8], dst_offset: usize, length
 }
 
 pub fn load(src: &'static [u8], page_table: &PageTable) -> Result<usize, Error> {
-  use xmas_elf::*;
+
   if let Ok(elf) = ElfFile::new(src) {
     let entry_point = elf.header.pt2.entry_point() as usize;
     for program_header in elf.program_iter() {

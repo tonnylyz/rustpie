@@ -19,7 +19,9 @@ unsafe extern "C" fn current_el_sp0_irq(ctx: *mut ContextFrame) {
 
 #[no_mangle]
 unsafe extern "C" fn current_el_spx_synchronous(ctx: *mut ContextFrame) {
-  panic!("current_el_spx_synchronous\n{}", ctx.read());
+  let ec = ESR_EL1.read(ESR_EL1::EC);
+  error!("current_el_spx_synchronous EC {:#X} \n{}", ec, ctx.read());
+  loop {}
 }
 
 #[no_mangle]

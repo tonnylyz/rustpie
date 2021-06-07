@@ -36,13 +36,13 @@ ${KERNEL}.bin: ${KERNEL}
 	llvm-objcopy $< -O binary $@
 
 ${KERNEL}.asm: ${KERNEL}
-	llvm-objdump -d $< > $@
+	llvm-objdump --demangle -d $< > $@
 
 ifeq (${ARCH}, aarch64)
-QEMU_CMD := qemu-system-aarch64 -M virt -cpu cortex-a53
+QEMU_CMD := qemu-system-aarch64 -M virt -cpu cortex-a53 -device loader,file=${KERNEL},addr=0x80000000,force-raw=on
 endif
 ifeq (${ARCH}, riscv64)
-QEMU_CMD := qemu-system-riscv64 -M virt -bios default
+QEMU_CMD := qemu-system-riscv64 -M virt -bios default -device loader,file=${KERNEL},addr=0xc0000000,force-raw=on
 endif
 
 QEMU_DISK_OPTIONS := -drive file=disk.img,if=none,format=raw,id=x0 \
@@ -50,10 +50,10 @@ QEMU_DISK_OPTIONS := -drive file=disk.img,if=none,format=raw,id=x0 \
 					 -global virtio-mmio.force-legacy=false
 QEMU_COMMON_OPTIONS := -serial stdio -display none -smp 4 -m 2048
 
-emu: ${KERNEL}.bin
+emu: ${KERNEL}.bin ${KERNEL}.asm
 	${QEMU_CMD} ${QEMU_COMMON_OPTIONS} ${QEMU_DISK_OPTIONS} -kernel $<
 
-debug: ${KERNEL}.bin
+debug: ${KERNEL}.bin ${KERNEL}.asm
 	${QEMU_CMD} ${QEMU_COMMON_OPTIONS} ${QEMU_DISK_OPTIONS} -kernel $< -s -S
 
 clean:

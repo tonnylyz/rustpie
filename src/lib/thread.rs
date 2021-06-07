@@ -130,6 +130,14 @@ impl Thread {
     let mut ptr = self.0.msg_ptr.lock();
     *ptr = Some(msg_ptr);
   }
+
+  pub fn wake(&self) {
+    todo!()
+  }
+
+  pub fn sleep(&self) {
+    todo!()
+  }
 }
 
 struct ThreadPool {

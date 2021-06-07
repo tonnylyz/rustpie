@@ -9,6 +9,8 @@
 #![feature(const_btree_new)]
 #![feature(const_generics)]
 #![feature(const_evaluatable_checked)]
+#![feature(trait_alias)]
+#![feature(core_intrinsics)]
 
 #[macro_use]
 extern crate alloc;
@@ -52,8 +54,9 @@ mod mm;
 mod panic;
 mod util;
 mod logger;
+mod unwind;
 
-use core::mem::size_of;
+use core::mem::{size_of, ManuallyDrop};
 use arch::{CoreId, ContextFrame};
 use lib::traits::*;
 use lib::cpu::CoreTrait;
@@ -62,6 +65,8 @@ use mm::page_table::PageTableTrait;
 use mm::page_table::PageTableEntryAttrTrait;
 
 pub use util::*;
+use crate::unwind::elf::section_by_name;
+use alloc::vec::Vec;
 
 #[no_mangle]
 pub unsafe fn main(core_id: arch::CoreId) -> ! {
@@ -87,6 +92,14 @@ pub unsafe fn main(core_id: arch::CoreId) -> ! {
   info!("init core {}", core_id);
 
   if core_id == 0 {
+    info!("before panic");
+    unwind::catch::catch_unwind(|| {
+      let mut a = Vec::new();
+      a.reserve(10000000000);
+      a.push(1);
+    });
+    info!("after panic");
+
     #[cfg(target_arch = "aarch64")]
       #[cfg(not(feature = "user_release"))]
       let bin = include_bytes!("../user/target/aarch64/debug/rustpi-user");

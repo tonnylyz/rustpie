@@ -13,8 +13,13 @@ xmas-elf = "0.7.0"
 cfg-if = "1.0.0"
 log = "0.4.5"
 static_assertions = "1.1.0"
-
+fallible-iterator = { version = "0.2.0", default-features = false }
 common = { path = "common" }
+
+[dependencies.gimli]
+path = "../gimli"
+default-features = false
+features = [ "read", "alloc" ]
 
 [target.'cfg(target_arch = "aarch64")'.dependencies]
 cortex-a = { git = "https://github.com/tonnylyz/cortex-a" }

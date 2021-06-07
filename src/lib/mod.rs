@@ -14,3 +14,4 @@ pub mod traits;
 pub mod mmio;
 pub mod timer;
 pub mod exception;
+pub mod notification;

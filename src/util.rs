@@ -29,7 +29,7 @@ pub fn core_id() -> CoreId {
 
 #[inline(always)]
 pub fn current_cpu() -> &'static mut Core {
-  crate::current_cpu()
+  crate::lib::cpu::current()
 }
 
 #[inline(always)]
