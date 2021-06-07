@@ -5,11 +5,12 @@ pub mod catch;
 
 use registers::Registers;
 use fallible_iterator::FallibleIterator;
-use gimli::{Aarch64, BaseAddresses, FrameDescriptionEntry, UnwindTableRow, UninitializedUnwindContext, UnwindSection, CfaRule, Pointer, EndianSlice};
+use gimli::{BaseAddresses, FrameDescriptionEntry, UnwindTableRow, UninitializedUnwindContext, UnwindSection, CfaRule, Pointer, EndianSlice};
 use gimli::SectionId::EhFrame;
 use gimli::read::RegisterRule;
 use alloc::boxed::Box;
 use crate::unwind::registers::{SavedRegs, LandingRegisters};
+use registers::Aarch64;
 
 pub struct UnwindingContext {
   stack_frame_iter: StackFrameIter,
