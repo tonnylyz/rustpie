@@ -53,24 +53,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "rlibc"
-version = "1.0.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "fc874b127765f014d792f16763a81245ab80500e2ad921ed4ee9e82481ee08fe"
-
-[[package]]
-name = "rustpi-user"
-version = "0.1.0"
-dependencies = [
- "common",
- "microcall",
- "register",
- "rlibc",
- "spin 0.9.0",
- "trusted",
-]
-
-[[package]]
 name = "scopeguard"
 version = "1.1.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"

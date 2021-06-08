@@ -1,12 +1,11 @@
 use crate::fs::{Disk, FileSystem};
-use crate::syscall::*;
+use trusted::redoxcall::*;
 use core::cmp::{max, min};
 use alloc::collections::BTreeMap;
 use alloc::boxed::Box;
 use alloc::string::String;
 use alloc::vec::Vec;
 use crate::alloc::string::ToString;
-use crate::mem::valloc;
 
 pub trait Resource<D: Disk> {
     fn block(&self) -> u64;
@@ -200,7 +199,7 @@ impl Fmap {
         // Memory provided to fmap must be page aligned and sized
         let align = 4096;
         // let address = memalign(align, ((map.size + align - 1) / align) * align);
-        let address = valloc((map.size + align - 1) / align);
+        let address = trusted::mm::valloc((map.size + align - 1) / align);
         if address.is_null() {
             return Err(Error::new(ENOMEM));
         }

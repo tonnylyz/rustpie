@@ -1,16 +1,30 @@
+use alloc::boxed::Box;
+
+use fallible_iterator::FallibleIterator;
+use gimli::{
+  BaseAddresses,
+  CfaRule,
+  EndianSlice,
+  FrameDescriptionEntry,
+  Pointer,
+  UninitializedUnwindContext,
+  UnwindSection,
+  UnwindTableRow,
+  read::RegisterRule,
+  SectionId::EhFrame
+};
+
+use registers::{
+  LandingRegisters,
+  SavedRegs,
+  Aarch64,
+  Registers
+};
+
 mod registers;
 pub mod elf;
 mod lsda;
 pub mod catch;
-
-use registers::Registers;
-use fallible_iterator::FallibleIterator;
-use gimli::{BaseAddresses, FrameDescriptionEntry, UnwindTableRow, UninitializedUnwindContext, UnwindSection, CfaRule, Pointer, EndianSlice};
-use gimli::SectionId::EhFrame;
-use gimli::read::RegisterRule;
-use alloc::boxed::Box;
-use crate::unwind::registers::{SavedRegs, LandingRegisters};
-use registers::Aarch64;
 
 pub struct UnwindingContext {
   stack_frame_iter: StackFrameIter,

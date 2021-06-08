@@ -1,11 +1,9 @@
 use crate::fs::mount::scheme::FileScheme;
 use crate::fs::{VirtioClient, FileSystem};
-use crate::syscall::{Packet, Scheme};
-use crate::microcall::get_tid;
+use trusted::redoxcall::*;
 use alloc::string::String;
-use crate::itc::*;
-use crate::root::server_set_busy;
-use crate::root::Server::RedoxFs;
+use trusted::message::Message;
+use microcall::get_tid;
 
 pub fn server() {
   println!("[FS] server started t{}", get_tid());
@@ -16,9 +14,7 @@ pub fn server() {
       loop {
         let mut packet = Packet::default();
 
-        server_set_busy(RedoxFs, false);
-        let msg = ItcMessage::receive();
-        server_set_busy(RedoxFs, true);
+        let msg = Message::receive();
         packet.a = msg.1.a;
         packet.b = msg.1.b;
         packet.c = msg.1.c;
@@ -27,7 +23,7 @@ pub fn server() {
         println!("[FS] {:x?}", msg);
         scheme.handle(&mut packet);
 
-        let mut msg = ItcMessage::default();
+        let mut msg = Message::default();
         msg.a = packet.a;
         loop {
           let r = msg.send_to(client);

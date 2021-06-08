@@ -1,6 +1,7 @@
 use crate::fs::{Extent, BLOCK_SIZE};
 use core::{fmt, ops, slice, mem};
 use alloc::vec::Vec;
+use trusted::redoxcall::*;
 
 /// A file/folder node
 #[repr(packed)]
@@ -55,10 +56,10 @@ impl Node {
         parent: u64,
         ctime: u64,
         ctime_nsec: u32,
-    ) -> crate::syscall::Result<Node> {
+    ) -> Result<Node> {
         let mut bytes = [0; 226];
         if name.len() > bytes.len() {
-            return Err(crate::syscall::Error::new(crate::syscall::ENAMETOOLONG));
+            return Err(Error::new(ENAMETOOLONG));
         }
         for (b, c) in bytes.iter_mut().zip(name.bytes()) {
             *b = c;
@@ -94,10 +95,10 @@ impl Node {
         alloc::str::from_utf8(&self.name[..len])
     }
 
-    pub fn set_name(&mut self, name: &str) -> crate::syscall::Result<()> {
+    pub fn set_name(&mut self, name: &str) -> Result<()> {
         let mut bytes = [0; 226];
         if name.len() > bytes.len() {
-            return Err(crate::syscall::Error::new(crate::syscall::ENAMETOOLONG));
+            return Err(Error::new(ENAMETOOLONG));
         }
         for (b, c) in bytes.iter_mut().zip(name.bytes()) {
             *b = c;

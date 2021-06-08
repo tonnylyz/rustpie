@@ -1,13 +1,15 @@
-use crate::fs::{Disk, FileSystem, Node, BLOCK_SIZE};
-use core::sync::atomic::{AtomicUsize, Ordering};
-use core::cell::RefCell;
-use crate::fs::mount::resource::*;
-use alloc::collections::BTreeMap;
-use crate::syscall::*;
-use alloc::string::String;
 use alloc::boxed::Box;
+use alloc::collections::BTreeMap;
+use alloc::string::String;
 use alloc::vec::Vec;
+use core::cell::RefCell;
+use core::sync::atomic::{AtomicUsize, Ordering};
+
+use trusted::redoxcall::*;
+
 use crate::alloc::string::ToString;
+use crate::fs::{BLOCK_SIZE, Disk, FileSystem, Node};
+use crate::fs::mount::resource::*;
 
 pub struct FileScheme<D: Disk> {
     name: String,

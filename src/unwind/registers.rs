@@ -25,8 +25,6 @@ macro_rules! registers {
     };
 }
 
-
-
 /// Aarch64 architecture specific definitions.
 #[derive(Debug, Clone, Copy)]
 pub struct Aarch64;
