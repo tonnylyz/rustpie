@@ -49,7 +49,6 @@ impl FallibleIterator for StackFrameIter {
   type Error = &'static str;
 
   fn next(&mut self) -> Result<Option<Self::Item>, Self::Error> {
-    info!("StackFrameIter.next");
     let registers = &mut self.registers;
     let prev_cfa_adjustment = self.cfa_adjustment;
     if let Some((unwind_row_ref, cfa)) = self.state.take() {
@@ -91,8 +90,8 @@ impl FallibleIterator for StackFrameIter {
         }
         Ok(())
       })?;
-      info!("old {:X?}", registers);
-      info!("new {:X?}", new_regs);
+      // info!("old {:X?}", registers);
+      // info!("new {:X?}", new_regs);
       *registers = new_regs;
     }
 
@@ -488,6 +487,14 @@ fn continue_unwinding(unwinding_context_ptr: *mut UnwindingContext) -> Result<()
           landing_pad_address, landing_pad_value, landing_pad_value == 0x0B0F,  // the `ud2` instruction
     );
     return continue_unwinding(unwinding_context_ptr);
+  }
+
+  unsafe {
+    // brk #1
+    if (landing_pad_address as usize as *const u32).read() == 0xd4_20_00_20 {
+      error!("landing to {:#X} is `brk #1`", landing_pad_address);
+      return continue_unwinding(unwinding_context_ptr);
+    }
   }
 
   // Jump to the actual landing pad function, or rather, a function that will jump there after setting up register values properly.

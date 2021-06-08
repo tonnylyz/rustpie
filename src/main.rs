@@ -93,12 +93,13 @@ pub unsafe fn main(core_id: arch::CoreId) -> ! {
 
   if core_id == 0 {
     info!("before panic");
-    unwind::catch::catch_unwind(|| {
+    let r = unwind::catch::catch_unwind(|| {
       let mut a = Vec::new();
-      a.reserve(10000000000);
+      a.reserve(10000000000000);
       a.push(1);
+      a
     });
-    info!("after panic");
+    info!("after panic {:?}", r);
 
     #[cfg(target_arch = "aarch64")]
       #[cfg(not(feature = "user_release"))]
