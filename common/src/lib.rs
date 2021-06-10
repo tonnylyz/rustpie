@@ -26,3 +26,29 @@ pub const PAGE_TABLE_L3_SHIFT: usize = 12;
 
 pub const WORD_SHIFT: usize = 3;
 pub const WORD_SIZE: usize = 1 << WORD_SHIFT;
+
+pub mod syscall {
+  pub const SYS_NULL: usize = 0;
+  pub const SYS_PUTC: usize = 1;
+  pub const SYS_GET_ASID: usize = 2;
+  pub const SYS_GET_TID: usize = 3;
+  pub const SYS_THREAD_YIELD: usize = 4;
+  pub const SYS_THREAD_DESTROY: usize = 5;
+  pub const SYS_EVENT_HANDLER: usize = 6;
+  pub const SYS_MEM_ALLOC: usize = 7;
+  pub const SYS_MEM_MAP: usize = 8;
+  pub const SYS_MEM_UNMAP: usize = 9;
+  pub const SYS_ADDRESS_SPACE_ALLOC: usize = 10;
+  pub const SYS_THREAD_ALLOC: usize = 11;
+  pub const SYS_THREAD_SET_STATUS: usize = 12;
+  pub const SYS_IPC_RECEIVE: usize = 13;
+  pub const SYS_CAN_SEND: usize = 14;
+  pub const SYS_ITC_RECV: usize = 15;
+  pub const SYS_ITC_SEND: usize = 16;
+
+}
+
+pub mod thread {
+  pub const THREAD_STATUS_RUNNABLE: usize = 1;
+  pub const THREAD_STATUS_NOT_RUNNABLE: usize = 2;
+}

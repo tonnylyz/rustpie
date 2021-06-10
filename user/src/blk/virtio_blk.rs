@@ -383,11 +383,11 @@ fn irq() {
         VIRTIO_BLK_S_OK => {
           {
             println!("[BLK] {:x?}", req);
+            let msg = trusted::message::Message::default();
             loop {
-              let msg = trusted::message::Message::default();
-              let r = msg.send_to(req.src);
-              if r == 0 {
-                break;
+              match msg.send_to(req.src) {
+                Ok(_) => break,
+                Err(_) => {}
               }
             }
           }

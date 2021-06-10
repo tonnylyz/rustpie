@@ -27,7 +27,7 @@ pub fn server() {
         msg.a = packet.a;
         loop {
           let r = msg.send_to(client);
-          if r == 0 {
+          if r.is_ok() {
             println!("[FS] done");
             break;
           }

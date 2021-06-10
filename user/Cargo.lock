@@ -42,6 +42,9 @@ dependencies = [
 [[package]]
 name = "microcall"
 version = "0.1.0"
+dependencies = [
+ "common",
+]
 
 [[package]]
 name = "register"

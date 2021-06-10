@@ -30,11 +30,12 @@ impl Thread {
       0
     }
 
-    return if native == u16::MAX {
-      drop(Box::from_raw(p));
-      Err(())
-    } else {
-      Ok(Thread { id: native })
+    match native {
+      Ok(native) => Ok(Thread { id: native }),
+      Err(_) => {
+        drop(Box::from_raw(p));
+        Err(())
+      }
     }
   }
 

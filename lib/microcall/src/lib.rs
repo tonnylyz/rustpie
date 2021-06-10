@@ -1,103 +1,81 @@
 #![no_std]
+#![feature(asm)]
 #![feature(global_asm)]
 
 #[cfg(target_arch = "aarch64")]
 #[path = "arch/aarch64/mod.rs"]
 mod arch;
 
-#[cfg(target_arch = "riscv64")]
-#[path = "arch/riscv64/mod.rs"]
-mod arch;
+// #[cfg(target_arch = "riscv64")]
+// #[path = "arch/riscv64/mod.rs"]
+// mod arch;
 
-pub const THREAD_STATUS_RUNNABLE: usize = 1;
-pub const THREAD_STATUS_NOT_RUNNABLE: usize = 2;
+use arch::*;
+use common::syscall::*;
 
-extern "C" {
-  fn syscall_0(); // null
-fn syscall_1(x0: u8); // putc
-fn syscall_2(tid: u16) -> u16; // get_asid
-fn syscall_3() -> u16; // get_tid
-fn syscall_4(); // thread_yield
-fn syscall_5(asid: u16) -> isize; // thread_destroy
-fn syscall_6(asid: u16, value: usize, sp: usize, event: usize) -> isize; // event_handler
-fn syscall_7(asid: u16, va: usize, attr: usize) -> isize; // mem_alloc
-fn syscall_8(src_asid: u16, src_va: usize, dst_asid: u16, dst_va: usize, attr: usize) -> isize; // mem_map
-fn syscall_9(asid: u16, va: usize) -> isize; // mem_unmap
-fn syscall_10() -> isize; // address_space_alloc
-fn syscall_11(entry: usize, sp: usize, arg: usize) -> u16; // thread_alloc
-fn syscall_12(tid: u16, status: usize) -> isize; // thread_set_status
-fn syscall_13(dst_va: usize); // ipc_receive
-fn syscall_14(asid: u16, value: usize, src_va: usize, attr: usize) -> isize; // ipc_can_send
-fn syscall_15(msg_ptr: usize) -> usize;
-  fn syscall_16(tid: u16, a: usize, b: usize, c: usize, d: usize) -> isize;
-}
-
-pub fn null() { unsafe { syscall_0(); } }
+pub fn null() { syscall_0_0(SYS_NULL).unwrap() }
 
 pub fn putc(c: char) {
-  unsafe { syscall_1(c as u8); }
+  syscall_1_0(SYS_PUTC, c as usize).unwrap()
 }
 
-pub fn get_asid(tid: u16) -> u16 {
-  unsafe { syscall_2(tid) }
+pub fn get_asid() -> u16 {
+  syscall_0_1(SYS_GET_ASID).unwrap() as u16
 }
 
-pub fn get_tid() -> u16 { unsafe { syscall_3() } }
+pub fn get_tid() -> u16 {
+  syscall_0_1(SYS_GET_TID).unwrap() as u16
+}
 
 pub fn thread_yield() {
-  unsafe { syscall_4(); }
+  syscall_0_0(SYS_THREAD_YIELD).unwrap()
 }
 
-pub fn thread_destroy(tid: u16) -> isize {
-  unsafe { syscall_5(tid) }
+pub fn thread_destroy(tid: u16) -> Result<(), Error> {
+  syscall_1_0(SYS_THREAD_DESTROY, tid as usize)
 }
 
-pub fn event_handler(asid: u16, value: usize, sp: usize, event: usize) -> isize {
-  unsafe { syscall_6(asid, value, sp, event) }
+pub fn event_handler(asid: u16, value: usize, sp: usize, event: usize) -> Result<(), Error> {
+  syscall_4_0(SYS_EVENT_HANDLER, asid as usize, value, sp, event)
 }
 
-pub fn mem_alloc(asid: u16, va: usize, attr: usize) -> isize {
-  unsafe { syscall_7(asid, va, attr) }
+pub fn mem_alloc(asid: u16, va: usize, attr: usize) -> Result<(), Error> {
+  syscall_3_0(SYS_MEM_ALLOC, asid as usize, va, attr)
 }
 
-pub fn mem_map(src_asid: u16, src_va: usize, dst_asid: u16, dst_va: usize, attr: usize) -> isize {
-  unsafe { syscall_8(src_asid, src_va, dst_asid, dst_va, attr) }
+pub fn mem_map(src_asid: u16, src_va: usize, dst_asid: u16, dst_va: usize, attr: usize) -> Result<(), Error> {
+  syscall_5_0(SYS_MEM_MAP, src_asid as usize, src_va, dst_asid as usize, dst_va, attr)
 }
 
-pub fn mem_unmap(asid: u16, va: usize) -> isize {
-  unsafe { syscall_9(asid, va) }
+pub fn mem_unmap(asid: u16, va: usize) -> Result<(), Error> {
+  syscall_2_0(SYS_MEM_UNMAP, asid as usize, va)
 }
 
 #[inline(always)]
-pub fn address_space_alloc() -> (u16, u16) {
-  let x = unsafe { syscall_10() };
-  ((x >> 16) as u16, x as u16)
+pub fn address_space_alloc() -> Result<(u16, u16), Error> {
+  syscall_0_2(SYS_ADDRESS_SPACE_ALLOC).map(|(asid,  tid)| (asid as u16, tid as u16))
 }
 
-pub fn thread_alloc(entry: usize, sp: usize, arg: usize) -> u16 {
-  unsafe { syscall_11(entry, sp, arg) }
+pub fn thread_alloc(entry: usize, sp: usize, arg: usize) -> Result<u16, Error> {
+  syscall_3_1(SYS_THREAD_ALLOC, entry, sp, arg).map(|tid| tid as u16)
 }
 
-pub fn thread_set_status(tid: u16, status: usize) -> isize {
-  unsafe { syscall_12(tid, status) }
+pub fn thread_set_status(tid: u16, status: usize) -> Result<(), Error> {
+  syscall_2_0(SYS_THREAD_SET_STATUS, tid as usize, status)
 }
 
-pub fn ipc_receive(dst_va: usize) {
-  unsafe { syscall_13(dst_va); }
+pub fn ipc_receive() {
+  todo!()
 }
 
-pub fn ipc_can_send(asid: u16, value: usize, src_va: usize, attr: usize) -> isize {
-  unsafe { syscall_14(asid, value, src_va, attr) }
+pub fn ipc_can_send() {
+  todo!()
 }
 
-pub fn itc_receive(msg_ptr: usize) -> usize {
-  unsafe {
-    syscall_15(msg_ptr)
-  }
+pub fn itc_receive() -> Result<(u16, usize, usize, usize, usize), Error> {
+  syscall_0_5(SYS_ITC_RECV).map(|(tid, a, b, c, d)| (tid as u16, a, b, c, d))
 }
 
-pub fn itc_send(tid: u16, a: usize, b: usize, c: usize, d: usize) -> isize {
-  unsafe {
-    syscall_16(tid, a, b, c, d)
-  }
+pub fn itc_send(tid: u16, a: usize, b: usize, c: usize, d: usize) -> Result<(), Error> {
+  syscall_5_0(SYS_ITC_SEND, tid as usize, a, b, c, d)
 }

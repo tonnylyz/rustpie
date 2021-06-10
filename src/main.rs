@@ -56,7 +56,6 @@ mod util;
 mod logger;
 mod unwind;
 
-use core::mem::{size_of, ManuallyDrop};
 use arch::{CoreId, ContextFrame};
 use lib::traits::*;
 use lib::cpu::CoreTrait;

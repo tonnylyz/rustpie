@@ -1,5 +1,6 @@
 use core::fmt::Formatter;
 use crate::ContextFrameTrait;
+use crate::lib::syscall::{SyscallResult, SyscallOutRegisters, Error};
 
 #[repr(C)]
 #[derive(Copy, Clone, Debug)]
@@ -52,9 +53,43 @@ impl ContextFrameTrait for Aarch64ContextFrame {
     self.gpr[8] as usize
   }
 
-  fn set_syscall_return_value(&mut self, v: usize) {
-    // x0
-    self.gpr[0] = v as u64;
+  fn set_syscall_result(&mut self, v: &SyscallResult) {
+    match v {
+      Ok(regs) => {
+        self.gpr[7] = 0;
+        match regs {
+          SyscallOutRegisters::Unit => {}
+          SyscallOutRegisters::Single(a) => {
+            self.gpr[0] = *a as u64;
+          }
+          SyscallOutRegisters::Double(a, b) => {
+            self.gpr[0] = *a as u64;
+            self.gpr[1] = *b as u64;
+          }
+          SyscallOutRegisters::Triple(a, b, c) => {
+            self.gpr[0] = *a as u64;
+            self.gpr[1] = *b as u64;
+            self.gpr[2] = *c as u64;
+          }
+          SyscallOutRegisters::Quadruple(a, b, c, d) => {
+            self.gpr[0] = *a as u64;
+            self.gpr[1] = *b as u64;
+            self.gpr[2] = *c as u64;
+            self.gpr[3] = *d as u64;
+          }
+          SyscallOutRegisters::Pentad(a, b, c, d, e) => {
+            self.gpr[0] = *a as u64;
+            self.gpr[1] = *b as u64;
+            self.gpr[2] = *c as u64;
+            self.gpr[3] = *d as u64;
+            self.gpr[4] = *e as u64;
+          }
+        }
+      }
+      Err(e) => {
+        self.gpr[7] = *e as u64;
+      }
+    }
   }
 
   fn exception_pc(&self) -> usize {
