@@ -1,4 +1,4 @@
-use microcall::{itc_send, itc_receive};
+use microcall::{itc_send, itc_receive, itc_call, itc_reply};
 
 pub type Error = usize;
 
@@ -24,5 +24,20 @@ impl Message {
   }
   pub fn send_to(&self, tid: u16) -> Result<(), Error> {
     itc_send(tid, self.a, self.b, self.c, self.d)
+  }
+
+  pub fn call(&self, tid: u16) -> Self {
+    loop {
+      if let Ok(msg) = itc_call(tid, self.a, self.b, self.c, self.d).map(|(tid, a, b, c, d)| Message {
+        a, b, c, d
+      }) {
+        break msg
+      }
+      microcall::thread_yield();
+    }
+  }
+
+  pub fn reply(&self)  {
+    itc_reply(self.a, self.b, self.c, self.d).unwrap();
   }
 }

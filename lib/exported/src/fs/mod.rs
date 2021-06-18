@@ -1,3 +1,6 @@
+use trusted::message::Message;
+use trusted::redoxcall::*;
+
 pub enum Error {
   NONE
 }
@@ -19,14 +22,13 @@ pub enum SeekFrom {
 impl File {
 
   pub fn open<P: AsRef<str>>(path: P) -> Result<File> {
-    let mut msg = ItcMessage::default();
+    let mut msg = Message::default();
     msg.a = SYS_OPEN;
     msg.b = path.as_ref().as_ptr() as usize;
     msg.c = path.as_ref().len();
     msg.d = O_RDONLY;
-    msg.send_to_server(RedoxFs);
-    let (_tid, msg) = ItcMessage::receive();
-    let err = crate::syscall::Error::demux(msg.a);
+    let msg = msg.call(microcall::server_tid_wait(common::server::SERVER_REDOX_FS));
+    let err = trusted::redoxcall::Error::demux(msg.a);
     match err {
       Ok(handle) => { Ok(File{handle}) }
       Err(_) => { Err(Error::NONE) }
@@ -34,14 +36,13 @@ impl File {
   }
 
   pub fn read(&mut self, buf: &mut [u8]) -> Result<usize> {
-    let mut msg = ItcMessage::default();
+    let mut msg = Message::default();
     msg.a = SYS_READ;
     msg.b = self.handle;
     msg.c = buf.as_ptr() as usize;
     msg.d = buf.len();
-    msg.send_to_server(RedoxFs);
-    let (_tid, msg) = ItcMessage::receive();
-    let err = crate::syscall::Error::demux(msg.a);
+    let msg = msg.call(microcall::server_tid_wait(common::server::SERVER_REDOX_FS));
+    let err = trusted::redoxcall::Error::demux(msg.a);
     match err {
       Ok(read) => { Ok(read) }
       Err(_) => { Err(Error::NONE) }
@@ -49,7 +50,7 @@ impl File {
   }
 
   pub fn seek(&mut self, pos: SeekFrom) -> Result<u64> {
-    let mut msg = ItcMessage::default();
+    let mut msg = Message::default();
     msg.a = SYS_LSEEK;
     msg.b = self.handle;
     msg.c =
@@ -64,9 +65,8 @@ impl File {
         SeekFrom::End(_i) => {SEEK_END}
         SeekFrom::Current(_i) => {SEEK_CUR}
       };
-    msg.send_to_server(RedoxFs);
-    let (_tid, msg) = ItcMessage::receive();
-    let err = crate::syscall::Error::demux(msg.a);
+    let msg = msg.call(microcall::server_tid_wait(common::server::SERVER_REDOX_FS));
+    let err = trusted::redoxcall::Error::demux(msg.a);
     match err {
       Ok(p) => { Ok(p as u64) }
       Err(_) => { Err(Error::NONE) }

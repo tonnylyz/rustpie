@@ -1,15 +1,20 @@
 use crate::fs::{Disk, BLOCK_SIZE};
 use common::PAGE_SIZE;
-use crate::root::Server::VirtioBlk;
 use rlibc::memcpy;
 use trusted::redoxcall::*;
 use trusted::message::Message;
 
-pub struct VirtioClient;
+pub struct VirtioClient {
+    tid: u16,
+}
 
 impl VirtioClient {
     pub fn new() -> VirtioClient {
-        VirtioClient
+        let server_tid = microcall::server_tid_wait(common::server::SERVER_VIRTIO_BLK);
+        println!("virtio client {}", server_tid);
+        VirtioClient {
+            tid: server_tid,
+        }
     }
 }
 
@@ -21,16 +26,14 @@ impl Disk for VirtioClient {
         let sector = (block as usize) * 8;
         let count = 8;
         let buf = unsafe { core::slice::from_raw_parts_mut(tmp, PAGE_SIZE) };
-        Message {
+        let msg = Message {
             a: sector,
             b: count,
             c: buf.as_mut_ptr() as usize,
             d: 0
-        }.send_to(crate::root::server_tid_wait(VirtioBlk));
-        let msg = Message::receive();
-        // assert_eq!(msg.0, self.server_tid);
-        println!("[FS] VirtoClient RX {:x?}", msg);
-        assert_eq!(msg.1.a, 0);
+        }.call(self.tid);
+        println!("[FS] VirtioClient RX {:x?}", msg);
+        assert_eq!(msg.a, 0);
         unsafe { memcpy(buffer.as_mut_ptr(), tmp, PAGE_SIZE); }
         Ok(buffer.len())
     }

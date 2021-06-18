@@ -7,6 +7,7 @@ use register::mmio::*;
 use spin::Mutex;
 use trusted::mm::virt_to_phys;
 use microcall::get_tid;
+use trusted::message::Message;
 
 #[cfg(target_arch = "aarch64")]
 const VIRTIO_MMIO_BASE: usize = 0x8_0000_0000 + 0x0a000000;
@@ -384,12 +385,7 @@ fn irq() {
           {
             println!("[BLK] {:x?}", req);
             let msg = trusted::message::Message::default();
-            loop {
-              match msg.send_to(req.src) {
-                Ok(_) => break,
-                Err(_) => {}
-              }
-            }
+            msg.reply();
           }
           // println!("ok {:#x?}", req);
         }
@@ -426,6 +422,7 @@ fn wait_for_irq() {
 pub fn server() {
   init();
   println!("[BLK] server started t{}",  get_tid());
+  microcall::server_register(common::server::SERVER_VIRTIO_BLK).unwrap();
 
   loop {
     let (client_tid, msg) = trusted::message::Message::receive();

@@ -10,6 +10,7 @@ use crate::lib::bitmap::BitMap;
 use crate::lib::cpu::CoreTrait;
 use core::mem::size_of;
 use crate::lib::traits::*;
+use crate::lib::thread::Status::{TsRunnable, TsNotRunnable};
 
 pub type Tid = u16;
 
@@ -35,7 +36,7 @@ struct Inner {
   status: Mutex<Status>,
   context_frame: Mutex<ContextFrame>,
   running_core: Mutex<Option<CoreId>>,
-  msg_ptr: Mutex<Option<usize>>,
+  itc_peer: Mutex<Option<Thread>>,
 }
 
 pub enum Error {
@@ -121,23 +122,37 @@ impl Thread {
     free(self)
   }
 
-  pub fn msg_ptr(&self) -> Option<usize> {
-    let ptr = self.0.msg_ptr.lock();
+  pub fn peer(&self) -> Option<Thread> {
+    let ptr = self.0.itc_peer.lock();
     ptr.clone()
   }
 
-  pub fn set_msg_ptr(&self, msg_ptr: usize) {
-    let mut ptr = self.0.msg_ptr.lock();
-    *ptr = Some(msg_ptr);
+  pub fn set_peer(&self, sender: Thread) {
+    let mut ptr = self.0.itc_peer.lock();
+    *ptr = Some(sender);
+  }
+
+  pub fn clear_peer(&self) {
+    let mut ptr = self.0.itc_peer.lock();
+    *ptr = None;
   }
 
   pub fn wake(&self) {
-    todo!()
+    self.set_status(TsRunnable);
   }
 
   pub fn sleep(&self) {
-    todo!()
+    self.set_status(TsNotRunnable);
   }
+
+  pub fn receivable(&self, sender: &Thread) -> bool {
+    (if let Some(peer) = self.peer() {
+      peer.tid() == sender.tid()
+    } else {
+      true
+    })&& self.status() == TsNotRunnable
+  }
+
 }
 
 struct ThreadPool {
@@ -155,7 +170,7 @@ impl ThreadPool {
       status: Mutex::new(Status::TsNotRunnable),
       context_frame: Mutex::new(ContextFrame::new(pc, sp, arg, false)),
       running_core: Mutex::new(None),
-      msg_ptr: Mutex::new(None)
+      itc_peer: Mutex::new(None)
     });
     let mut map = THREAD_MAP.get().unwrap().lock();
     map.insert(id, arc.clone());
@@ -172,7 +187,7 @@ impl ThreadPool {
       status: Mutex::new(Status::TsNotRunnable),
       context_frame: Mutex::new(ContextFrame::new(pc, sp, arg, true)),
       running_core: Mutex::new(None),
-      msg_ptr: Mutex::new(None)
+      itc_peer: Mutex::new(None)
     });
     let mut map = THREAD_MAP.get().unwrap().lock();
     map.insert(id, arc.clone());

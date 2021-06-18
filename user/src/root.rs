@@ -1,44 +1,28 @@
-use alloc::collections::BTreeMap;
-use spin::Mutex;
-use trusted::thread::{JoinHandle, spawn};
-
-#[derive(Debug, Copy, Clone, Ord, PartialOrd, Eq, PartialEq)]
-pub enum Server {
-  VirtioBlk = 0,
-  RedoxFs = 1,
-}
-
-static HANDLES: Mutex<BTreeMap<Server, JoinHandle<()>>> = Mutex::new(BTreeMap::new());
+use exported::fs::{File, SeekFrom};
 
 pub fn main(_arg: usize) {
-  let mut handles = HANDLES.lock();
-  handles.insert(Server::VirtioBlk, spawn(|| {
+  trusted::thread::spawn(|| {
     crate::blk::virtio_blk::server();
-  }));
+  });
 
-  handles.insert(Server::RedoxFs, spawn(|| {
+  trusted::thread::spawn(|| {
     crate::fs::server();
-  }));
+  });
 
-  drop(handles);
+  trusted::thread::spawn(|| {
+    println!("[TEST] client t{}", microcall::get_tid());
+    let mut file = File::open("hello").ok().unwrap();
+    let mut buf: [u8; 128] = [0; 128];
+    let r = file.seek(SeekFrom::Start(0)).ok().unwrap();
+    println!("[TEST] client seek {}", r);
+    let r = file.read(&mut buf).ok().unwrap();
+    println!("[TEST] client read {}", r);
+    let str = core::str::from_utf8(&buf).unwrap();
+    println!("[TEST] client str {}", str);
+    microcall::thread_destroy(0);
+  });
+
   loop {
     microcall::thread_yield();
-  }
-}
-
-pub fn server_tid(server: Server) -> Result<u16, ()> {
-  let handles = HANDLES.lock();
-  if let Some(handle) = handles.get(&server) {
-    Ok(handle.native())
-  } else {
-    Err(())
-  }
-}
-
-pub fn server_tid_wait(server: Server) -> u16 {
-  loop {
-    if let Ok(tid) = server_tid(server) {
-      break tid
-    }
   }
 }

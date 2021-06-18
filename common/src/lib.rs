@@ -45,7 +45,15 @@ pub mod syscall {
   pub const SYS_CAN_SEND: usize = 14;
   pub const SYS_ITC_RECV: usize = 15;
   pub const SYS_ITC_SEND: usize = 16;
+  pub const SYS_ITC_CALL: usize = 17;
+  pub const SYS_ITC_REPLY: usize = 18;
+  pub const SYS_SERVER_REGISTER: usize = 19;
+  pub const SYS_SERVER_TID: usize = 20;
+}
 
+pub mod server {
+  pub const SERVER_VIRTIO_BLK: usize = 0;
+  pub const SERVER_REDOX_FS: usize = 1;
 }
 
 pub mod thread {

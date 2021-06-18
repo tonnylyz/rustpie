@@ -28,7 +28,7 @@ pub fn get_tid() -> u16 {
 }
 
 pub fn thread_yield() {
-  syscall_0_0(SYS_THREAD_YIELD).unwrap()
+  syscall_0_0(SYS_THREAD_YIELD);
 }
 
 pub fn thread_destroy(tid: u16) -> Result<(), Error> {
@@ -78,4 +78,28 @@ pub fn itc_receive() -> Result<(u16, usize, usize, usize, usize), Error> {
 
 pub fn itc_send(tid: u16, a: usize, b: usize, c: usize, d: usize) -> Result<(), Error> {
   syscall_5_0(SYS_ITC_SEND, tid as usize, a, b, c, d)
+}
+
+pub fn itc_call(tid: u16, a: usize, b: usize, c: usize, d: usize) -> Result<(u16, usize, usize, usize, usize), Error> {
+  syscall_5_5(SYS_ITC_CALL, tid as usize, a, b, c, d).map(|(tid, a, b, c, d)| (tid as u16, a, b, c, d))
+}
+
+pub fn itc_reply(a: usize, b: usize, c: usize, d: usize) -> Result<(), Error> {
+  syscall_4_0(SYS_ITC_REPLY, a, b, c, d)
+}
+
+pub fn server_register(server_id: usize) -> Result<(), Error> {
+  syscall_1_0(SYS_SERVER_REGISTER, server_id)
+}
+
+pub fn server_tid(server_id: usize) -> Result<u16, Error> {
+  syscall_1_1(SYS_SERVER_TID, server_id).map(|x| x as u16)
+}
+
+pub fn server_tid_wait(server_id: usize) -> u16 {
+  loop {
+    if let Ok(tid) = server_tid(server_id) {
+      break tid
+    }
+  }
 }

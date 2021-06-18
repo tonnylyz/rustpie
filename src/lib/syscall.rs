@@ -66,7 +66,7 @@ impl Display for SyscallOutRegisters {
 
 pub type SyscallResult = Result<SyscallOutRegisters, Error>;
 
-static SYSCALL_NAMES: [&str; 17] = [
+static SYSCALL_NAMES: [&str; 21] = [
   "null",
   "putc",
   "get_asid",
@@ -84,6 +84,10 @@ static SYSCALL_NAMES: [&str; 17] = [
   "ipc_can_send",
   "itc_receive",
   "itc_send",
+  "itc_call",
+  "itc_reply",
+  "server_register",
+  "server_tid",
 ];
 
 pub trait SyscallTrait {
@@ -104,11 +108,10 @@ pub trait SyscallTrait {
   fn ipc_can_send(pid: u16, value: usize, src_va: usize, perm: usize) -> SyscallResult;
   fn itc_recv() -> SyscallResult;
   fn itc_send(tid: u16, a: usize, b: usize, c: usize, d: usize) -> SyscallResult;
-  fn itc_call(tid: u16, a: usize, b: usize, c: usize, d: usize, msg_ptr: usize) -> SyscallResult;
-  fn itc_reply(tid: u16, a: usize, b: usize, c: usize, d: usize) -> SyscallResult;
-  fn itc_send_nb(tid: u16, a: usize, b: usize, c: usize, d: usize) -> SyscallResult;
-  fn itc_reply_recv(tid: u16, a: usize, b: usize, c: usize, d: usize, msg_ptr: usize) -> SyscallResult;
-  fn itc_recv_nb(msg_ptr: usize) -> SyscallResult;
+  fn itc_call(tid: u16, a: usize, b: usize, c: usize, d: usize) -> SyscallResult;
+  fn itc_reply(a: usize, b: usize, c: usize, d: usize) -> SyscallResult;
+  fn server_register(a: usize) -> SyscallResult;
+  fn server_tid(a: usize) -> SyscallResult;
 }
 
 pub struct Syscall;
@@ -287,17 +290,18 @@ impl SyscallTrait for Syscall {
 
   #[allow(unused_variables)]
   fn ipc_receive(dst_va: usize) -> SyscallResult {
-    unimplemented!()
+    todo!()
   }
 
   #[allow(unused_variables)]
   fn ipc_can_send(pid: u16, value: usize, src_va: usize, attr: usize) -> SyscallResult {
-    unimplemented!()
+    todo!()
   }
 
   fn itc_recv() -> SyscallResult {
     let t = current().running_thread().ok_or_else(|| InternalError)?;
-    t.set_status(TsNotRunnable);
+    t.clear_peer(); // receive from any sender
+    t.sleep();
     crate::current_cpu().schedule();
     Ok(Unit)
   }
@@ -308,35 +312,73 @@ impl SyscallTrait for Syscall {
     if t.address_space() != target.address_space() {
       return Err(PermissionDenied);
     }
-    if target.status() != TsNotRunnable {
-      // trace!("recv thread runnable?");
+    if !target.receivable(&t) {
       return Err(InternalError);
     }
     let mut ctx = target.context();
     ctx.set_syscall_result(&SyscallResult::Ok(SyscallOutRegisters::Pentad(t.tid() as usize, a, b, c, d)));
     target.set_context(ctx);
-    target.set_status(TsRunnable);
+    target.wake();
     Ok(Unit)
   }
 
-  fn itc_call(tid: u16, a: usize, b: usize, c: usize, d: usize, msg_ptr: usize) -> SyscallResult {
-    todo!()
+  fn itc_call(tid: u16, a: usize, b: usize, c: usize, d: usize) -> SyscallResult {
+    let t = current().running_thread().ok_or_else(|| InternalError)?;
+    let target = crate::lib::thread::lookup(tid).ok_or_else(|| InvalidArgumentError)?;
+    if t.address_space() != target.address_space() {
+      return Err(PermissionDenied);
+    }
+    if !target.receivable(&t) {
+      return Err(InternalError);
+    }
+    let mut ctx = target.context();
+    ctx.set_syscall_result(&SyscallResult::Ok(SyscallOutRegisters::Pentad(t.tid() as usize, a, b, c, d)));
+    target.set_context(ctx);
+
+    target.wake();
+    target.set_peer(t.clone());
+    t.set_peer(target.clone());
+    t.sleep();
+
+    crate::current_cpu().schedule();
+    Ok(Unit)
   }
 
-  fn itc_reply(tid: u16, a: usize, b: usize, c: usize, d: usize) -> SyscallResult {
-    todo!()
+  fn itc_reply(a: usize, b: usize, c: usize, d: usize) -> SyscallResult {
+    let t = current().running_thread().ok_or(InternalError)?;
+    let target = t.peer().ok_or(InternalError)?;
+    if t.address_space() != target.address_space() {
+      return Err(PermissionDenied);
+    }
+    if !target.receivable(&t) {
+      return Err(InternalError);
+    }
+    let mut ctx = target.context();
+    ctx.set_syscall_result(&SyscallResult::Ok(SyscallOutRegisters::Pentad(t.tid() as usize, a, b, c, d)));
+    target.set_context(ctx);
+
+    target.clear_peer();
+    t.clear_peer();
+    target.wake();
+    Ok(Unit)
   }
 
-  fn itc_send_nb(tid: u16, a: usize, b: usize, c: usize, d: usize) -> SyscallResult {
-    todo!()
+  fn server_register(server_id: usize) -> SyscallResult {
+    use common::server::*;
+    let t = current().running_thread().ok_or(InternalError)?;
+    super::server::set(server_id, t.tid());
+    Ok(Unit)
   }
 
-  fn itc_reply_recv(tid: u16, a: usize, b: usize, c: usize, d: usize, msg_ptr: usize) -> SyscallResult {
-    todo!()
-  }
-
-  fn itc_recv_nb(msg_ptr: usize) -> SyscallResult {
-    todo!()
+  fn server_tid(server_id: usize) -> SyscallResult {
+    match super::server::get(server_id) {
+      None => {
+        Err(InvalidArgumentError)
+      },
+      Some(tid) => {
+        Ok(Single(tid as usize))
+      }
+    }
   }
 }
 
@@ -364,6 +406,10 @@ pub fn syscall() {
     SYS_CAN_SEND => Syscall::ipc_can_send(arg(0) as u16, arg(1), arg(2), arg(3)),
     SYS_ITC_RECV => Syscall::itc_recv(),
     SYS_ITC_SEND => Syscall::itc_send(arg(0) as u16, arg(1), arg(2), arg(3), arg(4)),
+    SYS_ITC_CALL => Syscall::itc_call(arg(0) as u16, arg(1), arg(2), arg(3), arg(4)),
+    SYS_ITC_REPLY => Syscall::itc_reply(arg(1), arg(2), arg(3), arg(4)),
+    SYS_SERVER_REGISTER => Syscall::server_register(arg(0)),
+    SYS_SERVER_TID => Syscall::server_tid(arg(0)),
     _ => {
       warn!("system call: unrecognized system call number");
       Err(super::syscall::Error::InvalidArgumentError)

@@ -7,13 +7,14 @@ use microcall::get_tid;
 
 pub fn server() {
   println!("[FS] server started t{}", get_tid());
+  microcall::server_register(common::server::SERVER_REDOX_FS).unwrap();
   let disk = VirtioClient::new();
   match FileSystem::open(disk, Some(0)) {
     Ok(filesystem) => {
       let scheme = FileScheme::new(String::from("virtio"), filesystem);
       loop {
         let mut packet = Packet::default();
-
+        println!("[FS] ready to provide service");
         let msg = Message::receive();
         packet.a = msg.1.a;
         packet.b = msg.1.b;
