@@ -1,5 +1,5 @@
-use trusted::message::Message;
-use trusted::redoxcall::*;
+use crate::message::Message;
+use crate::redoxcall::*;
 
 pub enum Error {
   NONE
@@ -28,7 +28,7 @@ impl File {
     msg.c = path.as_ref().len();
     msg.d = O_RDONLY;
     let msg = msg.call(microcall::server_tid_wait(common::server::SERVER_REDOX_FS));
-    let err = trusted::redoxcall::Error::demux(msg.a);
+    let err = crate::redoxcall::Error::demux(msg.a);
     match err {
       Ok(handle) => { Ok(File{handle}) }
       Err(_) => { Err(Error::NONE) }
@@ -42,7 +42,7 @@ impl File {
     msg.c = buf.as_ptr() as usize;
     msg.d = buf.len();
     let msg = msg.call(microcall::server_tid_wait(common::server::SERVER_REDOX_FS));
-    let err = trusted::redoxcall::Error::demux(msg.a);
+    let err = crate::redoxcall::Error::demux(msg.a);
     match err {
       Ok(read) => { Ok(read) }
       Err(_) => { Err(Error::NONE) }
@@ -66,7 +66,7 @@ impl File {
         SeekFrom::Current(_i) => {SEEK_CUR}
       };
     let msg = msg.call(microcall::server_tid_wait(common::server::SERVER_REDOX_FS));
-    let err = trusted::redoxcall::Error::demux(msg.a);
+    let err = crate::redoxcall::Error::demux(msg.a);
     match err {
       Ok(p) => { Ok(p as u64) }
       Err(_) => { Err(Error::NONE) }

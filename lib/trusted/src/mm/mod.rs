@@ -16,6 +16,7 @@ pub use arch::page_table::Entry;
 pub use arch::page_table::traverse;
 pub use arch::page_table::query;
 pub use valloc::valloc;
+pub use valloc::virtual_page_alloc;
 
 pub fn virt_to_phys(va: usize) -> usize {
   match arch::page_table::query(va) {

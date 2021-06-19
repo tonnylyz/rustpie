@@ -14,6 +14,7 @@ use crate::util::round_down;
 
 use self::Error::*;
 use core::fmt::{Display, Formatter};
+use crate::current_thread;
 
 #[derive(Debug, Copy, Clone)]
 pub enum Error {
@@ -102,7 +103,7 @@ pub trait SyscallTrait {
   fn mem_map(src_asid: u16, src_va: usize, dst_asid: u16, dst_va: usize, perm: usize) -> SyscallResult;
   fn mem_unmap(asid: u16, va: usize) -> SyscallResult;
   fn address_space_alloc() -> SyscallResult;
-  fn thread_alloc(entry: usize, sp: usize, arg: usize) -> SyscallResult;
+  fn thread_alloc(asid: u16, entry: usize, sp: usize, arg: usize) -> SyscallResult;
   fn thread_set_status(pid: u16, status: usize) -> SyscallResult;
   fn ipc_receive(dst_va: usize) -> SyscallResult;
   fn ipc_can_send(pid: u16, value: usize, src_va: usize, perm: usize) -> SyscallResult;
@@ -256,30 +257,23 @@ impl SyscallTrait for Syscall {
 
   fn address_space_alloc() -> SyscallResult {
     let a = crate::lib::address_space::alloc();
-    let mut ctx = *crate::current_cpu().context();
-    ctx.set_syscall_result(&SyscallResult::Ok(SyscallOutRegisters::Single(0)));
-    let t = crate::lib::thread::new_user(0, 0, 0, a.clone(), current().running_thread());
-    t.set_context(ctx);
-    t.set_status(crate::lib::thread::Status::TsNotRunnable);
-    Ok(Double(a.asid() as usize, t.tid() as usize))
+    Ok(Single(a.asid() as usize))
   }
 
-  fn thread_alloc(entry: usize, sp: usize, arg: usize) -> SyscallResult {
-    let t = crate::current_thread();
-    let a = t.address_space().unwrap();
-    let child_thread = crate::lib::thread::new_user(entry, sp, arg, a.clone(), current().running_thread());
-    child_thread.set_status(crate::lib::thread::Status::TsRunnable);
+  fn thread_alloc(asid: u16, entry: usize, sp: usize, arg: usize) -> SyscallResult {
+    let a = lookup_as(asid)?;
+    let child_thread = crate::lib::thread::new_user(entry, sp, arg, a.clone(), Some(current_thread()));
     Ok(Single(child_thread.tid() as usize))
   }
 
-  fn thread_set_status(pid: u16, status: usize) -> SyscallResult {
+  fn thread_set_status(tid: u16, status: usize) -> SyscallResult {
     use common::thread::*;
     let status = match status {
       THREAD_STATUS_NOT_RUNNABLE => crate::lib::thread::Status::TsNotRunnable,
       THREAD_STATUS_RUNNABLE => crate::lib::thread::Status::TsRunnable,
       _ => return Err(InvalidArgumentError)
     };
-    match crate::lib::thread::lookup(pid) {
+    match crate::lib::thread::lookup(tid) {
       None => {}
       Some(t) => {
         t.set_status(status);
@@ -400,7 +394,7 @@ pub fn syscall() {
     SYS_MEM_MAP => Syscall::mem_map(arg(0) as u16, arg(1), arg(2) as u16, arg(3), arg(4)),
     SYS_MEM_UNMAP => Syscall::mem_unmap(arg(0) as u16, arg(1)),
     SYS_ADDRESS_SPACE_ALLOC => Syscall::address_space_alloc(),
-    SYS_THREAD_ALLOC => Syscall::thread_alloc(arg(0), arg(1), arg(2)),
+    SYS_THREAD_ALLOC => Syscall::thread_alloc(arg(0) as u16, arg(1), arg(2), arg(3)),
     SYS_THREAD_SET_STATUS => Syscall::thread_set_status(arg(0) as u16, arg(1)),
     SYS_IPC_RECEIVE => Syscall::ipc_receive(arg(0)),
     SYS_CAN_SEND => Syscall::ipc_can_send(arg(0) as u16, arg(1), arg(2), arg(3)),

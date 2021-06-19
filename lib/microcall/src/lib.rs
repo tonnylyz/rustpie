@@ -52,12 +52,12 @@ pub fn mem_unmap(asid: u16, va: usize) -> Result<(), Error> {
 }
 
 #[inline(always)]
-pub fn address_space_alloc() -> Result<(u16, u16), Error> {
-  syscall_0_2(SYS_ADDRESS_SPACE_ALLOC).map(|(asid,  tid)| (asid as u16, tid as u16))
+pub fn address_space_alloc() -> Result<u16, Error> {
+  syscall_0_1(SYS_ADDRESS_SPACE_ALLOC).map(|asid| asid as u16)
 }
 
-pub fn thread_alloc(entry: usize, sp: usize, arg: usize) -> Result<u16, Error> {
-  syscall_3_1(SYS_THREAD_ALLOC, entry, sp, arg).map(|tid| tid as u16)
+pub fn thread_alloc(asid: u16, entry: usize, sp: usize, arg: usize) -> Result<u16, Error> {
+  syscall_4_1(SYS_THREAD_ALLOC, asid as usize, entry, sp, arg).map(|tid| tid as u16)
 }
 
 pub fn thread_set_status(tid: u16, status: usize) -> Result<(), Error> {

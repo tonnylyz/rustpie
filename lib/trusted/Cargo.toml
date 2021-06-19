@@ -13,3 +13,4 @@ buddy_system_allocator = "0.7.0"
 bitflags = "1.2.1"
 microcall = { path = "../microcall" }
 common = { path = "../../common" }
+xmas-elf = "0.8.0"

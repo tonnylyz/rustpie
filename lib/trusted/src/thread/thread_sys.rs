@@ -1,7 +1,7 @@
 use alloc::boxed::Box;
 use core::time::Duration;
 use common::PAGE_SIZE;
-use microcall::{thread_alloc, thread_yield};
+use microcall::{thread_alloc, thread_yield, thread_set_status};
 
 pub struct Thread {
   id: u16,
@@ -20,7 +20,7 @@ impl Thread {
     assert_eq!(stack_size % PAGE_SIZE, 0);
 
     let stack = super::thread_stack::Stack::new();
-    let native = thread_alloc(thread_start as usize, stack.top(), p as *mut _ as usize);
+    let native = thread_alloc(0, thread_start as usize, stack.top(), p as *mut _ as usize);
 
     extern "C" fn thread_start(main: usize) -> usize {
       unsafe {
@@ -31,7 +31,10 @@ impl Thread {
     }
 
     match native {
-      Ok(native) => Ok(Thread { id: native }),
+      Ok(native) => {
+        thread_set_status(native, common::thread::THREAD_STATUS_RUNNABLE);
+        Ok(Thread { id: native })
+      },
       Err(_) => {
         drop(Box::from_raw(p));
         Err(())

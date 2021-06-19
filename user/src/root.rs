@@ -1,4 +1,4 @@
-use exported::fs::{File, SeekFrom};
+use trusted::fs::{File, SeekFrom};
 
 pub fn main(_arg: usize) {
   trusted::thread::spawn(|| {
