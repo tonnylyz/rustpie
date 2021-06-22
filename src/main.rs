@@ -93,19 +93,19 @@ pub unsafe fn main(core_id: arch::CoreId) -> ! {
   if core_id == 0 {
     #[cfg(target_arch = "aarch64")]
       #[cfg(not(feature = "user_release"))]
-      let bin = include_bytes!("../user/target/aarch64/debug/rustpi-user");
+      let bin = include_bytes!("../trusted/target/aarch64/debug/trusted");
 
     #[cfg(target_arch = "aarch64")]
       #[cfg(feature = "user_release")]
-      let bin = include_bytes!("../user/target/aarch64/release/rustpi-user");
+      let bin = include_bytes!("../trusted/target/aarch64/release/trusted");
 
     #[cfg(target_arch = "riscv64")]
       #[cfg(not(feature = "user_release"))]
-      let bin = include_bytes!("../user/target/riscv64/debug/rustpi-user");
+      let bin = include_bytes!("../trusted/target/riscv64/debug/trusted");
 
     #[cfg(target_arch = "riscv64")]
       #[cfg(feature = "user_release")]
-      let bin = include_bytes!("../user/target/riscv64/release/rustpi-user");
+      let bin = include_bytes!("../trusted/target/riscv64/release/trusted");
 
     let (a, entry) = lib::address_space::load_image(bin);
     info!("load_image ok");

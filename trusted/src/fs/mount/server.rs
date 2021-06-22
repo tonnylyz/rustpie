@@ -1,8 +1,8 @@
 use crate::fs::mount::scheme::FileScheme;
 use crate::fs::{VirtioClient, FileSystem};
-use trusted::redoxcall::*;
+use libtrusted::redoxcall::*;
 use alloc::string::String;
-use trusted::message::Message;
+use libtrusted::message::Message;
 use microcall::get_tid;
 
 pub fn server() {

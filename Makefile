@@ -2,6 +2,7 @@
 ARCH ?= aarch64
 PROFILE ?= release
 USER_PROFILE ?= release
+TRUSTED_PROFILE ?= release
 
 # NOTE: this is to deal with `(signal: 11, SIGSEGV: invalid memory reference)`
 # https://github.com/rust-lang/rust/issues/73677
@@ -14,20 +15,24 @@ ifeq (${PROFILE}, release)
 CARGO_FLAGS := ${CARGO_FLAGS} --release
 endif
 
-ifeq (${USER_PROFILE}, release)
+ifeq (${TRUSTED_PROFILE}, release)
 CARGO_FLAGS := ${CARGO_FLAGS} --features user_release
 endif
 
-USER_IMAGE := user/target/${ARCH}/${USER_PROFILE}/rustpi-user
+TRUSTED_IMAGE := trusted/target/${ARCH}/${TRUSTED_PROFILE}/trusted
+USER_IMAGE := user/target/${ARCH}/${USER_PROFILE}/user
 
 KERNEL := target/${ARCH}/${PROFILE}/rustpi
 
-.PHONY: all emu debug dependencies ${USER_IMAGE} clean
+.PHONY: all emu debug dependencies clean disk ${TRUSTED_IMAGE} ${USER_IMAGE}
 
 all: ${KERNEL} ${KERNEL}.bin ${KERNEL}.asm
 
-${KERNEL}: ${USER_IMAGE}
+${KERNEL}: ${TRUSTED_IMAGE}
 	cargo build --target src/target/${ARCH}.json -Z build-std=core,alloc ${CARGO_FLAGS}
+
+${TRUSTED_IMAGE}:
+	make ARCH=${ARCH} TRUSTED_PROFILE=${TRUSTED_PROFILE} -C trusted
 
 ${USER_IMAGE}:
 	make ARCH=${ARCH} USER_PROFILE=${USER_PROFILE} -C user
@@ -58,7 +63,16 @@ debug: ${KERNEL}.bin ${KERNEL}.asm
 
 clean:
 	-cargo clean
+	make -C trusted clean
 	make -C user clean
+
+disk: ${USER_IMAGE}
+	rm -rf disk
+	mkdir disk
+	redoxfs disk.img disk
+	cp ${USER_IMAGE} disk/
+	sync
+	umount disk
 
 dependencies:
 	rustup component add rust-src

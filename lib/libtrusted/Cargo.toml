@@ -1,5 +1,5 @@
 [package]
-name = "trusted"
+name = "libtrusted"
 version = "0.1.0"
 authors = ["tonnylyz <lyztonny@gmail.com>"]
 edition = "2018"

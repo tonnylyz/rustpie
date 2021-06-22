@@ -5,6 +5,7 @@ pub fn handle() {
     None => { panic!("isr: default: no running thread") }
     Some(t) => {
       t.destroy();
+      crate::current_cpu().schedule();
     }
   }
 }

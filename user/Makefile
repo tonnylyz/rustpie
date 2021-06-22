@@ -1,4 +1,3 @@
-
 ARCH ?= aarch64
 USER_PROFILE ?= release
 
@@ -8,7 +7,7 @@ else
 CARGO_FLAGS =
 endif
 
-USER_IMAGE := target/${ARCH}/${USER_PROFILE}/rustpi-user
+USER_IMAGE := target/${ARCH}/${USER_PROFILE}/user
 
 .PHONY: all clean ${USER_IMAGE}
 

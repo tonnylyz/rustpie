@@ -5,9 +5,9 @@ use core::mem::size_of;
 use register::*;
 use register::mmio::*;
 use spin::Mutex;
-use trusted::mm::virt_to_phys;
+use libtrusted::mm::virt_to_phys;
 use microcall::get_tid;
-use trusted::message::Message;
+use libtrusted::message::Message;
 
 #[cfg(target_arch = "aarch64")]
 const VIRTIO_MMIO_BASE: usize = 0x8_0000_0000 + 0x0a000000;
@@ -384,7 +384,7 @@ fn irq() {
         VIRTIO_BLK_S_OK => {
           {
             println!("[BLK] {:x?}", req);
-            let msg = trusted::message::Message::default();
+            let msg = libtrusted::message::Message::default();
             msg.reply();
           }
           // println!("ok {:#x?}", req);
@@ -425,7 +425,7 @@ pub fn server() {
   microcall::server_register(common::server::SERVER_VIRTIO_BLK).unwrap();
 
   loop {
-    let (client_tid, msg) = trusted::message::Message::receive();
+    let (client_tid, msg) = libtrusted::message::Message::receive();
     println!("[BLK] RX {:x?}", (client_tid, msg));
     let sector = msg.a;
     let count = msg.b;
