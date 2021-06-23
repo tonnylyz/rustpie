@@ -319,9 +319,9 @@ impl SyscallTrait for Syscall {
   fn itc_call(tid: u16, a: usize, b: usize, c: usize, d: usize) -> SyscallResult {
     let t = current().running_thread().ok_or_else(|| InternalError)?;
     let target = crate::lib::thread::lookup(tid).ok_or_else(|| InvalidArgumentError)?;
-    if t.address_space() != target.address_space() {
-      return Err(PermissionDenied);
-    }
+    // if t.address_space() != target.address_space() {
+    //   return Err(PermissionDenied);
+    // }
     if !target.receivable(&t) {
       return Err(InternalError);
     }
@@ -341,9 +341,9 @@ impl SyscallTrait for Syscall {
   fn itc_reply(a: usize, b: usize, c: usize, d: usize) -> SyscallResult {
     let t = current().running_thread().ok_or(InternalError)?;
     let target = t.peer().ok_or(InternalError)?;
-    if t.address_space() != target.address_space() {
-      return Err(PermissionDenied);
-    }
+    // if t.address_space() != target.address_space() {
+    //   return Err(PermissionDenied);
+    // }
     if !target.receivable(&t) {
       return Err(InternalError);
     }
@@ -401,7 +401,7 @@ pub fn syscall() {
     SYS_ITC_RECV => Syscall::itc_recv(),
     SYS_ITC_SEND => Syscall::itc_send(arg(0) as u16, arg(1), arg(2), arg(3), arg(4)),
     SYS_ITC_CALL => Syscall::itc_call(arg(0) as u16, arg(1), arg(2), arg(3), arg(4)),
-    SYS_ITC_REPLY => Syscall::itc_reply(arg(1), arg(2), arg(3), arg(4)),
+    SYS_ITC_REPLY => Syscall::itc_reply(arg(0), arg(1), arg(2), arg(3)),
     SYS_SERVER_REGISTER => Syscall::server_register(arg(0)),
     SYS_SERVER_TID => Syscall::server_tid(arg(0)),
     _ => {

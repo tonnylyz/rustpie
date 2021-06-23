@@ -1,12 +1,20 @@
 use libtrusted::fs::{File, SeekFrom};
 
-pub fn main(_arg: usize) {
+pub fn main() {
   libtrusted::thread::spawn(|| {
     crate::blk::virtio_blk::server();
   });
 
   libtrusted::thread::spawn(|| {
     crate::fs::server();
+  });
+
+  libtrusted::thread::spawn(|| {
+    crate::terminal::input_server();
+  });
+
+  libtrusted::thread::spawn(|| {
+    crate::terminal::server();
   });
 
   libtrusted::thread::spawn(|| {

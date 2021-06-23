@@ -65,7 +65,7 @@ impl InterruptWait {
 }
 
 pub fn interrupt(int: Interrupt) {
-  info!("external {}", int);
+  trace!("external {}", int);
   if let Some(t) = INTERRUPT_WAIT.get(int) {
     INTERRUPT_WAIT.remove(int);
     assert_eq!(t.status(), TsWaitForInterrupt);

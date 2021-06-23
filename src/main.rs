@@ -109,9 +109,6 @@ pub unsafe fn main(core_id: arch::CoreId) -> ! {
 
     let (a, entry) = lib::address_space::load_image(bin);
     info!("load_image ok");
-    // Note: `arg` is used to start different programs:
-    //    0 - fktest: a `fork` test
-    //    1 - virtio_blk server
     const INIT_ARG: usize = 3;
 
     let page_table = a.page_table();

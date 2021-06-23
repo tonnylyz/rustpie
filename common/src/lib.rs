@@ -54,6 +54,7 @@ pub mod syscall {
 pub mod server {
   pub const SERVER_VIRTIO_BLK: usize = 0;
   pub const SERVER_REDOX_FS: usize = 1;
+  pub const SERVER_TERMINAL: usize = 2;
 }
 
 pub mod thread {

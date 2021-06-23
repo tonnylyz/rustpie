@@ -13,12 +13,13 @@ extern crate libtrusted;
 mod blk;
 mod fs;
 mod root;
+mod terminal;
 
 #[no_mangle]
-fn _start(arg: usize) -> ! {
+fn _start(_arg: usize) -> ! {
   libtrusted::mm::page_fault_init();
   libtrusted::mm::heap_init();
-  root::main(arg);
+  root::main();
   microcall::thread_destroy(0);
   loop {};
 }
