@@ -14,5 +14,7 @@ fn _start() -> ! {
   loop {
     let c = exported::getline();
     println!("{}", c);
+    exported::exec::exec(c.as_str(), 0);
   }
 }
+

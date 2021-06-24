@@ -42,18 +42,18 @@ pub fn spawn<P: AsRef<str>>(path: P, arg: usize) -> Result<u16, &'static str> {
     let va_tmp = crate::mm::virtual_page_alloc(1);
     while va < va_end {
       microcall::mem_alloc(asid, va, crate::mm::Entry::default().attribute()).map_err(|e| "out of memory")?;
-      println!("alloc @{:016x}", va);
+      // println!("alloc @{:016x}", va);
       unsafe {
         if va < va_start + ph.file_size() as usize {
           microcall::mem_map(asid, va, 0, va_tmp, crate::mm::Entry::default().attribute())
             .map_err(|e| "mem_map failed");
           let va_slice = core::slice::from_raw_parts_mut(va_tmp as *mut u8, PAGE_SIZE);
           let offset = ph.offset() as usize + (va - va_start);
-          println!("offset {:x}", offset);
+          // println!("offset {:x}", offset);
           for i in 0..PAGE_SIZE {
             va_slice[i] = buf[offset + i];
           }
-          println!("copy into {:016x}", va);
+          // println!("copy into {:016x}", va);
           microcall::mem_unmap(0, va_tmp).map_err(|e| "mem_unmap failed")?;
         }
       }

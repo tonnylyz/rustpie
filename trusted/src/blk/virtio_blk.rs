@@ -383,7 +383,7 @@ fn irq() {
       match *req.status {
         VIRTIO_BLK_S_OK => {
           {
-            println!("[BLK] finished {:x?}", req);
+            // println!("[BLK] finished {:x?}", req);
             let msg = libtrusted::message::Message::default();
             msg.reply();
           }
@@ -426,7 +426,7 @@ pub fn server() {
 
   loop {
     let (client_tid, msg) = libtrusted::message::Message::receive();
-    println!("[BLK] RX {:x?}", (client_tid, msg));
+    // println!("[BLK] RX {:x?}", (client_tid, msg));
     let sector = msg.a;
     let count = msg.b;
     let buf = msg.c;

@@ -23,6 +23,7 @@ macro_rules! println {
 pub mod print;
 pub mod heap;
 pub mod mm;
+pub mod exec;
 
 pub fn getchar() -> u8 {
   let server_tid = microcall::server_tid_wait(common::server::SERVER_TERMINAL);
@@ -45,10 +46,11 @@ pub fn getline() -> String {
   let mut v = Vec::new();
   loop {
     let c = getchar();
-    v.push(c);
+
     if c == 0xd {
       break
     }
+    v.push(c);
   }
   String::from_utf8(v).expect("getline failed!")
 }

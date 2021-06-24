@@ -22,6 +22,10 @@ pub fn main() {
   });
 
   libtrusted::thread::spawn(|| {
+    crate::pm::server();
+  });
+
+  libtrusted::thread::spawn(|| {
     // println!("[TEST] client t{}", microcall::get_tid());
     // let mut file = File::open("hello").ok().unwrap();
     // let mut buf: [u8; 128] = [0; 128];

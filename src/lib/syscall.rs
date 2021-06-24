@@ -12,33 +12,31 @@ use crate::lib::traits::*;
 use crate::mm::page_table::{Entry, PageTableEntryAttrTrait, PageTableTrait};
 use crate::util::round_down;
 
-use self::Error::*;
 use core::fmt::{Display, Formatter};
 use crate::current_thread;
 use crate::lib::thread::Thread;
 
-#[derive(Debug, Copy, Clone)]
-pub enum Error {
-  InvalidArgumentError = 1,
-  OutOfMemoryError,
-  MemoryNotMappedError,
-  NotReceivingError,
-  InternalError,
-  PermissionDenied,
-}
+pub type Error = usize;
+
+pub const ERROR_INVARG:usize = 1;
+pub const ERROR_OOM:usize = 2;
+pub const ERROR_MEM_NOT_MAP:usize= 3;
+pub const ERROR_INTERNAL:usize = 4;
+pub const ERROR_DENIED:usize = 5;
+
 
 impl core::convert::From<crate::mm::page_pool::Error> for Error {
   fn from(e: crate::mm::page_pool::Error) -> Self {
     match e {
-      crate::mm::page_pool::Error::OutOfFrame => { OutOfMemoryError }
-      _ => { InternalError }
+      crate::mm::page_pool::Error::OutOfFrame => { ERROR_OOM }
+      _ => { ERROR_INTERNAL }
     }
   }
 }
 
 impl core::convert::From<crate::mm::page_table::Error> for Error {
   fn from(_: crate::mm::page_table::Error) -> Self {
-    InternalError
+    ERROR_INTERNAL
   }
 }
 
@@ -125,7 +123,7 @@ fn lookup_as(asid: u16) -> Result<AddressSpace, Error> {
   } else {
     crate::lib::address_space::lookup(asid)
   } {
-    None => { Err(InternalError) }
+    None => { Err(ERROR_INTERNAL) }
     Some(a) => { Ok(a) }
   }
 }
@@ -143,15 +141,15 @@ impl SyscallTrait for Syscall {
   fn get_asid(tid: u16) -> SyscallResult {
     if tid == 0 {
       match crate::current_cpu().address_space() {
-        None => { Err(InternalError) }
+        None => { Err(ERROR_INTERNAL) }
         Some(a) => { Ok(Single(a.asid() as usize)) }
       }
     } else {
       match crate::lib::thread::lookup(tid) {
-        None => { Err(InvalidArgumentError) }
+        None => { Err(ERROR_INVARG) }
         Some(t) => {
           match t.address_space() {
-            None => { Err(InvalidArgumentError) }
+            None => { Err(ERROR_INVARG) }
             Some(a) => { Ok(Single(a.asid() as usize)) }
           }
         }
@@ -161,7 +159,7 @@ impl SyscallTrait for Syscall {
 
   fn get_tid() -> SyscallResult {
     match crate::current_cpu().running_thread() {
-      None => { Err(InternalError) }
+      None => { Err(ERROR_INTERNAL) }
       Some(t) => { Ok(Single(t.tid() as usize)) }
     }
   }
@@ -178,14 +176,14 @@ impl SyscallTrait for Syscall {
       Syscall::thread_yield()
     } else {
       match crate::lib::thread::lookup(tid) {
-        None => { Err(PermissionDenied) }
+        None => { Err(ERROR_DENIED) }
         Some(t) => {
           if t.is_child_of(current_thread.tid()) {
             // TODO: check if destroy safe for inter-processor
             t.destroy();
             Ok(Unit)
           } else {
-            Err(PermissionDenied)
+            Err(ERROR_DENIED)
           }
         }
       }
@@ -214,7 +212,7 @@ impl SyscallTrait for Syscall {
             Ok(Unit)
           }
           _ => {
-            Err(InternalError)
+            Err(ERROR_INTERNAL)
           }
         };
       } else {
@@ -254,7 +252,7 @@ impl SyscallTrait for Syscall {
       dst_pt.insert_page(dst_va, uf, attr)?;
       Ok(Unit)
     } else {
-      Err(MemoryNotMappedError)
+      Err(ERROR_MEM_NOT_MAP)
     }
   }
 
@@ -284,7 +282,7 @@ impl SyscallTrait for Syscall {
     let status = match status {
       THREAD_STATUS_NOT_RUNNABLE => crate::lib::thread::Status::TsNotRunnable,
       THREAD_STATUS_RUNNABLE => crate::lib::thread::Status::TsRunnable,
-      _ => return Err(InvalidArgumentError)
+      _ => return Err(ERROR_INVARG)
     };
     match crate::lib::thread::lookup(tid) {
       None => {}
@@ -306,7 +304,7 @@ impl SyscallTrait for Syscall {
   }
 
   fn itc_receive() -> SyscallResult {
-    let t = current().running_thread().ok_or_else(|| InternalError)?;
+    let t = current().running_thread().ok_or_else(|| ERROR_INTERNAL)?;
     t.clear_peer(); // receive from any sender
     t.sleep();
     crate::current_cpu().schedule();
@@ -314,13 +312,13 @@ impl SyscallTrait for Syscall {
   }
 
   fn itc_send(tid: u16, a: usize, b: usize, c: usize, d: usize) -> SyscallResult {
-    let t = current().running_thread().ok_or_else(|| InternalError)?;
-    let target = crate::lib::thread::lookup(tid).ok_or_else(|| InvalidArgumentError)?;
-    if t.address_space() != target.address_space() {
-      return Err(PermissionDenied);
-    }
+    let t = current().running_thread().ok_or_else(|| ERROR_INTERNAL)?;
+    let target = crate::lib::thread::lookup(tid).ok_or_else(|| ERROR_INVARG)?;
+    // if t.address_space() != target.address_space() {
+    //   return Err(ERROR_DENIED);
+    // }
     if !target.receivable(&t) {
-      return Err(InternalError);
+      return Err(ERROR_INTERNAL);
     }
     let mut ctx = target.context();
     ctx.set_syscall_result(&SyscallResult::Ok(SyscallOutRegisters::Pentad(t.tid() as usize, a, b, c, d)));
@@ -330,13 +328,13 @@ impl SyscallTrait for Syscall {
   }
 
   fn itc_call(tid: u16, a: usize, b: usize, c: usize, d: usize) -> SyscallResult {
-    let t = current().running_thread().ok_or_else(|| InternalError)?;
-    let target = crate::lib::thread::lookup(tid).ok_or_else(|| InvalidArgumentError)?;
+    let t = current().running_thread().ok_or_else(|| ERROR_INTERNAL)?;
+    let target = crate::lib::thread::lookup(tid).ok_or_else(|| ERROR_INVARG)?;
     // if t.address_space() != target.address_space() {
     //   return Err(PermissionDenied);
     // }
     if !target.receivable(&t) {
-      return Err(InternalError);
+      return Err(ERROR_INTERNAL);
     }
     let mut ctx = target.context();
     ctx.set_syscall_result(&SyscallResult::Ok(SyscallOutRegisters::Pentad(t.tid() as usize, a, b, c, d)));
@@ -353,18 +351,17 @@ impl SyscallTrait for Syscall {
   }
 
   fn itc_reply(a: usize, b: usize, c: usize, d: usize) -> SyscallResult {
-    let t = current().running_thread().ok_or(InternalError)?;
-    let target = t.peer().ok_or(InternalError)?;
+    let t = current().running_thread().ok_or(ERROR_INTERNAL)?;
+    let target = t.peer().ok_or(ERROR_INTERNAL)?;
     // if t.address_space() != target.address_space() {
     //   return Err(PermissionDenied);
     // }
     if !target.receivable(&t) {
-      return Err(InternalError);
+      return Err(ERROR_INTERNAL);
     }
     let mut ctx = target.context();
     ctx.set_syscall_result(&SyscallResult::Ok(SyscallOutRegisters::Pentad(t.tid() as usize, a, b, c, d)));
     target.set_context(ctx);
-    trace!("reply to {}: {:x?}", target.tid(), (t.tid() as usize, a, b, c, d));
 
     target.clear_peer();
     t.clear_peer();
@@ -374,7 +371,7 @@ impl SyscallTrait for Syscall {
 
   fn server_register(server_id: usize) -> SyscallResult {
     use common::server::*;
-    let t = current().running_thread().ok_or(InternalError)?;
+    let t = current().running_thread().ok_or(ERROR_INTERNAL)?;
     super::server::set(server_id, t.tid());
     Ok(Unit)
   }
@@ -382,7 +379,7 @@ impl SyscallTrait for Syscall {
   fn server_tid(server_id: usize) -> SyscallResult {
     match super::server::get(server_id) {
       None => {
-        Err(InvalidArgumentError)
+        Err(ERROR_INVARG)
       },
       Some(tid) => {
         Ok(Single(tid as usize))
@@ -421,7 +418,7 @@ pub fn syscall() {
     SYS_SERVER_TID => Syscall::server_tid(arg(0)),
     _ => {
       warn!("system call: unrecognized system call number");
-      Err(super::syscall::Error::InvalidArgumentError)
+      Err(ERROR_INVARG)
     }
   };
 

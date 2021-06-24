@@ -56,6 +56,7 @@ pub mod server {
   pub const SERVER_REDOX_FS: usize = 1;
   pub const SERVER_TERMINAL: usize = 2;
   pub const SERVER_MM: usize = 3;
+  pub const SERVER_PM: usize = 4;
 }
 
 pub mod thread {

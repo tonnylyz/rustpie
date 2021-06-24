@@ -29,7 +29,7 @@ impl VirtioClient {
             c: buf.as_mut_ptr() as usize,
             d: 0
         }.call(self.tid);
-        println!("[FS] VirtioClient RX {:x?}", msg);
+        // println!("[FS] VirtioClient RX {:x?}", msg);
         assert_eq!(msg.a, 0);
         unsafe { memcpy(buffer.as_mut_ptr(), tmp, PAGE_SIZE); }
         Ok(buffer.len())

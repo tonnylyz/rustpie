@@ -14,22 +14,22 @@ pub fn server() {
       let scheme = FileScheme::new(String::from("virtio"), filesystem);
       loop {
         let mut packet = Packet::default();
-        println!("[FS] ready to provide service");
-        let msg = Message::receive();
-        packet.a = msg.1.a;
-        packet.b = msg.1.b;
-        packet.c = msg.1.c;
-        packet.d = msg.1.d;
-        let client = msg.0;
-        println!("[FS] {:x?}", msg);
+        let (tid, msg) = Message::receive();
+        packet.a = msg.a;
+        packet.b = msg.b;
+        packet.c = msg.c;
+        packet.d = msg.d;
+        // println!("[FS] from t{}: {:x?}", tid, msg);
         scheme.handle(&mut packet);
 
         let mut msg = Message::default();
         msg.a = packet.a;
+        // println!("[FS] err {:?}", Error::demux(msg.a));
         loop {
-          let r = msg.send_to(client);
+          let r = msg.send_to(tid);
+          // println!("[FS] reply to t{}: {:x?}", tid, msg);
           if r.is_ok() {
-            println!("[FS] done");
+            // println!("[FS] done");
             break;
           }
         }
