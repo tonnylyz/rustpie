@@ -25,11 +25,15 @@ pub fn handle() {
   trace!("thread t{} core {} page fault {:x}", t.tid(), core_id(), va);
   if va >= CONFIG_USER_LIMIT {
     warn!("isr: page_fault: {:016x} >= CONFIG_USER_LIMIT, process killed", va);
+    t.destroy();
+    current_cpu().schedule();
     return;
   }
   if p.event_handler(Event::PageFault).is_none() {
     warn!("isr: page_fault: {:016x}", addr);
     warn!("isr: page_fault: process has no handler, process killed");
+    t.destroy();
+    current_cpu().schedule();
     return;
   }
   let (entry, stack_top) = p.event_handler(Event::PageFault).unwrap();
@@ -39,6 +43,8 @@ pub fn handle() {
     Some(uf) => {
       if va == stack_btm {
         warn!("isr: page_fault: fault on exception stack, process killed");
+        t.destroy();
+        current_cpu().schedule();
         return;
       }
       let ctx = current().context_mut();
@@ -53,6 +59,8 @@ pub fn handle() {
     }
     None => {
       warn!("isr: page_fault: exception stack not valid, process killed");
+      t.destroy();
+      current_cpu().schedule();
       return;
     }
   }

@@ -14,6 +14,7 @@ mod blk;
 mod fs;
 mod root;
 mod terminal;
+mod mm;
 
 #[no_mangle]
 fn _start(_arg: usize) -> ! {

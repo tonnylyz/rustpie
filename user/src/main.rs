@@ -1,18 +1,18 @@
 #![no_std]
 #![no_main]
 #![feature(format_args_nl)]
+#![feature(alloc_error_handler)]
 
 extern crate rlibc;
 #[macro_use]
 extern crate exported;
 
-use exported::getchar;
-
 #[no_mangle]
 fn _start() -> ! {
-    println!("User image!");
-    loop {
-        let c = getchar();
-        print!("{}", c);
-    }
+  exported::heap::init();
+  println!("User image!");
+  loop {
+    let c = exported::getline();
+    println!("{}", c);
+  }
 }

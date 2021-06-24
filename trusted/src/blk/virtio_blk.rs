@@ -383,7 +383,7 @@ fn irq() {
       match *req.status {
         VIRTIO_BLK_S_OK => {
           {
-            println!("[BLK] {:x?}", req);
+            println!("[BLK] finished {:x?}", req);
             let msg = libtrusted::message::Message::default();
             msg.reply();
           }

@@ -19,8 +19,8 @@ pub fn putc(c: char) {
   syscall_1_0(SYS_PUTC, c as usize).unwrap()
 }
 
-pub fn get_asid() -> u16 {
-  syscall_0_1(SYS_GET_ASID).unwrap() as u16
+pub fn get_asid(tid: u16) -> u16 {
+  syscall_1_1(SYS_GET_ASID, tid as usize).unwrap() as u16
 }
 
 pub fn get_tid() -> u16 {

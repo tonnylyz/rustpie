@@ -15,6 +15,7 @@ use crate::util::round_down;
 use self::Error::*;
 use core::fmt::{Display, Formatter};
 use crate::current_thread;
+use crate::lib::thread::Thread;
 
 #[derive(Debug, Copy, Clone)]
 pub enum Error {
@@ -94,7 +95,7 @@ static SYSCALL_NAMES: [&str; 21] = [
 pub trait SyscallTrait {
   fn null() -> SyscallResult;
   fn putc(c: char) -> SyscallResult;
-  fn get_asid() -> SyscallResult;
+  fn get_asid(tid: u16) -> SyscallResult;
   fn get_tid() -> SyscallResult;
   fn thread_yield() -> SyscallResult;
   fn thread_destroy(asid: u16) -> SyscallResult;
@@ -107,7 +108,7 @@ pub trait SyscallTrait {
   fn thread_set_status(pid: u16, status: usize) -> SyscallResult;
   fn ipc_receive(dst_va: usize) -> SyscallResult;
   fn ipc_can_send(pid: u16, value: usize, src_va: usize, perm: usize) -> SyscallResult;
-  fn itc_recv() -> SyscallResult;
+  fn itc_receive() -> SyscallResult;
   fn itc_send(tid: u16, a: usize, b: usize, c: usize, d: usize) -> SyscallResult;
   fn itc_call(tid: u16, a: usize, b: usize, c: usize, d: usize) -> SyscallResult;
   fn itc_reply(a: usize, b: usize, c: usize, d: usize) -> SyscallResult;
@@ -139,10 +140,22 @@ impl SyscallTrait for Syscall {
     Ok(Unit)
   }
 
-  fn get_asid() -> SyscallResult {
-    match crate::current_cpu().address_space() {
-      None => { Err(InternalError) }
-      Some(a) => { Ok(Single(a.asid() as usize)) }
+  fn get_asid(tid: u16) -> SyscallResult {
+    if tid == 0 {
+      match crate::current_cpu().address_space() {
+        None => { Err(InternalError) }
+        Some(a) => { Ok(Single(a.asid() as usize)) }
+      }
+    } else {
+      match crate::lib::thread::lookup(tid) {
+        None => { Err(InvalidArgumentError) }
+        Some(t) => {
+          match t.address_space() {
+            None => { Err(InvalidArgumentError) }
+            Some(a) => { Ok(Single(a.asid() as usize)) }
+          }
+        }
+      }
     }
   }
 
@@ -292,7 +305,7 @@ impl SyscallTrait for Syscall {
     todo!()
   }
 
-  fn itc_recv() -> SyscallResult {
+  fn itc_receive() -> SyscallResult {
     let t = current().running_thread().ok_or_else(|| InternalError)?;
     t.clear_peer(); // receive from any sender
     t.sleep();
@@ -328,6 +341,7 @@ impl SyscallTrait for Syscall {
     let mut ctx = target.context();
     ctx.set_syscall_result(&SyscallResult::Ok(SyscallOutRegisters::Pentad(t.tid() as usize, a, b, c, d)));
     target.set_context(ctx);
+    trace!("{} call {}: {:x?}", t.tid(), target.tid(), (t.tid() as usize, a, b, c, d));
 
     target.wake();
     target.set_peer(t.clone());
@@ -350,6 +364,7 @@ impl SyscallTrait for Syscall {
     let mut ctx = target.context();
     ctx.set_syscall_result(&SyscallResult::Ok(SyscallOutRegisters::Pentad(t.tid() as usize, a, b, c, d)));
     target.set_context(ctx);
+    trace!("reply to {}: {:x?}", target.tid(), (t.tid() as usize, a, b, c, d));
 
     target.clear_peer();
     t.clear_peer();
@@ -385,7 +400,7 @@ pub fn syscall() {
   let result = match num {
     SYS_NULL => Syscall::null(),
     SYS_PUTC => Syscall::putc(arg(0) as u8 as char),
-    SYS_GET_ASID => Syscall::get_asid(),
+    SYS_GET_ASID => Syscall::get_asid(arg(0) as u16),
     SYS_GET_TID => Syscall::get_tid(),
     SYS_THREAD_YIELD => Syscall::thread_yield(),
     SYS_THREAD_DESTROY => Syscall::thread_destroy(arg(0) as u16),
@@ -398,7 +413,7 @@ pub fn syscall() {
     SYS_THREAD_SET_STATUS => Syscall::thread_set_status(arg(0) as u16, arg(1)),
     SYS_IPC_RECEIVE => Syscall::ipc_receive(arg(0)),
     SYS_CAN_SEND => Syscall::ipc_can_send(arg(0) as u16, arg(1), arg(2), arg(3)),
-    SYS_ITC_RECV => Syscall::itc_recv(),
+    SYS_ITC_RECV => Syscall::itc_receive(),
     SYS_ITC_SEND => Syscall::itc_send(arg(0) as u16, arg(1), arg(2), arg(3), arg(4)),
     SYS_ITC_CALL => Syscall::itc_call(arg(0) as u16, arg(1), arg(2), arg(3), arg(4)),
     SYS_ITC_REPLY => Syscall::itc_reply(arg(0), arg(1), arg(2), arg(3)),

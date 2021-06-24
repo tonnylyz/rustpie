@@ -11,7 +11,6 @@ pub struct VirtioClient {
 impl VirtioClient {
     pub fn new() -> VirtioClient {
         let server_tid = microcall::server_tid_wait(common::server::SERVER_VIRTIO_BLK);
-        println!("virtio client {}", server_tid);
         VirtioClient {
             tid: server_tid,
         }
