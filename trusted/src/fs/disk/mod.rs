@@ -4,7 +4,7 @@ pub use self::virtio_client::VirtioClient;
 mod cache;
 mod virtio_client;
 
-use libtrusted::redoxcall::*;
+use libtrusted::redox::*;
 
 /// A disk
 pub trait Disk {

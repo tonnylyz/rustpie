@@ -24,11 +24,7 @@ fn process_request(va_tmp: usize, asid: u16, msg: &Message) -> Result<(), &'stat
       }
       let buf = unsafe { core::slice::from_raw_parts(va_tmp as *const u8, length) };
       let path = core::str::from_utf8(buf).map_err(|_| "MalEncoded")?;
-      // println!("[PM] ready to spawn {}", path);
-      let asid = libtrusted::loader::spawn(path, msg.c).map_err(|e| {
-        println!("[PM] spawn {}", e);
-        "Spawn"
-      })?;
+      let asid = libtrusted::loader::spawn(path, msg.c)?;
       mem_unmap(0, va_tmp);
       Ok(())
     }
@@ -39,12 +35,12 @@ fn process_request(va_tmp: usize, asid: u16, msg: &Message) -> Result<(), &'stat
 }
 
 pub fn server() {
-  println!("[PM] server started t{}", get_tid());
+  info!("server started t{}", get_tid());
   microcall::server_register(common::server::SERVER_PM).unwrap();
   let va_tmp = libtrusted::mm::virtual_page_alloc(1);
   loop {
     let (tid, msg) = Message::receive();
-    // println!("[PM] t{}: {:x?}", tid, msg);
+    trace!("t{}: {:x?}", tid, msg);
     let asid = get_asid(tid);
     match process_request(va_tmp, asid, &msg) {
       Ok(_) => {
@@ -53,7 +49,7 @@ pub fn server() {
         msg.send_to(tid).unwrap();
       }
       Err(e) => {
-        println!("[PM] ERR {}", e);
+        error!("ERR {}", e);
         let mut msg = Message::default();
         msg.a = 1;
         msg.send_to(tid).unwrap();

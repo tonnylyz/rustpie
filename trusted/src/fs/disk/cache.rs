@@ -1,7 +1,7 @@
 use crate::fs::{BLOCK_SIZE, Disk};
 use alloc::collections::VecDeque;
 use alloc::collections::BTreeMap as HashMap;
-use libtrusted::redoxcall::*;
+use libtrusted::redox::*;
 fn copy_memory(src: &[u8], dest: &mut [u8]) -> usize {
     let len = core::cmp::min(src.len(), dest.len());
     unsafe { core::ptr::copy(src.as_ptr(), dest.as_mut_ptr(), len) };

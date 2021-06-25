@@ -1,11 +1,5 @@
 use crate::message::Message;
-use crate::redoxcall::*;
-
-pub enum Error {
-  NONE
-}
-
-pub type Result<T> = core::result::Result<T, Error>;
+use crate::redox::*;
 
 pub struct File {
   handle: usize,
@@ -19,57 +13,50 @@ pub enum SeekFrom {
   Current(i64),
 }
 
+fn server_tid() -> u16 {
+  microcall::server_tid_wait(common::server::SERVER_REDOX_FS)
+}
+
 impl File {
 
   pub fn open<P: AsRef<str>>(path: P) -> Result<File> {
-    let mut msg = Message::default();
-    msg.a = SYS_OPEN;
-    msg.b = path.as_ref().as_ptr() as usize;
-    msg.c = path.as_ref().len();
-    msg.d = O_RDONLY;
-    let msg = msg.call(microcall::server_tid_wait(common::server::SERVER_REDOX_FS));
-    let err = crate::redoxcall::Error::demux(msg.a);
-    match err {
-      Ok(handle) => { Ok(File{handle}) }
-      Err(_) => { Err(Error::NONE) }
-    }
+    let msg = Message {
+      a: SYS_OPEN,
+      b: path.as_ref().as_ptr() as usize,
+      c: path.as_ref().len(),
+      d: O_RDONLY,
+    };
+    let msg = msg.call(server_tid());
+    Error::demux(msg.a).map(|handle| File{ handle })
   }
 
   pub fn read(&mut self, buf: &mut [u8]) -> Result<usize> {
-    let mut msg = Message::default();
-    msg.a = SYS_READ;
-    msg.b = self.handle;
-    msg.c = buf.as_ptr() as usize;
-    msg.d = buf.len();
-    let msg = msg.call(microcall::server_tid_wait(common::server::SERVER_REDOX_FS));
-    let err = crate::redoxcall::Error::demux(msg.a);
-    match err {
-      Ok(read) => { Ok(read) }
-      Err(_) => { Err(Error::NONE) }
-    }
+    let msg = Message {
+      a: SYS_READ,
+      b: self.handle,
+      c: buf.as_ptr() as usize,
+      d: buf.len(),
+    };
+    let msg = msg.call(server_tid());
+    Error::demux(msg.a)
   }
 
-  pub fn seek(&mut self, pos: SeekFrom) -> Result<u64> {
-    let mut msg = Message::default();
-    msg.a = SYS_LSEEK;
-    msg.b = self.handle;
-    msg.c =
-      match pos {
-        SeekFrom::Start(u) => {u as usize}
-        SeekFrom::End(i) => {i as usize}
-        SeekFrom::Current(i) => {i as usize}
-      };
-    msg.d =
-      match pos {
-        SeekFrom::Start(_u) => {SEEK_SET}
-        SeekFrom::End(_i) => {SEEK_END}
-        SeekFrom::Current(_i) => {SEEK_CUR}
-      };
-    let msg = msg.call(microcall::server_tid_wait(common::server::SERVER_REDOX_FS));
-    let err = crate::redoxcall::Error::demux(msg.a);
-    match err {
-      Ok(p) => { Ok(p as u64) }
-      Err(_) => { Err(Error::NONE) }
-    }
+  pub fn seek(&self, pos: SeekFrom) -> Result<u64> {
+    let msg = Message {
+      a: SYS_LSEEK,
+      b: self.handle,
+      c: match pos {
+        SeekFrom::Start(u) => u as usize,
+        SeekFrom::End(i) => i as usize,
+        SeekFrom::Current(i) => i as usize,
+      },
+      d: match pos {
+        SeekFrom::Start(_u) => SEEK_SET,
+        SeekFrom::End(_i) => SEEK_END,
+        SeekFrom::Current(_i) => SEEK_CUR,
+      }
+    };
+    let msg = msg.call(server_tid());
+    Error::demux(msg.a).map(|u| u as u64)
   }
 }

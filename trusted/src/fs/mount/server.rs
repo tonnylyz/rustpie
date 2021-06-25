@@ -1,12 +1,12 @@
 use crate::fs::mount::scheme::FileScheme;
 use crate::fs::{VirtioClient, FileSystem};
-use libtrusted::redoxcall::*;
+use libtrusted::redox::*;
 use alloc::string::String;
 use libtrusted::message::Message;
-use microcall::get_tid;
+use microcall::{get_tid, get_asid};
 
 pub fn server() {
-  println!("[FS] server started t{}", get_tid());
+  info!("server started t{}", get_tid());
   microcall::server_register(common::server::SERVER_REDOX_FS).unwrap();
   let disk = VirtioClient::new();
   match FileSystem::open(disk, Some(0)) {
@@ -19,24 +19,22 @@ pub fn server() {
         packet.b = msg.b;
         packet.c = msg.c;
         packet.d = msg.d;
-        // println!("[FS] from t{}: {:x?}", tid, msg);
+        packet.pid = get_asid(tid) as usize;
+        trace!("from t{}: {:x?}", tid, msg);
         scheme.handle(&mut packet);
 
         let mut msg = Message::default();
         msg.a = packet.a;
-        // println!("[FS] err {:?}", Error::demux(msg.a));
+        trace!("handle packet err {:?}", Error::demux(msg.a));
         loop {
           let r = msg.send_to(tid);
-          // println!("[FS] reply to t{}: {:x?}", tid, msg);
           if r.is_ok() {
-            // println!("[FS] done");
             break;
           }
         }
-
       }
     }
-    Err(e) => { println!("[FS] FileSystem::open {}", e.errno); }
+    Err(e) => { error!("FileSystem::open {}", e.errno); }
   }
 }
 

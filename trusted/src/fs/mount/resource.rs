@@ -1,5 +1,5 @@
 use crate::fs::{Disk, FileSystem};
-use libtrusted::redoxcall::*;
+use libtrusted::redox::*;
 use core::cmp::{max, min};
 use alloc::collections::BTreeMap;
 use alloc::boxed::Box;

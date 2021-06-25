@@ -24,7 +24,7 @@ macro_rules! println {
 pub mod print;
 pub mod thread;
 pub mod mm;
-pub mod redoxcall;
+pub mod redox;
 pub mod message;
 pub mod loader;
 pub mod fs;

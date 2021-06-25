@@ -3,11 +3,11 @@ use libtrusted::mm::{Entry, EntryLike};
 use microcall::get_tid;
 
 pub fn server() {
-  println!("[MM] server started t{}",  get_tid());
+  info!("server started t{}",  get_tid());
   microcall::server_register(common::server::SERVER_MM).unwrap();
   loop {
     let (tid, msg) = Message::receive();
-    // println!("[MM] t{}: {:x?}", tid, msg);
+    trace!("t{}: {:x?}", tid, msg);
     let asid = microcall::get_asid(tid);
     let r = match msg.a {
       1 => {

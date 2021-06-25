@@ -29,7 +29,7 @@ pub fn main() {
   thread::spawn(|| {
     match libtrusted::loader::spawn("user", 0) {
       Ok(_) => {}
-      Err(s) => { println!("{}", s); }
+      Err(s) => { error!("{}", s); }
     }
     microcall::thread_destroy(0);
   });

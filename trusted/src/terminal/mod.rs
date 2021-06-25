@@ -94,7 +94,7 @@ fn buffer() -> &'static Mutex<VecDeque<u8>> {
 }
 
 pub fn server() {
-  println!("[TERMINAL] server started t{}",  get_tid());
+  info!("server started t{}",  get_tid());
   microcall::server_register(common::server::SERVER_TERMINAL).unwrap();
 
   loop {

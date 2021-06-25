@@ -365,38 +365,35 @@ fn irq() {
     let mut disk = DISK.lock();
     let used = &ring.device;
 
-    // println!("[BLK][IRQ] last used {} used {}", disk.last_used, used.idx);
     loop {
       if disk.last_used == used.idx {
         break;
       }
       if disk.requests.is_empty() {
-        println!("[BLK][IRQ] no requests record");
+        error!("irq no requests record");
         break;
       }
       if used.ring[(disk.last_used as usize) % QUEUE_SIZE].id != 0 {
         // TODO?
-        println!("[BLK][IRQ] unexpected ring desc head, only #0 is used");
+        error!("irq unexpected ring desc head, only #0 is used");
         break;
       }
       let req = &disk.requests[0];
       match *req.status {
         VIRTIO_BLK_S_OK => {
           {
-            // println!("[BLK] finished {:x?}", req);
             let msg = libtrusted::message::Message::default();
             msg.reply();
           }
-          // println!("ok {:#x?}", req);
         }
         VIRTIO_BLK_S_IOERR => {
-          println!("[BLK][IRQ] status io err {:#x?}", req);
+          error!("irq status io err {:#x?}", req);
         }
         VIRTIO_BLK_S_UNSUPP => {
-          println!("[BLK][IRQ] status unsupported {:#x?}", req);
+          error!("irq status unsupported {:#x?}", req);
         }
         x => {
-          println!("[BLK][IRQ] unknown status {}", x);
+          error!("irq unknown status {}", x);
         }
       }
       disk.requests.remove(0);
@@ -405,10 +402,9 @@ fn irq() {
   }
   if status & 0b10 != 0 {
     // Configuration Change Notification
-    println!("[BLK][IRQ] Configuration Change Notification not handled!");
+    error!("irq Configuration Change Notification not handled!");
   }
   mmio.InterruptACK.set(status);
-  // println!("[BLK][IRQ] irq handled by user server");
 }
 
 fn wait_for_irq() {
@@ -421,12 +417,12 @@ fn wait_for_irq() {
 
 pub fn server() {
   init();
-  println!("[BLK] server started t{}",  get_tid());
+  info!("server started t{}",  get_tid());
   microcall::server_register(common::server::SERVER_VIRTIO_BLK).unwrap();
 
   loop {
     let (client_tid, msg) = libtrusted::message::Message::receive();
-    // println!("[BLK] RX {:x?}", (client_tid, msg));
+    trace!("recv {:x?}", (client_tid, msg));
     let sector = msg.a;
     let count = msg.b;
     let buf = msg.c;

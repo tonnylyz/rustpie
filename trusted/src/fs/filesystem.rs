@@ -2,7 +2,7 @@ use crate::fs::{Disk, Header, Node, BLOCK_SIZE, Extent, ExNode};
 use core::cmp::min;
 use alloc::vec::Vec;
 
-use libtrusted::redoxcall::*;
+use libtrusted::redox::*;
 
 /// A file system
 pub struct FileSystem<D: Disk> {
