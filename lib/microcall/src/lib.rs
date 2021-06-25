@@ -101,5 +101,6 @@ pub fn server_tid_wait(server_id: usize) -> u16 {
     if let Ok(tid) = server_tid(server_id) {
       break tid
     }
+    thread_yield();
   }
 }

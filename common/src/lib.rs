@@ -49,6 +49,15 @@ pub mod syscall {
   pub const SYS_ITC_REPLY: usize = 18;
   pub const SYS_SERVER_REGISTER: usize = 19;
   pub const SYS_SERVER_TID: usize = 20;
+
+  pub mod error {
+    pub const ERROR_INVARG:usize = 1;
+    pub const ERROR_OOM:usize = 2;
+    pub const ERROR_MEM_NOT_MAP:usize= 3;
+    pub const ERROR_INTERNAL:usize = 4;
+    pub const ERROR_DENIED:usize = 5;
+    pub const ERROR_HOLD_ON: usize = 6;
+  }
 }
 
 pub mod server {

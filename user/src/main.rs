@@ -12,9 +12,17 @@ fn _start() -> ! {
   exported::heap::init();
   println!("User image!");
   loop {
-    let c = exported::getline();
+    let c = exported::stdio::getline();
     println!("{}", c);
-    exported::exec::exec(c.as_str(), 0);
+    exported::pm::exec(c.as_str(), 0);
   }
 }
+
+// #[no_mangle]
+// fn _start() -> ! {
+//   println!("bbbbbbbbbbbbbbbbb");
+//   loop {
+//     exported::sched_yield();
+//   }
+// }
 

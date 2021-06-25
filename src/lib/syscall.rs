@@ -17,13 +17,7 @@ use crate::current_thread;
 use crate::lib::thread::Thread;
 
 pub type Error = usize;
-
-pub const ERROR_INVARG:usize = 1;
-pub const ERROR_OOM:usize = 2;
-pub const ERROR_MEM_NOT_MAP:usize= 3;
-pub const ERROR_INTERNAL:usize = 4;
-pub const ERROR_DENIED:usize = 5;
-
+use common::syscall::error::*;
 
 impl core::convert::From<crate::mm::page_pool::Error> for Error {
   fn from(e: crate::mm::page_pool::Error) -> Self {
@@ -334,7 +328,7 @@ impl SyscallTrait for Syscall {
     //   return Err(PermissionDenied);
     // }
     if !target.receivable(&t) {
-      return Err(ERROR_INTERNAL);
+      return Err(ERROR_HOLD_ON);
     }
     let mut ctx = target.context();
     ctx.set_syscall_result(&SyscallResult::Ok(SyscallOutRegisters::Pentad(t.tid() as usize, a, b, c, d)));

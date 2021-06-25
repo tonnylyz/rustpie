@@ -7,7 +7,7 @@ pub fn server() {
   microcall::server_register(common::server::SERVER_MM).unwrap();
   loop {
     let (tid, msg) = Message::receive();
-    println!("[MM] t{}: {:x?}", tid, msg);
+    // println!("[MM] t{}: {:x?}", tid, msg);
     let asid = microcall::get_asid(tid);
     let r = match msg.a {
       1 => {
