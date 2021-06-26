@@ -4,6 +4,7 @@
 
 #[cfg(target_arch = "aarch64")]
 #[path = "arch/aarch64/mod.rs"]
+#[allow(unused_parens, dead_code)]
 mod arch;
 
 // #[cfg(target_arch = "riscv64")]
@@ -27,6 +28,7 @@ pub fn get_tid() -> u16 {
   syscall_0_1(SYS_GET_TID).unwrap() as u16
 }
 
+#[allow(unused_must_use)]
 pub fn thread_yield() {
   syscall_0_0(SYS_THREAD_YIELD);
 }
@@ -99,8 +101,61 @@ pub fn server_tid(server_id: usize) -> Result<u16, Error> {
 pub fn server_tid_wait(server_id: usize) -> u16 {
   loop {
     if let Ok(tid) = server_tid(server_id) {
-      break tid
+      break tid;
     }
     thread_yield();
+  }
+}
+
+pub mod message {
+  #[repr(C)]
+  #[derive(Copy, Clone, Debug, Default)]
+  pub struct Message {
+    pub a: usize,
+    pub b: usize,
+    pub c: usize,
+    pub d: usize,
+  }
+
+  impl Message {
+    pub fn new(a: usize, b: usize, c: usize, d: usize) -> Self {
+      Message {
+        a,
+        b,
+        c,
+        d,
+      }
+    }
+
+    pub fn receive() -> Result<(u16, Self), super::Error> {
+      super::itc_receive().map(|(tid, a, b, c, d)|
+        (tid, Message { a, b, c, d }))
+    }
+
+    pub fn send_to(&self, tid: u16) -> Result<(), super::Error> {
+      super::itc_send(tid, self.a, self.b, self.c, self.d)
+    }
+
+    pub fn call(&self, server_id: usize) -> Result<Self, super::Error> {
+      use common::syscall::error::ERROR_HOLD_ON;
+      let server_tid = super::server_tid_wait(server_id);
+      loop {
+        match super::itc_call(server_tid, self.a, self.b, self.c, self.d) {
+          Ok((_, a, b, c, d)) => {
+            break Ok(Message { a, b, c, d });
+          }
+          Err(ERROR_HOLD_ON) => {
+            super::thread_yield();
+          }
+          Err(e) => {
+            break Err(e);
+          }
+        }
+      }
+    }
+
+    pub fn reply_with(&self) -> Result<(), super::Error> {
+      super::itc_reply(self.a, self.b, self.c, self.d)
+    }
   }
 }

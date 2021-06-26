@@ -5,7 +5,7 @@ use alloc::vec::Vec;
 use core::cell::RefCell;
 use core::sync::atomic::{AtomicUsize, Ordering};
 
-use libtrusted::redox::*;
+use redox::*;
 
 use crate::alloc::string::ToString;
 use crate::fs::{BLOCK_SIZE, Disk, FileSystem, Node};

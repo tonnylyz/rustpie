@@ -1,4 +1,4 @@
-use libtrusted::fs::{File, SeekFrom};
+use fs::{File, SeekFrom};
 use libtrusted::thread;
 
 pub fn main() {

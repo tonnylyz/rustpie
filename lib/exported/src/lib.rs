@@ -22,7 +22,6 @@ pub mod heap;
 pub mod mm;
 pub mod pm;
 pub mod stdio;
-pub(crate) mod server;
 
 pub fn sched_yield() {
   microcall::thread_yield();

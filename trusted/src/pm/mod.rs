@@ -1,31 +1,21 @@
-use libtrusted::message::Message;
+use microcall::message::Message;
 use libtrusted::mm::{Entry, EntryLike};
 use microcall::{get_tid, get_asid, mem_map, mem_unmap};
 use common::PAGE_SIZE;
 use alloc::string::String;
+use libtrusted::foreign_slice::ForeignSlice;
 
-fn process_request(va_tmp: usize, asid: u16, msg: &Message) -> Result<(), &'static str> {
+fn process_request(asid: u16, msg: &Message) -> Result<(), &'static str> {
   match msg.a {
     1 => { // SPAWN
-      if msg.b % PAGE_SIZE != 0 {
-        return Err("Alignment");
-      }
-      mem_map(asid, msg.b, 0, va_tmp, Entry::default().attribute()).map_err(|_| "Mem map Error")?;
-      let buf = unsafe { core::slice::from_raw_parts(va_tmp as *const u8, PAGE_SIZE) };
-      let mut length = 0;
-      for i in 0..PAGE_SIZE {
-        if buf[i] == 0 {
-          length = i;
-          break;
-        }
-      }
+      let length = msg.c;
       if length == 0 || length >= 128 {
         return Err("MalformedString");
       }
-      let buf = unsafe { core::slice::from_raw_parts(va_tmp as *const u8, length) };
-      let path = core::str::from_utf8(buf).map_err(|_| "MalEncoded")?;
-      let asid = libtrusted::loader::spawn(path, msg.c)?;
-      mem_unmap(0, va_tmp);
+      let s = ForeignSlice::new(asid, msg.b, msg.c).unwrap();
+      let path = s.local_slice();
+      let path = core::str::from_utf8(path).map_err(|_| "MalEncoded")?;
+      let asid = libtrusted::loader::spawn(path, msg.d)?;
       Ok(())
     }
     _ => {
@@ -37,12 +27,11 @@ fn process_request(va_tmp: usize, asid: u16, msg: &Message) -> Result<(), &'stat
 pub fn server() {
   info!("server started t{}", get_tid());
   microcall::server_register(common::server::SERVER_PM).unwrap();
-  let va_tmp = libtrusted::mm::virtual_page_alloc(1);
   loop {
-    let (tid, msg) = Message::receive();
+    let (tid, msg) = Message::receive().unwrap();
     trace!("t{}: {:x?}", tid, msg);
     let asid = get_asid(tid);
-    match process_request(va_tmp, asid, &msg) {
+    match process_request(asid, &msg) {
       Ok(_) => {
         let mut msg = Message::default();
         msg.a = 0;

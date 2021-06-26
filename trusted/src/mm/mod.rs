@@ -1,4 +1,4 @@
-use libtrusted::message::Message;
+use microcall::message::Message;
 use libtrusted::mm::{Entry, EntryLike};
 use microcall::get_tid;
 
@@ -6,7 +6,7 @@ pub fn server() {
   info!("server started t{}",  get_tid());
   microcall::server_register(common::server::SERVER_MM).unwrap();
   loop {
-    let (tid, msg) = Message::receive();
+    let (tid, msg) = Message::receive().unwrap();
     trace!("t{}: {:x?}", tid, msg);
     let asid = microcall::get_asid(tid);
     let r = match msg.a {
@@ -21,6 +21,6 @@ pub fn server() {
 
     let mut msg = Message::default();
     msg.a = r;
-    msg.reply()
+    msg.reply_with();
   }
 }

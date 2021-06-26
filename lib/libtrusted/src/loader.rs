@@ -1,4 +1,4 @@
-use crate::fs::{File, SeekFrom};
+use fs::{File, SeekFrom};
 use common::PAGE_SIZE;
 use crate::mm::EntryLike;
 use xmas_elf::program::SegmentData;

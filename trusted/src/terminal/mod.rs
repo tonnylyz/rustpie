@@ -98,13 +98,13 @@ pub fn server() {
   microcall::server_register(common::server::SERVER_TERMINAL).unwrap();
 
   loop {
-    let (_client_tid, _msg) = libtrusted::message::Message::receive();
-    let mut msg = libtrusted::message::Message::default();
+    let (_client_tid, _msg) = microcall::message::Message::receive().unwrap();
+    let mut msg = microcall::message::Message::default();
     let mut buf = buffer().lock();
     match buf.pop_front() {
       None => { msg.a = 0 }
       Some(c) => { msg.a = c as usize }
     }
-    msg.reply();
+    msg.reply_with();
   }
 }

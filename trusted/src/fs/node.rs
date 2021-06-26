@@ -1,7 +1,7 @@
 use crate::fs::{Extent, BLOCK_SIZE};
 use core::{fmt, ops, slice, mem};
 use alloc::vec::Vec;
-use libtrusted::redox::*;
+use redox::*;
 
 /// A file/folder node
 #[repr(packed)]

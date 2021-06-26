@@ -14,3 +14,5 @@ log = "0.4.5"
 libtrusted = { path = "../lib/libtrusted" }
 microcall = { path = "../lib/microcall" }
 common = { path = "../common" }
+redox = { path = "../lib/redox" }
+fs = { path = "../lib/fs" }

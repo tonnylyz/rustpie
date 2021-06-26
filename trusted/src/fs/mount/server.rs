@@ -1,9 +1,10 @@
 use crate::fs::mount::scheme::FileScheme;
 use crate::fs::{VirtioClient, FileSystem};
-use libtrusted::redox::*;
+use redox::*;
 use alloc::string::String;
-use libtrusted::message::Message;
+use microcall::message::Message;
 use microcall::{get_tid, get_asid};
+use libtrusted::foreign_slice::ForeignSlice;
 
 pub fn server() {
   info!("server started t{}", get_tid());
@@ -14,14 +15,29 @@ pub fn server() {
       let scheme = FileScheme::new(String::from("virtio"), filesystem);
       loop {
         let mut packet = Packet::default();
-        let (tid, msg) = Message::receive();
+        let (tid, msg) = Message::receive().unwrap();
         packet.a = msg.a;
         packet.b = msg.b;
         packet.c = msg.c;
         packet.d = msg.d;
-        packet.pid = get_asid(tid) as usize;
+        let asid = get_asid(tid);
         trace!("from t{}: {:x?}", tid, msg);
-        scheme.handle(&mut packet);
+        if asid == get_asid(0) {
+          scheme.handle(&mut packet);
+        } else {
+          match packet.a {
+            SYS_OPEN => {
+              let s = ForeignSlice::new(asid, packet.b, packet.c).unwrap();
+              packet.b = s.local_start;
+            }
+            SYS_READ => {
+              let s = ForeignSlice::new(asid, packet.c, packet.d).unwrap();
+              packet.c = s.local_start;
+            }
+            _ => panic!("NOT translated packet"),
+          }
+          scheme.handle(&mut packet);
+        }
 
         let mut msg = Message::default();
         msg.a = packet.a;

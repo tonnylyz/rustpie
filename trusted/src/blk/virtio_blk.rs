@@ -4,10 +4,10 @@ use core::mem::size_of;
 
 use register::*;
 use register::mmio::*;
-use spin::Mutex;
+use spin::{Mutex, Once};
 use libtrusted::mm::virt_to_phys;
 use microcall::get_tid;
-use libtrusted::message::Message;
+use microcall::message::Message;
 
 #[cfg(target_arch = "aarch64")]
 const VIRTIO_MMIO_BASE: usize = 0x8_0000_0000 + 0x0a000000;
@@ -51,14 +51,18 @@ register_structs! {
     (0x0a4 => QueueDeviceHigh: WriteOnly<u32>),
     (0x0a8 => _reserved_9),
     (0x0fc => ConfigGeneration: ReadOnly<u32>),
-    (0x0fd => _reserved_10),
-    (0x100 => _reserved_config),
+    (0x100 => CapacityLow: ReadOnly<u32>),
+    (0x104 => CapacityHigh: ReadOnly<u32>),
+    (0x108 => SizeMax: ReadOnly<u32>),
+    (0x10c => SegMax: ReadOnly<u32>),
+    (0x110 => _reserved_config),
     (0x200 => @END),
   }
 }
 
 struct VirtioMmio {
   base_addr: usize,
+  disk_size: Once<usize>,
 }
 
 impl core::ops::Deref for VirtioMmio {
@@ -71,7 +75,7 @@ impl core::ops::Deref for VirtioMmio {
 
 impl VirtioMmio {
   const fn new(base_addr: usize) -> Self {
-    VirtioMmio { base_addr }
+    VirtioMmio { base_addr, disk_size: Once::new() }
   }
 
   fn ptr(&self) -> *const VirtioMmioBlock {
@@ -93,23 +97,25 @@ const VIRTIO_CONFIG_S_FEATURES_OK: u32 = 8;
 // const VIRTIO_CONFIG_S_FAILED: u32 = 0x80;
 
 /* v1.0 compliant */
-const VIRTIO_F_VERSION_1: u32 = 32;
+const VIRTIO_F_VERSION_1: usize = 32;
 
 /* Feature bits */
-// const VIRTIO_BLK_F_SIZE_MAX: u32 = 1;  /* Indicates maximum segment size */
-// const VIRTIO_BLK_F_SEG_MAX: u32 = 2;   /* Indicates maximum # of segments */
-// const VIRTIO_BLK_F_GEOMETRY: u32 = 4;  /* Legacy geometry available */
-// const VIRTIO_BLK_F_RO: u32 = 5;        /* Disk is read-only */
-// const VIRTIO_BLK_F_BLK_SIZE: u32 = 6;  /* Block size of disk is available */
-// const VIRTIO_BLK_F_TOPOLOGY: u32 = 10; /* Topology information is available */
+// const VIRTIO_BLK_F_SIZE_MAX: usize = 1;  /* Indicates maximum segment size */
+const VIRTIO_BLK_F_SEG_MAX: usize = 2;   /* Indicates maximum # of segments */
+const VIRTIO_BLK_F_GEOMETRY: usize = 4;  /* Legacy geometry available */
+// const VIRTIO_BLK_F_RO: usize = 5;        /* Disk is read-only */
+const VIRTIO_BLK_F_BLK_SIZE: usize = 6;  /* Block size of disk is available */
+const VIRTIO_BLK_F_TOPOLOGY: usize = 10; /* Topology information is available */
 // const VIRTIO_BLK_F_MQ: u32 = 12;       /* Support more than one vq */
 
 /* Legacy feature bits */
-// const VIRTIO_BLK_F_BARRIER: u32 = 0;    /* Does host support barriers? */
-// const VIRTIO_BLK_F_SCSI: u32 = 7;        /* Supports scsi command passthru */
-// const VIRTIO_BLK_F_FLUSH: u32 = 9;      /* Flush command supported */
-// const VIRTIO_BLK_F_CONFIG_WCE: u32 = 11; /* Writeback mode available in config */
+// const VIRTIO_BLK_F_BARRIER: usize = 0;     /* Does host support barriers? */
+// const VIRTIO_BLK_F_SCSI: usize = 7;        /* Supports scsi command passthru */
+const VIRTIO_BLK_F_FLUSH: usize = 9;          /* Flush command supported */
+const VIRTIO_BLK_F_CONFIG_WCE: usize = 11;    /* Writeback mode available in config */
 
+const VIRTIO_BLK_F_DISCARD: usize = 13;
+const VIRTIO_BLK_F_WRITE_ZEROES: usize = 14;
 /* Can the device handle any descriptor layout? */
 // const VIRTIO_F_ANY_LAYOUT: u32 = 27;
 /*
@@ -119,9 +125,9 @@ const VIRTIO_F_VERSION_1: u32 = 32;
  * The Host publishes the avail index for which it expects a kick
  * at the end of the used ring. Guest should ignore the used->flags field.
  */
-// const VIRTIO_RING_F_EVENT_IDX: u32 = 29;
+const VIRTIO_RING_F_EVENT_IDX: usize = 29;
 /* We support indirect buffer descriptors */
-// const VIRTIO_RING_F_INDIRECT_DESC: u32 = 28;
+const VIRTIO_RING_F_INDIRECT_DESC: usize = 28;
 
 static VIRTIO_MMIO: VirtioMmio = VirtioMmio::new(VIRTIO_MMIO_BASE);
 
@@ -178,8 +184,18 @@ pub fn init() {
   status |= VIRTIO_CONFIG_S_DRIVER;
   mmio.Status.set(status);
 
-  // TODO: support more features
-  let features: u64 = 1 << VIRTIO_F_VERSION_1;
+  mmio.DeviceFeaturesSel.set(0);
+  // info!("device feature low  {:08x}", mmio.DeviceFeatures.get());
+  mmio.DeviceFeaturesSel.set(1);
+  // info!("device feature high {:08x}", mmio.DeviceFeatures.get());
+
+  let features: u64 =
+    1 << VIRTIO_F_VERSION_1
+    | 1 << VIRTIO_BLK_F_SEG_MAX
+    | 1 << VIRTIO_BLK_F_GEOMETRY
+    | 1 << VIRTIO_BLK_F_BLK_SIZE
+    | 1 << VIRTIO_BLK_F_TOPOLOGY;
+
 
   mmio.DriverFeaturesSel.set(0);
   mmio.DriverFeatures.set(features as u32);
@@ -193,6 +209,9 @@ pub fn init() {
   mmio.Status.set(status);
 
   setup_queue(0);
+  // info!("probe disk size {} / {} sectors", mmio.CapacityLow.get(), mmio.CapacityHigh.get());
+  let size = ((mmio.CapacityHigh.get() as usize) << 32) | mmio.CapacityLow.get() as usize;
+  mmio.disk_size.call_once(|| size);
 }
 
 const QUEUE_SIZE: usize = 16;
@@ -374,7 +393,6 @@ fn irq() {
         break;
       }
       if used.ring[(disk.last_used as usize) % QUEUE_SIZE].id != 0 {
-        // TODO?
         error!("irq unexpected ring desc head, only #0 is used");
         break;
       }
@@ -382,8 +400,8 @@ fn irq() {
       match *req.status {
         VIRTIO_BLK_S_OK => {
           {
-            let msg = libtrusted::message::Message::default();
-            msg.reply();
+            let msg = microcall::message::Message::default();
+            msg.reply_with();
           }
         }
         VIRTIO_BLK_S_IOERR => {
@@ -421,14 +439,27 @@ pub fn server() {
   microcall::server_register(common::server::SERVER_VIRTIO_BLK).unwrap();
 
   loop {
-    let (client_tid, msg) = libtrusted::message::Message::receive();
+    let (client_tid, msg) = microcall::message::Message::receive().unwrap();
     trace!("recv {:x?}", (client_tid, msg));
-    let sector = msg.a;
-    let count = msg.b;
-    let buf = msg.c;
-    let op = if msg.d == 0 { Operation::Read } else { Operation::Write };
-    io(sector, count, buf, op, client_tid);
-    wait_for_irq();
-    irq();
+    if msg.d == 0 || msg.d == 1 {
+      let sector = msg.a;
+      let count = msg.b;
+      let buf = msg.c;
+      let op = if msg.d == 0 { Operation::Read } else { Operation::Write };
+      io(sector, count, buf, op, client_tid);
+      wait_for_irq();
+      irq();
+    } else if msg.d == 2 {
+      let mut msg = microcall::message::Message::default();
+      msg.a = match VIRTIO_MMIO.disk_size.get() {
+        None => 0,
+        Some(s) => *s * 512,
+      };
+      msg.reply_with();
+    } else {
+      let mut msg = microcall::message::Message::default();
+      msg.a = 1;
+      msg.reply_with();
+    }
   }
 }

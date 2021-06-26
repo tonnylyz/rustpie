@@ -1,16 +1,17 @@
 use alloc::string::String;
 use alloc::vec::Vec;
 use spin::Mutex;
-use crate::server::*;
+use microcall::message::Message;
 
 pub fn getchar() -> u8 {
   loop {
-    let result = call(common::server::SERVER_TERMINAL, Message(
-      0, 0, 0, 0
-    )).unwrap();
-    match result.0 {
+    let result = Message::default().call(common::server::SERVER_TERMINAL).unwrap();
+    match result.a {
       0 => microcall::thread_yield(),
-      c => break c as u8,
+      c => {
+        print!("{}", c as u8 as char);
+        break c as u8
+      },
     }
   }
 }
