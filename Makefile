@@ -70,6 +70,7 @@ disk: user_image
 	redoxfs disk.img disk
 	cp user/target/${ARCH}/${USER_PROFILE}/shell disk/
 	cp user/target/${ARCH}/${USER_PROFILE}/cat disk/
+	cp user/target/${ARCH}/${USER_PROFILE}/ls disk/
 	sync
 	umount disk
 

@@ -13,6 +13,10 @@ path = "src/shell.rs"
 name = "cat"
 path = "src/cat.rs"
 
+[[bin]]
+name = "ls"
+path = "src/ls.rs"
+
 [dependencies]
 exported = { path = "../lib/exported" }
 fs = { path = "../lib/fs" }

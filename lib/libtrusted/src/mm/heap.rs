@@ -7,7 +7,7 @@ use crate::mm::{Entry, EntryLike};
 static HEAP_ALLOCATOR: LockedHeap = LockedHeap::empty();
 
 pub fn init() {
-  const HEAP_SIZE: usize = 16;
+  const HEAP_SIZE: usize = 32;
   for i in 0..HEAP_SIZE {
     mem_alloc(0, common::CONFIG_HEAP_BTM + i * PAGE_SIZE, Entry::default().attribute());
   }
