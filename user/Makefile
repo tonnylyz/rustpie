@@ -7,13 +7,10 @@ else
 CARGO_FLAGS =
 endif
 
-USER_IMAGE := target/${ARCH}/${USER_PROFILE}/user
+.PHONY: all clean
 
-.PHONY: all clean ${USER_IMAGE}
-
-${USER_IMAGE}:
-	cargo build --target src/target/${ARCH}.json -Z build-std=core,alloc ${CARGO_FLAGS}
-	llvm-objdump -d ${USER_IMAGE} > ${USER_IMAGE}.asm
+all:
+	cargo build --bins --target src/target/${ARCH}.json -Z build-std=core,alloc ${CARGO_FLAGS}
 
 clean:
 	-cargo clean

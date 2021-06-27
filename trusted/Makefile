@@ -9,9 +9,9 @@ endif
 
 TRUSTED_IMAGE := target/${ARCH}/${TRUSTED_PROFILE}/trusted
 
-.PHONY: all clean ${TRUSTED_IMAGE}
+.PHONY: all clean
 
-${TRUSTED_IMAGE}:
+all:
 	cargo build --target src/target/${ARCH}.json -Z build-std=core,alloc ${CARGO_FLAGS}
 	llvm-objdump -d ${TRUSTED_IMAGE} > ${TRUSTED_IMAGE}.asm
 

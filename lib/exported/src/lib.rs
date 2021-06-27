@@ -27,7 +27,21 @@ pub fn sched_yield() {
   microcall::thread_yield();
 }
 
-#[panic_handler]
-fn panic_handler(_info: &core::panic::PanicInfo) -> ! {
+pub fn exit() -> ! {
+  microcall::thread_destroy(0).unwrap();
   loop {}
+}
+
+#[panic_handler]
+fn panic_handler(info: &core::panic::PanicInfo) -> ! {
+  if let Some(m) = info.message() {
+    if let Some(l) = info.location() {
+      println!("[USER][panic] p{} {} \n {}", microcall::get_asid(0), m, l);
+    } else {
+      println!("[USER][panic] p{} {}", microcall::get_asid(0), m);
+    }
+  } else {
+    println!("[USER][panic] p{} no message", microcall::get_asid(0));
+  }
+  exit()
 }

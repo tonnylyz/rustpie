@@ -9,13 +9,16 @@ fn process_request(asid: u16, msg: &Message) -> Result<(), &'static str> {
   match msg.a {
     1 => { // SPAWN
       let length = msg.c;
-      if length == 0 || length >= 128 {
+      if length == 0 {
+        return Ok(())
+      }
+      if length >= 128 {
         return Err("MalformedString");
       }
       let s = ForeignSlice::new(asid, msg.b, msg.c).unwrap();
-      let path = s.local_slice();
-      let path = core::str::from_utf8(path).map_err(|_| "MalEncoded")?;
-      let asid = libtrusted::loader::spawn(path, msg.d)?;
+      let cmd = s.local_slice();
+      let cmd = core::str::from_utf8(cmd).map_err(|_| "MalEncoded")?;
+      let asid = libtrusted::loader::spawn(cmd)?;
       Ok(())
     }
     _ => {

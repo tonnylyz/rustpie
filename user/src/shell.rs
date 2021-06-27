@@ -3,6 +3,7 @@
 #![feature(format_args_nl)]
 #![feature(alloc_error_handler)]
 
+extern crate alloc;
 extern crate rlibc;
 #[macro_use]
 extern crate exported;
@@ -13,25 +14,17 @@ fn _start() -> ! {
   println!("Welcome to rustpi shell!");
   loop {
     print!("SHELL> ");
-    let c = exported::stdio::getline();
+    let cmd = exported::stdio::getline();
     println!();
-    if c == "ls" {
+    if cmd == "ls" {
       let mut root = fs::File::open("/").unwrap();
       let mut buf = [0u8; 128];
       root.read(&mut buf).unwrap();
       let dir = core::str::from_utf8(&buf).unwrap();
       println!("{}", dir);
     } else {
-      exported::pm::exec(c.as_str(), 0);
+      exported::pm::exec(cmd.as_str());
     }
   }
 }
-
-// #[no_mangle]
-// fn _start() -> ! {
-//   println!("bbbbbbbbbbbbbbbbb");
-//   loop {
-//     exported::sched_yield();
-//   }
-// }
 

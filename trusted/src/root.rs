@@ -27,7 +27,7 @@ pub fn main() {
   });
 
   thread::spawn(|| {
-    match libtrusted::loader::spawn("user", 0) {
+    match libtrusted::loader::spawn("shell") {
       Ok(_) => {}
       Err(s) => { error!("{}", s); }
     }

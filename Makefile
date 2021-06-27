@@ -1,4 +1,3 @@
-
 ARCH ?= aarch64
 PROFILE ?= release
 USER_PROFILE ?= release
@@ -19,22 +18,21 @@ ifeq (${TRUSTED_PROFILE}, release)
 CARGO_FLAGS := ${CARGO_FLAGS} --features user_release
 endif
 
-TRUSTED_IMAGE := trusted/target/${ARCH}/${TRUSTED_PROFILE}/trusted
-USER_IMAGE := user/target/${ARCH}/${USER_PROFILE}/user
+#TRUSTED_IMAGE := trusted/target/${ARCH}/${TRUSTED_PROFILE}/trusted
 
 KERNEL := target/${ARCH}/${PROFILE}/rustpi
 
-.PHONY: all emu debug dependencies clean disk ${TRUSTED_IMAGE} ${USER_IMAGE}
+.PHONY: all emu debug dependencies clean disk trusted_image user_image
 
 all: ${KERNEL} ${KERNEL}.bin ${KERNEL}.asm
 
-${KERNEL}: ${TRUSTED_IMAGE}
+${KERNEL}: trusted_image
 	cargo build --target src/target/${ARCH}.json -Z build-std=core,alloc ${CARGO_FLAGS}
 
-${TRUSTED_IMAGE}:
+trusted_image:
 	make ARCH=${ARCH} TRUSTED_PROFILE=${TRUSTED_PROFILE} -C trusted
 
-${USER_IMAGE}:
+user_image:
 	make ARCH=${ARCH} USER_PROFILE=${USER_PROFILE} -C user
 
 ${KERNEL}.bin: ${KERNEL}
@@ -55,10 +53,10 @@ QEMU_DISK_OPTIONS := -drive file=disk.img,if=none,format=raw,id=x0 \
 					 -global virtio-mmio.force-legacy=false
 QEMU_COMMON_OPTIONS := -serial stdio -display none -smp 4 -m 2048
 
-emu: ${KERNEL}.bin ${KERNEL}.asm
+emu: ${KERNEL}.bin ${KERNEL}.asm disk
 	${QEMU_CMD} ${QEMU_COMMON_OPTIONS} ${QEMU_DISK_OPTIONS} -kernel $<
 
-debug: ${KERNEL}.bin ${KERNEL}.asm
+debug: ${KERNEL}.bin ${KERNEL}.asm disk
 	${QEMU_CMD} ${QEMU_COMMON_OPTIONS} ${QEMU_DISK_OPTIONS} -kernel $< -s -S
 
 clean:
@@ -66,11 +64,12 @@ clean:
 	make -C trusted clean
 	make -C user clean
 
-disk: ${USER_IMAGE}
+disk: user_image
 	rm -rf disk
 	mkdir disk
 	redoxfs disk.img disk
-	cp ${USER_IMAGE} disk/
+	cp user/target/${ARCH}/${USER_PROFILE}/shell disk/
+	cp user/target/${ARCH}/${USER_PROFILE}/cat disk/
 	sync
 	umount disk
 
