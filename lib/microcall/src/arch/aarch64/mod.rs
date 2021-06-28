@@ -51,6 +51,7 @@ syscall!{
     syscall_5_0(a, b, c, d, e, f, ) -> ();
     syscall_0_1(a, ) -> (oa: usize, );
     syscall_1_1(a, b, ) -> (oa: usize, );
+    syscall_2_1(a, b, c, ) -> (oa: usize, );
     syscall_0_2(a, ) -> (oa: usize, ob: usize, );
     syscall_4_1(a, b, c, d, e, ) -> (oa: usize, );
     syscall_0_5(a, ) -> (oa: usize, ob: usize, oc: usize, od: usize, oe: usize, );

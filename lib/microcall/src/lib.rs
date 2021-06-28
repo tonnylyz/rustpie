@@ -20,8 +20,8 @@ pub fn putc(c: char) {
   syscall_1_0(SYS_PUTC, c as usize).unwrap()
 }
 
-pub fn get_asid(tid: u16) -> u16 {
-  syscall_1_1(SYS_GET_ASID, tid as usize).unwrap() as u16
+pub fn get_asid(tid: u16) -> Result<u16, Error> {
+  syscall_1_1(SYS_GET_ASID, tid as usize).map(|asid| asid as u16)
 }
 
 pub fn get_tid() -> u16 {
@@ -37,8 +37,8 @@ pub fn thread_destroy(tid: u16) -> Result<(), Error> {
   syscall_1_0(SYS_THREAD_DESTROY, tid as usize)
 }
 
-pub fn event_handler(asid: u16, value: usize, sp: usize, event: usize) -> Result<(), Error> {
-  syscall_4_0(SYS_EVENT_HANDLER, asid as usize, value, sp, event)
+pub fn event_wait(event_type: usize, event_num: usize) -> Result<usize, Error> {
+  syscall_2_1(SYS_EVENT_WAIT, event_type, event_num)
 }
 
 pub fn mem_alloc(asid: u16, va: usize, attr: usize) -> Result<(), Error> {

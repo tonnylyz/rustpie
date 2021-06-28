@@ -8,10 +8,8 @@ mod arch;
 
 mod valloc;
 mod heap;
-mod page_fault;
 
 pub use heap::init as heap_init;
-pub use page_fault::init as page_fault_init;
 pub use arch::page_table::Entry;
 pub use arch::page_table::traverse;
 pub use arch::page_table::query;

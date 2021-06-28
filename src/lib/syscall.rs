@@ -5,9 +5,8 @@ use SyscallOutRegisters::*;
 use crate::arch::{ArchPageTableEntry, PAGE_SIZE};
 use crate::lib::address_space::AddressSpace;
 use crate::lib::cpu::{CoreTrait, current};
-use crate::lib::event::Event::Interrupt;
 use crate::lib::interrupt::INTERRUPT_WAIT;
-use crate::lib::thread::Status::{TsNotRunnable, TsRunnable, TsWaitForInterrupt};
+use crate::lib::thread::Status::{TsNotRunnable, TsRunnable, TsWaitForInterrupt, TsWaitForThreadExit};
 use crate::lib::traits::*;
 use crate::mm::page_table::{Entry, PageTableEntryAttrTrait, PageTableTrait};
 use crate::util::round_down;
@@ -18,6 +17,7 @@ use crate::lib::thread::Thread;
 
 pub type Error = usize;
 use common::syscall::error::*;
+use crate::lib::event::{Event, set_thread_exit_waiter, thread_exit_waiter};
 
 impl core::convert::From<crate::mm::page_pool::Error> for Error {
   fn from(e: crate::mm::page_pool::Error) -> Self {
@@ -67,7 +67,7 @@ static SYSCALL_NAMES: [&str; 21] = [
   "get_tid",
   "thread_yield",
   "thread_destroy",
-  "event_handler",
+  "event_wait",
   "mem_alloc",
   "mem_map",
   "mem_unmap",
@@ -91,7 +91,7 @@ pub trait SyscallTrait {
   fn get_tid() -> SyscallResult;
   fn thread_yield() -> SyscallResult;
   fn thread_destroy(asid: u16) -> SyscallResult;
-  fn event_handler(asid: u16, value: usize, sp: usize, event: usize) -> SyscallResult;
+  fn event_wait(event_type: usize, event_num: usize) -> SyscallResult;
   fn mem_alloc(asid: u16, va: usize, perm: usize) -> SyscallResult;
   fn mem_map(src_asid: u16, src_va: usize, dst_asid: u16, dst_va: usize, perm: usize) -> SyscallResult;
   fn mem_unmap(asid: u16, va: usize) -> SyscallResult;
@@ -119,6 +119,15 @@ fn lookup_as(asid: u16) -> Result<AddressSpace, Error> {
   } {
     None => { Err(ERROR_INTERNAL) }
     Some(a) => { Ok(a) }
+  }
+}
+
+fn thread_waiter_wake(thread_exited: &Thread) {
+  if let Some(waiter) = thread_exit_waiter() {
+    let mut ctx = waiter.context();
+    ctx.set_syscall_result(&SyscallResult::Ok(SyscallOutRegisters::Single(thread_exited.tid() as usize)));
+    waiter.set_context(ctx);
+    waiter.set_status(TsRunnable);
   }
 }
 
@@ -166,6 +175,7 @@ impl SyscallTrait for Syscall {
   fn thread_destroy(tid: u16) -> SyscallResult {
     let current_thread = crate::current_thread();
     if tid == 0 {
+      thread_waiter_wake(&current_thread);
       current_thread.destroy();
       Syscall::thread_yield()
     } else {
@@ -174,6 +184,7 @@ impl SyscallTrait for Syscall {
         Some(t) => {
           if t.is_child_of(current_thread.tid()) {
             // TODO: check if destroy safe for inter-processor
+            thread_waiter_wake(&t);
             t.destroy();
             Ok(Unit)
           } else {
@@ -184,34 +195,33 @@ impl SyscallTrait for Syscall {
     }
   }
 
-  fn event_handler(asid: u16, entry: usize, sp: usize, event: usize) -> SyscallResult {
-    // trace!("event_handler {} {:x} {:x} {}", asid, entry, sp, event);
-    let e = event.into();
-    let a = lookup_as(asid)?;
-    a.event_register(e, entry, sp);
-
-    if asid != 0 {
-      Ok(Unit)
-    } else {
-      if let Interrupt(i) = e {
-        // register an interrupt event for current thread
-        let t = crate::current_thread().clone();
-        return match INTERRUPT_WAIT.add_yield(t.clone(), i) {
-          Ok(_) => {
-            t.set_status(TsWaitForInterrupt);
-            Self::thread_yield()
+  fn event_wait(event_type: usize, event_num: usize) -> SyscallResult {
+    let t = crate::current_thread().clone();
+    if let Some(e) = Event::from(event_type, event_num) {
+      match e {
+        Event::Interrupt(i) => {
+          match INTERRUPT_WAIT.add_yield(t.clone(), i) {
+            Ok(_) => {
+              t.set_status(TsWaitForInterrupt);
+              Self::thread_yield()
+            }
+            Err(super::interrupt::Error::AlreadyWaiting) => {
+              INTERRUPT_WAIT.remove(i);
+              Ok(Unit)
+            }
+            _ => {
+              Err(ERROR_INTERNAL)
+            }
           }
-          Err(super::interrupt::Error::AlreadyWaiting) => {
-            INTERRUPT_WAIT.remove(i);
-            Ok(Unit)
-          }
-          _ => {
-            Err(ERROR_INTERNAL)
-          }
-        };
-      } else {
-        Ok(Unit)
+        }
+        Event::ThreadExit => {
+          set_thread_exit_waiter(t.clone());
+          t.set_status(TsWaitForThreadExit);
+          Self::thread_yield()
+        }
       }
+    } else {
+      Err(ERROR_INVARG)
     }
   }
 
@@ -395,7 +405,7 @@ pub fn syscall() {
     SYS_GET_TID => Syscall::get_tid(),
     SYS_THREAD_YIELD => Syscall::thread_yield(),
     SYS_THREAD_DESTROY => Syscall::thread_destroy(arg(0) as u16),
-    SYS_EVENT_HANDLER => Syscall::event_handler(arg(0) as u16, arg(1), arg(2), arg(3)),
+    SYS_EVENT_WAIT => Syscall::event_wait(arg(0), arg(1)),
     SYS_MEM_ALLOC => Syscall::mem_alloc(arg(0) as u16, arg(1), arg(2)),
     SYS_MEM_MAP => Syscall::mem_map(arg(0) as u16, arg(1), arg(2) as u16, arg(3), arg(4)),
     SYS_MEM_UNMAP => Syscall::mem_unmap(arg(0) as u16, arg(1)),

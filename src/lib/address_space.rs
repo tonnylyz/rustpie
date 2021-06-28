@@ -16,7 +16,6 @@ pub type Asid = u16;
 struct Inner {
   asid: Asid,
   page_table: PageTable,
-  event_handlers: Mutex<Vec<(Event, usize, usize)>>,
 }
 
 #[derive(Debug, Clone)]
@@ -36,19 +35,6 @@ impl AddressSpace {
     &self.0.page_table
   }
 
-  pub fn event_register(&self, event: Event, entry: usize, sp: usize) {
-    let mut handlers = self.0.event_handlers.lock();
-    handlers.push((event, entry, sp));
-  }
-  pub fn event_handler(&self, event: Event) -> Option<(usize, usize)> {
-    let handlers = self.0.event_handlers.lock();
-    for (e, entry, sp) in handlers.iter() {
-      if *e == event {
-        return Some((*entry, *sp));
-      }
-    }
-    None
-  }
 }
 
 struct Pool {
@@ -69,7 +55,6 @@ impl Pool {
     let arc = Arc::new(Inner {
       asid: id,
       page_table: make_user_page_table(),
-      event_handlers: Mutex::new(Vec::new())
     });
     let mut map = ADDRESS_SPACE_MAP.get().unwrap().lock();
     map.insert(id, arc.clone());

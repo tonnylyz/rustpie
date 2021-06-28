@@ -29,39 +29,9 @@ pub fn handle() {
     current_cpu().schedule();
     return;
   }
-  if p.event_handler(Event::PageFault).is_none() {
-    warn!("isr: page_fault: {:016x}", addr);
-    warn!("isr: page_fault: process has no handler, process killed");
-    t.destroy();
-    current_cpu().schedule();
-    return;
-  }
-  let (entry, stack_top) = p.event_handler(Event::PageFault).unwrap();
-  let page_table = p.page_table();
-  let stack_btm = stack_top - PAGE_SIZE;
-  match page_table.lookup_user_page(stack_btm) {
-    Some(uf) => {
-      if va == stack_btm {
-        warn!("isr: page_fault: fault on exception stack, process killed");
-        t.destroy();
-        current_cpu().schedule();
-        return;
-      }
-      let ctx = current().context_mut();
-      unsafe {
-        ((uf.pa().pa2kva() + PAGE_SIZE - size_of::<ContextFrame>()) as *mut ContextFrame)
-          .write_volatile(*ctx);
-      }
-      ctx.set_exception_pc(entry);
-      ctx.set_stack_pointer(stack_top - size_of::<ContextFrame>());
-      ctx.set_argument(va);
-      return;
-    }
-    None => {
-      warn!("isr: page_fault: exception stack not valid, process killed");
-      t.destroy();
-      current_cpu().schedule();
-      return;
-    }
-  }
+
+  warn!("isr: page_fault: {:016x}", addr);
+  warn!("isr: page_fault: process has no handler, process killed");
+  t.destroy();
+  current_cpu().schedule();
 }

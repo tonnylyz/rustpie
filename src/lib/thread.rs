@@ -26,6 +26,7 @@ pub enum Status {
   TsNotRunnable = 2,
   TsIdle = 3,
   TsWaitForInterrupt = 4,
+  TsWaitForThreadExit = 5,
 }
 
 #[derive(Debug)]

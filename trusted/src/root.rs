@@ -27,6 +27,10 @@ pub fn main() {
   });
 
   thread::spawn(|| {
+    crate::pm::event_server();
+  });
+
+  thread::spawn(|| {
     match libtrusted::loader::spawn("shell") {
       Ok(_) => {}
       Err(s) => { error!("{}", s); }

@@ -23,7 +23,6 @@ mod logger;
 
 #[no_mangle]
 fn _start(_arg: usize) -> ! {
-  libtrusted::mm::page_fault_init();
   libtrusted::mm::heap_init();
   logger::init();
   info!("trusted root start");

@@ -20,9 +20,9 @@ pub fn server() {
         packet.b = msg.b;
         packet.c = msg.c;
         packet.d = msg.d;
-        let asid = get_asid(tid);
+        let asid = get_asid(tid).unwrap();
         trace!("from t{}: {:x?}", tid, msg);
-        if asid == get_asid(0) {
+        if asid == get_asid(0).unwrap() {
           scheme.handle(&mut packet);
         } else {
           match packet.a {

@@ -8,7 +8,7 @@ pub fn server() {
   loop {
     let (tid, msg) = Message::receive().unwrap();
     trace!("t{}: {:x?}", tid, msg);
-    let asid = microcall::get_asid(tid);
+    let asid = microcall::get_asid(tid).unwrap();
     let r = match msg.a {
       1 => {
         microcall::mem_alloc(asid, msg.b, Entry::default().attribute());

@@ -13,7 +13,7 @@ pub fn round_down(addr: usize, n: usize) -> usize {
   addr & !(n - 1)
 }
 
-pub fn spawn<P: AsRef<str>>(cmd: P) -> Result<u16, &'static str> {
+pub fn spawn<P: AsRef<str>>(cmd: P) -> Result<(u16, u16), &'static str> {
   let mut iter = cmd.as_ref().trim().split_ascii_whitespace();
   if let Some(bin) = iter.next() {
     let asid = microcall::address_space_alloc().map_err(|e| "address_space_alloc failed")?;
@@ -91,7 +91,7 @@ pub fn spawn<P: AsRef<str>>(cmd: P) -> Result<u16, &'static str> {
     // println!("[LOADER] spawn asid {} tid {}", asid, tid);
     microcall::thread_set_status(tid, common::thread::THREAD_STATUS_RUNNABLE);
 
-    Ok(asid)
+    Ok((asid, tid))
   } else {
     Err("cmd does not has bin")
   }

@@ -34,7 +34,7 @@ pub mod syscall {
   pub const SYS_GET_TID: usize = 3;
   pub const SYS_THREAD_YIELD: usize = 4;
   pub const SYS_THREAD_DESTROY: usize = 5;
-  pub const SYS_EVENT_HANDLER: usize = 6;
+  pub const SYS_EVENT_WAIT: usize = 6;
   pub const SYS_MEM_ALLOC: usize = 7;
   pub const SYS_MEM_MAP: usize = 8;
   pub const SYS_MEM_UNMAP: usize = 9;
@@ -71,4 +71,9 @@ pub mod server {
 pub mod thread {
   pub const THREAD_STATUS_RUNNABLE: usize = 1;
   pub const THREAD_STATUS_NOT_RUNNABLE: usize = 2;
+}
+
+pub mod event {
+  pub const EVENT_INTERRUPT: usize = 1;
+  pub const EVENT_THREAD_EXIT: usize = 2;
 }

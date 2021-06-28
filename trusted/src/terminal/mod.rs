@@ -53,7 +53,7 @@ static PL011_MMIO: Pl011Mmio = Pl011Mmio::new(PL011_MMIO_BASE);
 
 fn wait_for_irq() {
   #[cfg(target_arch = "aarch64")]
-    microcall::event_handler(0, 0, 0, 0x1 + 32);
+    microcall::event_wait(common::event::EVENT_INTERRUPT, 0x1 + 32);
 }
 
 fn irq() {
