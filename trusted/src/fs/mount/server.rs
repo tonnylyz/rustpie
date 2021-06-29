@@ -26,11 +26,11 @@ pub fn server() {
           scheme.handle(&mut packet);
         } else {
           match packet.a {
-            SYS_OPEN => {
+            SYS_OPEN | SYS_UNLINK => {
               let s = ForeignSlice::new(asid, packet.b, packet.c).unwrap();
               packet.b = s.local_start;
             }
-            SYS_READ => {
+            SYS_READ | SYS_WRITE => {
               let s = ForeignSlice::new(asid, packet.c, packet.d).unwrap();
               packet.c = s.local_start;
             }

@@ -71,6 +71,9 @@ disk: user_image
 	cp user/target/${ARCH}/${USER_PROFILE}/shell disk/
 	cp user/target/${ARCH}/${USER_PROFILE}/cat disk/
 	cp user/target/${ARCH}/${USER_PROFILE}/ls disk/
+	cp user/target/${ARCH}/${USER_PROFILE}/mkdir disk/
+	cp user/target/${ARCH}/${USER_PROFILE}/touch disk/
+	cp user/target/${ARCH}/${USER_PROFILE}/rm disk/
 	sync
 	umount disk
 

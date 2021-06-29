@@ -39,6 +39,34 @@ impl VirtioClient {
       Err(Error::new(EIO))
     }
   }
+
+  fn write_block_unaligned(&self, block: u64, buffer: &[u8]) -> Result<usize> {
+    assert_eq!(buffer.len(), PAGE_SIZE);
+    let va_tmp = libtrusted::mm::virtual_page_alloc(1);
+    microcall::mem_alloc(0, va_tmp, Entry::default().attribute());
+    let aligned_buffer = unsafe { core::slice::from_raw_parts_mut(va_tmp as *mut u8, PAGE_SIZE) };
+    for i in 0..PAGE_SIZE {
+      aligned_buffer[i] = buffer[i];
+    }
+    let read = self.write_block_aligned(block, aligned_buffer)?;
+    microcall::mem_unmap(0, va_tmp);
+    Ok(read)
+  }
+
+  fn write_block_aligned(&self, block: u64, buffer: &[u8]) -> Result<usize> {
+    assert_eq!(buffer.len(), PAGE_SIZE);
+    let msg = Message {
+      a: (block as usize) * 8,
+      b: 8,
+      c: buffer.as_ptr() as usize,
+      d: 1
+    }.call(common::server::SERVER_VIRTIO_BLK).map_err(|_| Error::new(EIO))?;
+    if msg.a == 0 {
+      Ok(buffer.len())
+    } else {
+      Err(Error::new(EIO))
+    }
+  }
 }
 
 impl Disk for VirtioClient {
@@ -57,8 +85,18 @@ impl Disk for VirtioClient {
     Ok(sum)
   }
 
-  fn write_at(&mut self, _block: u64, _buffer: &[u8]) -> Result<usize> {
-    unimplemented!()
+  fn write_at(&mut self, block: u64, buffer: &[u8]) -> Result<usize> {
+    assert_eq!(buffer.len() % BLOCK_SIZE as usize, 0);
+    let page_num = buffer.len() / PAGE_SIZE;
+    let mut sum = 0;
+    for i in 0..page_num {
+      if buffer.as_ptr() as usize % PAGE_SIZE == 0 {
+        sum += self.write_block_aligned(block + (i as u64), &buffer[(PAGE_SIZE * i)..(PAGE_SIZE * (i + 1))])?;
+      } else {
+        sum += self.write_block_unaligned(block + (i as u64), &buffer[(PAGE_SIZE * i)..(PAGE_SIZE * (i + 1))])?;
+      }
+    }
+    Ok(sum)
   }
 
   fn size(&mut self) -> Result<u64> {

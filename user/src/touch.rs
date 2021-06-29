@@ -9,6 +9,7 @@ extern crate rlibc;
 extern crate exported;
 
 use alloc::vec::Vec;
+use fs::File;
 
 #[inline(always)]
 pub fn round_up(addr: usize, n: usize) -> usize {
@@ -37,14 +38,15 @@ fn _start(arg: *const u8) -> ! {
 }
 
 fn main(arg: Vec<&str>) {
-  let path = if arg.len() == 0 {
-    "/"
-  } else {
-    arg[0]
-  };
-  let mut root = fs::File::open(path).unwrap();
-  let mut buf = [0u8; 128];
-  root.read(&mut buf).unwrap();
-  let dir = core::str::from_utf8(&buf).unwrap();
-  println!("{}", dir);
+  if arg.len() != 1 {
+    println!("usage: touch FILE...");
+    return;
+  }
+  let path = arg[0];
+  match fs::File::create(path) {
+    Ok(_) => {}
+    Err(e) => {
+      println!("{}", e);
+    }
+  }
 }

@@ -17,6 +17,18 @@ path = "src/cat.rs"
 name = "ls"
 path = "src/ls.rs"
 
+[[bin]]
+name = "mkdir"
+path = "src/mkdir.rs"
+
+[[bin]]
+name = "touch"
+path = "src/touch.rs"
+
+[[bin]]
+name = "rm"
+path = "src/rm.rs"
+
 [dependencies]
 exported = { path = "../lib/exported" }
 fs = { path = "../lib/fs" }
