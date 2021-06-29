@@ -34,6 +34,7 @@ pub fn server() {
               let s = ForeignSlice::new(asid, packet.c, packet.d).unwrap();
               packet.c = s.local_start;
             }
+            SYS_CLOSE => {}
             _ => panic!("NOT translated packet"),
           }
           scheme.handle(&mut packet);

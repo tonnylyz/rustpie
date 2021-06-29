@@ -16,8 +16,13 @@ fn _start() -> ! {
     print!("SHELL> ");
     let cmd = exported::stdio::getline();
     println!();
-    if let Ok(pid) = exported::pm::exec(cmd.as_str()) {
-      exported::pm::wait(pid);
+    match exported::pm::exec(cmd.as_str()) {
+      Ok(pid) => {
+        exported::pm::wait(pid);
+      }
+      Err(e) => {
+        println!("exec failed: {}", e);
+      }
     }
   }
 }

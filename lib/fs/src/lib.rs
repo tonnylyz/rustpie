@@ -58,3 +58,15 @@ impl File {
         Error::demux(msg.a).map(|u| u as u64)
     }
 }
+
+impl Drop for File {
+    fn drop(&mut self) {
+        let msg = Message {
+            a: SYS_CLOSE,
+            b: self.handle,
+            c: 0,
+            d: 0,
+        };
+        let _ = msg.call(SERVER_REDOX_FS).map_err(|_| Error::new(EIO));
+    }
+}
