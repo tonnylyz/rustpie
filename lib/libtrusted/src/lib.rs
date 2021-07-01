@@ -7,6 +7,8 @@
 #![feature(box_syntax)]
 
 extern crate alloc;
+#[macro_use]
+extern crate log;
 
 #[macro_export]
 macro_rules! print {

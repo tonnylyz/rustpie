@@ -1,4 +1,4 @@
-use buddy_system_allocator::{LockedHeap, LockedHeapWithRescue};
+use buddy_system_allocator::LockedHeapWithRescue;
 use microcall::mem_alloc;
 use common::PAGE_SIZE;
 use crate::mm::{Entry, EntryLike};
@@ -10,9 +10,13 @@ static HEAP_ALLOCATOR: LockedHeapWithRescue = LockedHeapWithRescue::new(enlarge)
 static HEAP_TOP: AtomicUsize = AtomicUsize::new(0);
 
 fn enlarge(heap: &mut buddy_system_allocator::Heap) {
-  let delta = HEAP_TOP.fetch_add(PAGE_SIZE, Ordering::Relaxed);
-  mem_alloc(0, delta, Entry::default().attribute());
-  unsafe { heap.add_to_heap(delta, delta + PAGE_SIZE); }
+  const HEAP_DELTA_SIZE: usize = 16;
+  let delta = HEAP_TOP.fetch_add(PAGE_SIZE * HEAP_DELTA_SIZE, Ordering::Relaxed);
+  for i in 0..HEAP_DELTA_SIZE {
+    mem_alloc(0, delta + i * PAGE_SIZE, Entry::default().attribute());
+  }
+  info!("Enlarge heap {:x} ~ {:x}", delta, delta + PAGE_SIZE * HEAP_DELTA_SIZE);
+  unsafe { heap.add_to_heap(delta, delta + PAGE_SIZE * HEAP_DELTA_SIZE); }
 }
 
 pub fn init() {
