@@ -1,5 +1,6 @@
 use common::event::*;
 use spin::Mutex;
+
 use crate::lib::thread::Thread;
 
 #[derive(Debug, Clone, Copy, PartialEq)]

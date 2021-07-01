@@ -21,5 +21,5 @@ pub extern fn rust_eh_personality() {
 #[allow(non_snake_case)]
 #[no_mangle]
 extern "C" fn _Unwind_Resume(arg: usize) -> ! {
-  crate::unwind::unwind_resume(arg)
+  unwind::unwind_resume(arg)
 }

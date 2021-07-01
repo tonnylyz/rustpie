@@ -13,13 +13,11 @@ SECTIONS
     . = ALIGN(4096);
     .data : {
         *(.data*)
-        *(.got)
     }
     . = ALIGN(4096);
     .bss : {
         *(.bss*)
     }
-    /DISCARD/ : {
-        *(.eh_frame*)
-    }
+
+    ELF_IMAGE = 0x80000000;
 }

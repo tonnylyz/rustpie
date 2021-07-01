@@ -1,14 +1,16 @@
 use alloc::collections::BTreeMap;
 use alloc::sync::Arc;
 use alloc::vec::Vec;
+use core::mem::size_of;
 
 use spin::Mutex;
 
 use crate::arch::PageTable;
 use crate::lib::bitmap::BitMap;
-use crate::lib::event::Event;
-use crate::mm::page_table::PageTableTrait;
-use core::mem::size_of;
+use crate::mm::page_table::{PageTableTrait, EntryAttribute, PageTableEntryAttrTrait};
+use crate::round_up;
+use common::{PAGE_SIZE, CONFIG_ELF_IMAGE};
+use crate::lib::traits::Address;
 
 pub type Asid = u16;
 
@@ -95,6 +97,12 @@ pub fn lookup(asid: Asid) -> Option<AddressSpace> {
 pub fn load_image(elf: &'static [u8]) -> (AddressSpace, usize) {
   let a = alloc();
   let page_table = a.page_table();
+  let va_start = elf.as_ptr() as usize;
+  let len = round_up(elf.len(), PAGE_SIZE);
+  for i in (0..len).step_by(PAGE_SIZE) {
+    let pa = (va_start + i).kva2pa();
+    page_table.map(CONFIG_ELF_IMAGE + i, pa, EntryAttribute::user_readonly());
+  }
   match crate::lib::elf::load(elf, page_table) {
     Ok(entry) => {
       (a, entry)

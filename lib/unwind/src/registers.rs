@@ -13,6 +13,7 @@ macro_rules! registers {
 
         impl $struct_name {
             /// The name of a register, or `None` if the register number is unknown.
+            #[allow(dead_code)]
             pub fn register_name(register: Register) -> Option<&'static str> {
                 match register {
                     $(
@@ -62,7 +63,6 @@ registers!(Aarch64, {
     X29 = (29, "X29"),
     X30 = (30, "X30"),
     SP = (31, "SP"),
-    ELR_mode = (33, "ELR_mode"),
 });
 
 #[derive(Clone)]

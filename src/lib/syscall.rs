@@ -1,23 +1,22 @@
-use core::mem::size_of;
+use core::fmt::{Display, Formatter};
+
+use common::syscall::error::*;
 
 use SyscallOutRegisters::*;
 
 use crate::arch::{ArchPageTableEntry, PAGE_SIZE};
+use crate::current_thread;
 use crate::lib::address_space::AddressSpace;
 use crate::lib::cpu::{CoreTrait, current};
+use crate::lib::event::{Event, set_thread_exit_waiter, thread_exit_waiter};
 use crate::lib::interrupt::INTERRUPT_WAIT;
-use crate::lib::thread::Status::{TsNotRunnable, TsRunnable, TsWaitForInterrupt, TsWaitForThreadExit};
+use crate::lib::thread::Status::{TsRunnable, TsWaitForInterrupt, TsWaitForThreadExit};
+use crate::lib::thread::Thread;
 use crate::lib::traits::*;
 use crate::mm::page_table::{Entry, PageTableEntryAttrTrait, PageTableTrait};
 use crate::util::round_down;
 
-use core::fmt::{Display, Formatter};
-use crate::current_thread;
-use crate::lib::thread::Thread;
-
 pub type Error = usize;
-use common::syscall::error::*;
-use crate::lib::event::{Event, set_thread_exit_waiter, thread_exit_waiter};
 
 impl core::convert::From<crate::mm::page_pool::Error> for Error {
   fn from(e: crate::mm::page_pool::Error) -> Self {
@@ -206,7 +205,7 @@ impl SyscallTrait for Syscall {
               Self::thread_yield()
             }
             Err(super::interrupt::Error::AlreadyWaiting) => {
-              INTERRUPT_WAIT.remove(i);
+              let _ = INTERRUPT_WAIT.remove(i);
               Ok(Unit)
             }
             _ => {
@@ -374,7 +373,6 @@ impl SyscallTrait for Syscall {
   }
 
   fn server_register(server_id: usize) -> SyscallResult {
-    use common::server::*;
     let t = current().running_thread().ok_or(ERROR_INTERNAL)?;
     super::server::set(server_id, t.tid());
     Ok(Unit)

@@ -1,6 +1,4 @@
-use alloc::rc::Rc;
 use core::panic::PanicInfo;
-use spin::Once;
 
 use crate::lib::cpu::CoreTrait;
 use crate::lib::traits::*;
@@ -118,7 +116,7 @@ fn backtrace() {
 }
 
 #[panic_handler]
-pub fn panic_entry_point(info: &PanicInfo) -> ! {
+pub fn panic_handler(info: &PanicInfo) -> ! {
   if let Some(message) = info.message() {
     error!("PANIC: {}", message);
   }
@@ -129,7 +127,7 @@ pub fn panic_entry_point(info: &PanicInfo) -> ! {
   backtrace();
   info!("backtrace done");
 
-  match crate::unwind::start_unwinding(5) {
+  match unwind::start_unwinding(5) {
     Ok(_) => {
       warn!("BUG: start_unwinding() returned an Ok() value, which is unexpected because it means no unwinding actually occurred.");
     }

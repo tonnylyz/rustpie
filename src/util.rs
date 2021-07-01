@@ -1,10 +1,10 @@
 use spin::barrier::Barrier;
 
-use crate::board::BOARD_CORE_NUMBER;
 use crate::arch::CoreId;
-use crate::lib::traits::ArchTrait;
+use crate::board::BOARD_CORE_NUMBER;
 use crate::lib::cpu::{Core, CoreTrait};
 use crate::lib::thread::Thread;
+use crate::lib::traits::ArchTrait;
 
 static CORES_BARRIER: spin::Barrier = Barrier::new(BOARD_CORE_NUMBER);
 

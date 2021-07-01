@@ -2,6 +2,8 @@
 #![no_main]
 #![feature(format_args_nl)]
 #![feature(const_btree_new)]
+#![feature(allocator_api)]
+#![feature(try_reserve)]
 
 #[macro_use]
 extern crate alloc;

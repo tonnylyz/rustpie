@@ -1,6 +1,8 @@
 use alloc::collections::BTreeMap;
-use crate::lib::thread::Tid;
+
 use spin::Mutex;
+
+use crate::lib::thread::Tid;
 
 static SERVER_MAP: Mutex<BTreeMap<usize, Tid>> = Mutex::new(BTreeMap::new());
 

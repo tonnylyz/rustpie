@@ -1,3 +1,12 @@
+#![no_std]
+#![feature(global_asm)]
+#![feature(trait_alias)]
+#![feature(core_intrinsics)]
+
+extern crate alloc;
+#[macro_use]
+extern crate log;
+
 use alloc::boxed::Box;
 
 use fallible_iterator::FallibleIterator;
@@ -10,8 +19,7 @@ use gimli::{
   UninitializedUnwindContext,
   UnwindSection,
   UnwindTableRow,
-  read::RegisterRule,
-  SectionId::EhFrame
+  read::RegisterRule
 };
 
 use registers::{
@@ -118,7 +126,7 @@ impl FallibleIterator for StackFrameIter {
     let (eh_frame_sec, base_addrs) = get_eh_frame_info();
     // info!("{:#X?}", base_addrs);
     let mut cfa_adjustment = None;
-    let mut this_frame_is_exception_handler = false;
+    let this_frame_is_exception_handler = false;
     let row_ref = UnwindRowReference { caller, eh_frame_sec, base_addrs };
     let (cfa, frame) = row_ref.with_unwind_info(|fde, row| {
       let cfa = match *row.cfa() {
@@ -364,12 +372,12 @@ fn get_eh_frame_info() -> (&'static [u8], BaseAddresses) {
   let eh_frame = ehf.start;
   let eh_frame_hdr = elf::section_by_name(".eh_frame_hdr").unwrap().start;
   let text = elf::section_by_name(".text").unwrap().start;
-  let got = elf::section_by_name(".got").unwrap().start;
+  // let got = elf::section_by_name(".got").unwrap().start;
   let base_addrs = BaseAddresses::default()
     .set_eh_frame_hdr(eh_frame_hdr as u64)
     .set_eh_frame(eh_frame as u64)
-    .set_text(text as u64)
-    .set_got(got as u64);
+    .set_text(text as u64);
+    // .set_got(got as u64);
 
   (unsafe { core::slice::from_raw_parts(
     ehf.start as usize as *const u8,
@@ -420,14 +428,14 @@ pub fn start_unwinding(stack_frames_to_skip: usize) -> Result<(), &'static str> 
 fn continue_unwinding(unwinding_context_ptr: *mut UnwindingContext) -> Result<(), &'static str> {
   let stack_frame_iter = unsafe { &mut (*unwinding_context_ptr).stack_frame_iter };
 
-  trace!("continue_unwinding(): stack_frame_iter: {:#X?}", stack_frame_iter);
+  trace!("continue_unwinding(): stack_frame_iter: {:X?}", stack_frame_iter);
 
   let (mut regs, landing_pad_address) = if let Some(frame) = stack_frame_iter.next().map_err(|e| {
     error!("continue_unwinding: error getting next stack frame in the call stack: {}", e);
     "continue_unwinding: error getting next stack frame in the call stack"
   })? {
     {
-      info!("Unwinding StackFrame: {:#X?}", frame);
+      info!("Unwinding StackFrame: {:X?}", frame);
       // info!("  Regs: {:#X?}", stack_frame_iter.registers);
     }
 
@@ -468,7 +476,7 @@ fn continue_unwinding(unwinding_context_ptr: *mut UnwindingContext) -> Result<()
         };
 
 
-        info!("Found call site entry for address {:#X}: {:#X?}", frame.call_site_address, entry);
+        info!("Found call site entry for address {:X}: {:X?}", frame.call_site_address, entry);
         (stack_frame_iter.registers.clone(), entry.landing_pad_address())
       } else {
         error!("  BUG: couldn't find LSDA section (.gcc_except_table) for LSDA address: {:#X}", lsda);
@@ -492,7 +500,7 @@ fn continue_unwinding(unwinding_context_ptr: *mut UnwindingContext) -> Result<()
     }
   };
 
-  // Exception/interrupt handlers appear to have no real cleanup routines, despite having an LSDA entry. 
+  // Exception/interrupt handlers appear to have no real cleanup routines, despite having an LSDA entry.
   // Thus, we skip unwinding an exception handler frame because its landing pad will point to an invalid instruction (usually `ud2`).
   if stack_frame_iter.last_frame_was_exception_handler {
     let landing_pad_value: u16 = unsafe { *(landing_pad_address as *const u16) };
@@ -504,9 +512,9 @@ fn continue_unwinding(unwinding_context_ptr: *mut UnwindingContext) -> Result<()
   }
 
   unsafe {
-    // brk #1
-    if (landing_pad_address as usize as *const u32).read() == 0xd4_20_00_20 {
-      error!("landing to {:#X} is `brk #1`", landing_pad_address);
+    // brk #?
+    if (landing_pad_address as usize as *const u32).read() & 0xFF_E0_00_00 == 0xd4_20_00_00 {
+      error!("landing to {:X} is `brk #?`", landing_pad_address);
       return continue_unwinding(unwinding_context_ptr);
     }
   }
@@ -515,7 +523,7 @@ fn continue_unwinding(unwinding_context_ptr: *mut UnwindingContext) -> Result<()
 
   info!("Jumping to landing pad (cleanup function) at {:#X}", landing_pad_address);
   // Once the unwinding cleanup function is done, it will call _Unwind_Resume (technically, it jumps to it),
-  // and pass the value in the landing registers' RAX register as the argument to _Unwind_Resume. 
+  // and pass the value in the landing registers' RAX register as the argument to _Unwind_Resume.
   // So, whatever we put into RAX in the landing regs will be placed into the first arg (RDI) in _Unwind_Resume.
   // This is arch-specific; for x86_64 the transfer is from RAX -> RDI, for ARM/AARCH64, the transfer is from R0 -> R1 or X0 -> X1.
   // See this for more mappings: <https://github.com/rust-lang/rust/blob/master/src/libpanic_unwind/gcc.rs#L102>

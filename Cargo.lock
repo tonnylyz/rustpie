@@ -129,14 +129,13 @@ dependencies = [
  "cfg-if",
  "common",
  "cortex-a",
- "fallible-iterator",
- "gimli",
  "log",
  "register 1.0.2",
  "riscv",
  "rlibc",
  "spin 0.9.0",
  "static_assertions",
+ "unwind",
  "xmas-elf",
 ]
 
@@ -184,6 +183,16 @@ name = "tock-registers"
 version = "0.6.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "f521a79accce68c417c9c77ce22108056b626126da1932f7e2e9b5bbffee0cea"
+
+[[package]]
+name = "unwind"
+version = "0.1.0"
+dependencies = [
+ "fallible-iterator",
+ "gimli",
+ "log",
+ "xmas-elf",
+]
 
 [[package]]
 name = "xmas-elf"

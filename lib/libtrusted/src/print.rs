@@ -33,6 +33,14 @@ fn panic_handler(info: &core::panic::PanicInfo) -> ! {
   } else {
     println!("[TRUSTED][panic] t{} no message", get_tid());
   }
+  match unwind::start_unwinding(5) {
+    Ok(_) => {
+      println!("BUG: start_unwinding() returned an Ok() value, which is unexpected because it means no unwinding actually occurred.");
+    }
+    Err(e) => {
+      println!("Task was unable to start unwinding procedure, error: {}.", e);
+    }
+  }
   loop {}
 }
 
@@ -45,7 +53,6 @@ pub extern fn rust_eh_personality() {
 
 #[allow(non_snake_case)]
 #[no_mangle]
-pub extern fn _Unwind_Resume() {
-  println!("_Unwind_Resume");
-  loop {}
+extern "C" fn _Unwind_Resume(arg: usize) -> ! {
+  unwind::unwind_resume(arg)
 }

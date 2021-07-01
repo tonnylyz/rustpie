@@ -4,8 +4,8 @@ use spin::Mutex;
 
 use crate::driver::Interrupt;
 use crate::lib::cpu::CoreTrait;
-use crate::lib::thread::Thread;
 use crate::lib::thread::Status::{TsRunnable, TsWaitForInterrupt};
+use crate::lib::thread::Thread;
 
 pub trait InterruptController {
   fn init(&self);
@@ -67,13 +67,13 @@ impl InterruptWait {
 pub fn interrupt(int: Interrupt) {
   trace!("external {}", int);
   if let Some(t) = INTERRUPT_WAIT.get(int) {
-    INTERRUPT_WAIT.remove(int);
+    let _ = INTERRUPT_WAIT.remove(int);
     assert_eq!(t.status(), TsWaitForInterrupt);
     t.set_status(TsRunnable);
     crate::driver::timer::next();
     crate::current_cpu().schedule();
   } else {
-    INTERRUPT_WAIT.add_happened(int);
+    let _ = INTERRUPT_WAIT.add_happened(int);
   }
 }
 

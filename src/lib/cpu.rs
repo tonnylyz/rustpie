@@ -4,11 +4,11 @@ use crate::arch::{AddressSpaceId, ContextFrame, PAGE_SIZE};
 use crate::board::BOARD_CORE_NUMBER;
 use crate::core_id;
 use crate::lib::address_space::AddressSpace;
-use crate::mm::page_table::PageTableTrait;
 use crate::lib::scheduler::{RoundRobinScheduler, SchedulerTrait};
 use crate::lib::thread::Thread;
-use crate::mm::PageFrame;
 use crate::lib::traits::*;
+use crate::mm::page_table::PageTableTrait;
+use crate::mm::PageFrame;
 
 pub trait CoreTrait {
   fn context(&self) -> &ContextFrame;

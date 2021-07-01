@@ -9,8 +9,6 @@
 #![feature(const_btree_new)]
 #![feature(const_generics)]
 #![feature(const_evaluatable_checked)]
-#![feature(trait_alias)]
-#![feature(core_intrinsics)]
 
 #[macro_use]
 extern crate alloc;
@@ -54,9 +52,8 @@ mod mm;
 mod panic;
 mod util;
 mod logger;
-mod unwind;
 
-use arch::{CoreId, ContextFrame};
+use arch::ContextFrame;
 use lib::traits::*;
 use lib::cpu::CoreTrait;
 use lib::interrupt::InterruptController;
@@ -64,8 +61,34 @@ use mm::page_table::PageTableTrait;
 use mm::page_table::PageTableEntryAttrTrait;
 
 pub use util::*;
-use crate::unwind::elf::section_by_name;
-use alloc::vec::Vec;
+
+#[macro_use]
+mod macros {
+  #[repr(C)] // guarantee 'bytes' comes after '_align'
+  pub struct AlignedAs<Align, Bytes: ?Sized> {
+    pub _align: [Align; 0],
+    pub bytes: Bytes,
+  }
+
+macro_rules! include_bytes_align_as {
+  ($align_ty:ty, $path:literal) => {
+    {  // const block expression to encapsulate the static
+      use $crate::macros::AlignedAs;
+
+      // this assignment is made possible by CoerceUnsized
+      static ALIGNED: &AlignedAs::<$align_ty, [u8]> = &AlignedAs {
+        _align: [],
+        bytes: *include_bytes!($path),
+      };
+
+      &ALIGNED.bytes
+    }
+  };
+}
+}
+
+#[repr(align(4096))]
+struct AlignPage;
 
 #[no_mangle]
 pub unsafe fn main(core_id: arch::CoreId) -> ! {
@@ -73,7 +96,7 @@ pub unsafe fn main(core_id: arch::CoreId) -> ! {
   if core_id == 0 {
     board::init();
     mm::heap::init();
-    logger::init();
+    let _ = logger::init();
     info!("heap init ok");
     mm::page_pool::init();
     info!("page pool init ok");
@@ -93,20 +116,21 @@ pub unsafe fn main(core_id: arch::CoreId) -> ! {
   if core_id == 0 {
     #[cfg(target_arch = "aarch64")]
       #[cfg(not(feature = "user_release"))]
-      let bin = include_bytes!("../trusted/target/aarch64/debug/trusted");
+      let bin = include_bytes_align_as!(AlignPage, "../trusted/target/aarch64/debug/trusted");
 
     #[cfg(target_arch = "aarch64")]
       #[cfg(feature = "user_release")]
-      let bin = include_bytes!("../trusted/target/aarch64/release/trusted");
+      let bin = include_bytes_align_as!(AlignPage, "../trusted/target/aarch64/release/trusted");
 
     #[cfg(target_arch = "riscv64")]
       #[cfg(not(feature = "user_release"))]
-      let bin = include_bytes!("../trusted/target/riscv64/debug/trusted");
+      let bin = include_bytes_align_as!(AlignPage, "../trusted/target/riscv64/debug/trusted");
 
     #[cfg(target_arch = "riscv64")]
       #[cfg(feature = "user_release")]
-      let bin = include_bytes!("../trusted/target/riscv64/release/trusted");
+      let bin = include_bytes_align_as!(AlignPage, "../trusted/target/riscv64/release/trusted");
 
+    info!("embedded trusted {:x}", bin.as_ptr() as usize);
     let (a, entry) = lib::address_space::load_image(bin);
     info!("load_image ok");
     const INIT_ARG: usize = 3;

@@ -1,6 +1,7 @@
 use alloc::collections::BTreeMap;
 use alloc::sync::Arc;
 use alloc::vec::Vec;
+use core::mem::size_of;
 
 use spin::Mutex;
 
@@ -8,9 +9,7 @@ use crate::arch::{ContextFrame, CoreId};
 use crate::lib::address_space::AddressSpace;
 use crate::lib::bitmap::BitMap;
 use crate::lib::cpu::CoreTrait;
-use core::mem::size_of;
 use crate::lib::traits::*;
-use crate::lib::thread::Status::{TsRunnable, TsNotRunnable};
 
 pub type Tid = u16;
 
@@ -139,11 +138,11 @@ impl Thread {
   }
 
   pub fn wake(&self) {
-    self.set_status(TsRunnable);
+    self.set_status(Status::TsRunnable);
   }
 
   pub fn sleep(&self) {
-    self.set_status(TsNotRunnable);
+    self.set_status(Status::TsNotRunnable);
   }
 
   pub fn receivable(&self, sender: &Thread) -> bool {
@@ -151,7 +150,7 @@ impl Thread {
       peer.tid() == sender.tid()
     } else {
       true
-    })&& self.status() == TsNotRunnable
+    })&& self.status() == Status::TsNotRunnable
   }
 
 }
