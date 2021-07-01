@@ -226,12 +226,14 @@ impl<D: Disk> Scheme for FileScheme<D> {
                             }
                         }
 
-                        Box::new(DirResource::new(path.to_string(), node.0, Some(data), uid))
+                        Box::try_new(DirResource::new(path.to_string(), node.0, Some(data), uid))
+                          .map(|b| b as Box<dyn Resource<D>>).map_err(|_| Error::new(ENOMEM))?
                     } else if flags & O_WRONLY == O_WRONLY {
                         // println!("{:X} & {:X}: EISDIR {}", flags, O_DIRECTORY, path);
                         return Err(Error::new(EISDIR));
                     } else {
-                        Box::new(DirResource::new(path.to_string(), node.0, None, uid))
+                        Box::try_new(DirResource::new(path.to_string(), node.0, None, uid))
+                          .map(|b| b as Box<dyn Resource<D>>).map_err(|_| Error::new(ENOMEM))?
                     }
                 } else if node.1.is_symlink()
                     && !(flags & O_STAT == O_STAT && flags & O_NOFOLLOW == O_NOFOLLOW)
@@ -273,7 +275,8 @@ impl<D: Disk> Scheme for FileScheme<D> {
                         fs.node_set_len(node.0, 0)?;
                     }
 
-                    Box::new(FileResource::new(path.to_string(), node.0, flags, uid))
+                    Box::try_new(FileResource::new(path.to_string(), node.0, flags, uid))
+                      .map(|b| b as Box<dyn Resource<D>>).map_err(|_| Error::new(ENOMEM))?
                 }
             }
             None => {
@@ -314,9 +317,11 @@ impl<D: Disk> Scheme for FileScheme<D> {
                             fs.write_at(node.0, &node.1)?;
 
                             if dir {
-                                Box::new(DirResource::new(path.to_string(), node.0, None, uid))
+                                Box::try_new(DirResource::new(path.to_string(), node.0, None, uid))
+                                  .map(|b| b as Box<dyn Resource<D>>).map_err(|_| Error::new(ENOMEM))?
                             } else {
-                                Box::new(FileResource::new(path.to_string(), node.0, flags, uid))
+                                Box::try_new(FileResource::new(path.to_string(), node.0, flags, uid))
+                                  .map(|b| b as Box<dyn Resource<D>>).map_err(|_| Error::new(ENOMEM))?
                             }
                         } else {
                             return Err(Error::new(EPERM));

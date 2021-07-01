@@ -52,13 +52,13 @@ impl<D: Disk> Resource<D> for DirResource {
     }
 
     fn dup(&self) -> Result<Box<dyn Resource<D>>> {
-        Ok(Box::new(DirResource {
+        Box::try_new(DirResource {
             path: self.path.clone(),
             block: self.block,
             data: self.data.clone(),
             seek: self.seek,
             uid: self.uid,
-        }))
+        }).map(|b| b as Box<dyn Resource<D>>).map_err(|_| Error::new(ENOMEM))
     }
 
     fn set_path(&mut self, path: &str) {
@@ -281,14 +281,14 @@ impl<D: Disk> Resource<D> for FileResource {
     }
 
     fn dup(&self) -> Result<Box<dyn Resource<D>>> {
-        Ok(Box::new(FileResource {
+        Box::try_new(FileResource {
             path: self.path.clone(),
             block: self.block,
             flags: self.flags,
             seek: self.seek,
             uid: self.uid,
             fmaps: BTreeMap::new(),
-        }))
+        }).map(|b| b as Box<dyn Resource<D>>).map_err(|_| Error::new(ENOMEM))
     }
 
     fn set_path(&mut self, path: &str) {

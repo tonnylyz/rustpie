@@ -3,6 +3,7 @@ use core::cmp::min;
 use alloc::vec::Vec;
 
 use redox::*;
+use core::mem::size_of;
 
 /// A file system
 pub struct FileSystem<D: Disk> {
@@ -152,6 +153,7 @@ impl<D: Disk> FileSystem<D> {
         for extent in parent.1.extents.iter() {
             for (block, size) in extent.blocks() {
                 if size >= BLOCK_SIZE {
+                    children.try_reserve(size_of::<(u64, Node)>()).map_err(|_| Error::new(ENOMEM))?;
                     children.push(self.node(block)?);
                 }
             }
