@@ -8,9 +8,10 @@ use crate::arch::{ArchPageTableEntry, PAGE_SIZE};
 use crate::current_thread;
 use crate::lib::address_space::AddressSpace;
 use crate::lib::cpu::{CoreTrait, current};
-use crate::lib::event::{Event, set_thread_exit_waiter, thread_exit_waiter};
-use crate::lib::interrupt::INTERRUPT_WAIT;
-use crate::lib::thread::Status::{TsRunnable, TsWaitForInterrupt, TsWaitForThreadExit};
+use crate::lib::event::{Event, thread_exit_sem, thread_exit_signal};
+use crate::lib::interrupt::INT_SEM;
+use crate::lib::semaphore::SemaphoreWaitResult;
+use crate::lib::thread::Status::TsRunnable;
 use crate::lib::thread::Thread;
 use crate::lib::traits::*;
 use crate::mm::page_table::{Entry, PageTableEntryAttrTrait, PageTableTrait};
@@ -121,15 +122,6 @@ fn lookup_as(asid: u16) -> Result<AddressSpace, Error> {
   }
 }
 
-fn thread_waiter_wake(thread_exited: &Thread) {
-  if let Some(waiter) = thread_exit_waiter() {
-    let mut ctx = waiter.context();
-    ctx.set_syscall_result(&SyscallResult::Ok(SyscallOutRegisters::Single(thread_exited.tid() as usize)));
-    waiter.set_context(ctx);
-    waiter.set_status(TsRunnable);
-  }
-}
-
 impl SyscallTrait for Syscall {
   fn null() -> SyscallResult {
     Ok(Unit)
@@ -174,7 +166,6 @@ impl SyscallTrait for Syscall {
   fn thread_destroy(tid: u16) -> SyscallResult {
     let current_thread = crate::current_thread();
     if tid == 0 {
-      thread_waiter_wake(&current_thread);
       current_thread.destroy();
       Syscall::thread_yield()
     } else {
@@ -183,7 +174,6 @@ impl SyscallTrait for Syscall {
         Some(t) => {
           if t.is_child_of(current_thread.tid()) {
             // TODO: check if destroy safe for inter-processor
-            thread_waiter_wake(&t);
             t.destroy();
             Ok(Unit)
           } else {
@@ -199,23 +189,13 @@ impl SyscallTrait for Syscall {
     if let Some(e) = Event::from(event_type, event_num) {
       match e {
         Event::Interrupt(i) => {
-          match INTERRUPT_WAIT.add_yield(t.clone(), i) {
-            Ok(_) => {
-              t.set_status(TsWaitForInterrupt);
-              Self::thread_yield()
-            }
-            Err(super::interrupt::Error::AlreadyWaiting) => {
-              let _ = INTERRUPT_WAIT.remove(i);
-              Ok(Unit)
-            }
-            _ => {
-              Err(ERROR_INTERNAL)
-            }
+          match INT_SEM.wait(t.clone(), i) {
+            SemaphoreWaitResult::Acquired => Ok(Unit),
+            SemaphoreWaitResult::Enqueued => Self::thread_yield(),
           }
         }
         Event::ThreadExit => {
-          set_thread_exit_waiter(t.clone());
-          t.set_status(TsWaitForThreadExit);
+          thread_exit_sem().wait(t.clone());
           Self::thread_yield()
         }
       }

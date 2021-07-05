@@ -17,13 +17,13 @@ pub fn spawn<P: AsRef<str>>(cmd: P) -> Result<(u16, u16), &'static str> {
   let mut iter = cmd.as_ref().trim().split_ascii_whitespace();
   if let Some(bin) = iter.next() {
     let asid = microcall::address_space_alloc().map_err(|e| "address_space_alloc failed")?;
-    let mut f = File::open(bin).map_err(|e| "open file failed")?;
-    let file_size = f.seek(SeekFrom::End(0)).map_err(|e| "seek end failed")? as usize;
+    let mut f = File::open(bin).map_err(|e| e.text())?;
+    let file_size = f.seek(SeekFrom::End(0)).map_err(|e| e.text())? as usize;
     let page_num = round_up(file_size, PAGE_SIZE) / PAGE_SIZE;
     let buf = crate::mm::valloc(page_num);
     let buf = unsafe { core::slice::from_raw_parts_mut(buf, file_size) };
-    f.seek(SeekFrom::Start(0)).map_err(|e| "seek start failed")? as usize;
-    let read = f.read(buf).map_err(|e| "read failed")?;
+    f.seek(SeekFrom::Start(0)).map_err(|e| e.text())? as usize;
+    let read = f.read(buf).map_err(|e| e.text())?;
     // println!("read {} byte", read);
     // for i in 0..read {
     //   print!("{:02x} ", buf[i]);

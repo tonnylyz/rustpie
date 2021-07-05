@@ -1,43 +1,37 @@
+use alloc::collections::VecDeque;
+
+use spin::{Mutex, Once};
+
 use crate::lib::thread::Thread;
 
-#[derive(Copy, Clone)]
 pub struct RoundRobinScheduler {
-  counter: usize,
-}
-
-pub trait SchedulerTrait {
-  fn schedule(&mut self) -> Option<Thread>;
-}
-
-impl SchedulerTrait for RoundRobinScheduler {
-  fn schedule(&mut self) -> Option<Thread> {
-    self.counter += 1;
-    let list = crate::lib::thread::list();
-    // trace!("list {:#x?}", list);
-    for i in (self.counter % list.len())..list.len() {
-      let t = list[i].clone();
-      if t.runnable() {
-        if t.assign_to_current_core() {
-          return Some(t.clone());
-        }
-      }
-    }
-    for i in 0..list.len() {
-      let t = list[i].clone();
-      if t.runnable() {
-        if t.assign_to_current_core() {
-          return Some(t.clone());
-        }
-      }
-    }
-    None
-  }
+  inner: Mutex<VecDeque<Thread>>,
 }
 
 impl RoundRobinScheduler {
-  pub const fn new() -> Self {
+  fn new() -> Self {
     RoundRobinScheduler {
-      counter: 0
+      inner: Mutex::new(VecDeque::new()),
     }
+  }
+
+  pub fn add(&self, thread: Thread) {
+    let mut inner = self.inner.lock();
+    inner.push_back(thread);
+  }
+
+  pub fn pop(&self) -> Option<Thread> {
+    let mut inner = self.inner.lock();
+    inner.pop_front()
+  }
+}
+
+static SCHEDULER: Once<RoundRobinScheduler> = Once::new();
+
+pub fn scheduler() -> &'static RoundRobinScheduler {
+  if let Some(s) = SCHEDULER.get() {
+    s
+  } else {
+    SCHEDULER.call_once(|| RoundRobinScheduler::new())
   }
 }

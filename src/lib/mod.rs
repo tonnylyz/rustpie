@@ -15,3 +15,4 @@ pub mod mmio;
 pub mod timer;
 pub mod exception;
 pub mod server;
+pub mod semaphore;

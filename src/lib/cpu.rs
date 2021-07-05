@@ -4,7 +4,7 @@ use crate::arch::{AddressSpaceId, ContextFrame, PAGE_SIZE};
 use crate::board::BOARD_CORE_NUMBER;
 use crate::core_id;
 use crate::lib::address_space::AddressSpace;
-use crate::lib::scheduler::{RoundRobinScheduler, SchedulerTrait};
+use crate::lib::scheduler::scheduler;
 use crate::lib::thread::Thread;
 use crate::lib::traits::*;
 use crate::mm::page_table::PageTableTrait;
@@ -36,7 +36,6 @@ pub struct Core {
   context: Option<*mut ContextFrame>,
   // pointer points at stack
   running_thread: Option<Thread>,
-  scheduler: RoundRobinScheduler,
   idle_thread: Once<Thread>,
   idle_stack: Once<PageFrame>,
   address_space: Option<AddressSpace>,
@@ -50,7 +49,6 @@ unsafe impl core::marker::Sync for Core {}
 const CORE: Core = Core {
   context: None,
   running_thread: None,
-  scheduler: RoundRobinScheduler::new(),
   idle_thread: Once::new(),
   idle_stack: Once::new(),
   address_space: None,
@@ -88,15 +86,10 @@ impl CoreTrait for Core {
   }
 
   fn schedule(&mut self) {
-    let t = self.scheduler.schedule();
-    match t {
-      None => {
-        self.run(self.idle_thread())
-      }
-      Some(t) => {
-        trace!("core {} run t{}", core_id(), t.tid());
-        self.run(t);
-      }
+    if let Some(t) = scheduler().pop() {
+      self.run(t);
+    } else {
+      self.run(self.idle_thread());
     }
   }
 
@@ -118,6 +111,12 @@ impl CoreTrait for Core {
   fn run(&mut self, t: Thread) {
     if let Some(prev) = self.running_thread() {
       // Note: normal switch
+
+      // add back to scheduler queue
+      if prev.runnable() {
+        scheduler().add(prev.clone());
+      }
+
       prev.set_context(*self.context());
 
       *self.context_mut() = t.context();

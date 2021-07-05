@@ -1,7 +1,10 @@
 use common::event::*;
-use spin::Mutex;
+use spin::{Mutex, Once};
 
-use crate::lib::thread::Thread;
+use crate::lib::semaphore::Semaphore;
+use crate::lib::syscall::{SyscallOutRegisters, SyscallResult};
+use crate::lib::thread::{Thread, Tid};
+use crate::lib::traits::ContextFrameTrait;
 
 #[derive(Debug, Clone, Copy, PartialEq)]
 pub enum Event {
@@ -19,14 +22,25 @@ impl Event {
   }
 }
 
-static THREAD_EXIT_WAITER: Mutex<Option<Thread>> = Mutex::new(None);
+static THREAD_EXIT_SEM: Once<Semaphore> = Once::new();
 
-pub fn set_thread_exit_waiter(thread: Thread) {
-  let mut waiter = THREAD_EXIT_WAITER.lock();
-  *waiter = Some(thread.clone());
+pub fn thread_exit_sem() -> &'static Semaphore {
+  if let Some(s) = THREAD_EXIT_SEM.get() {
+    s
+  } else {
+    THREAD_EXIT_SEM.call_once(|| Semaphore::new())
+  }
 }
 
-pub fn thread_exit_waiter() -> Option<Thread> {
-  let waiter = THREAD_EXIT_WAITER.lock();
-  waiter.clone()
+pub fn thread_exit_signal(tid_exited: Tid) {
+  match thread_exit_sem().try_signal() {
+    None => {}
+    Some(waiter) => {
+      let mut ctx = waiter.context();
+      ctx.set_syscall_result(&SyscallResult::Ok(SyscallOutRegisters::Single(tid_exited as usize)));
+      waiter.set_context(ctx);
+      waiter.wake();
+    }
+  }
 }
+

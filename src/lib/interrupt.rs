@@ -4,7 +4,8 @@ use spin::Mutex;
 
 use crate::driver::Interrupt;
 use crate::lib::cpu::CoreTrait;
-use crate::lib::thread::Status::{TsRunnable, TsWaitForInterrupt};
+use crate::lib::semaphore::{Semaphore, SemaphoreWaitResult};
+use crate::lib::thread::Status::TsRunnable;
 use crate::lib::thread::Thread;
 
 pub trait InterruptController {
@@ -17,63 +18,37 @@ pub trait InterruptController {
   fn finish(&self, int: Interrupt);
 }
 
-pub struct InterruptWait(Mutex<BTreeMap<Interrupt, Option<Thread>>>);
+pub struct InterruptSemaphore(Mutex<BTreeMap<Interrupt, Semaphore>>);
 
-pub static INTERRUPT_WAIT: InterruptWait = InterruptWait(Mutex::new(BTreeMap::new()));
+pub static INT_SEM: InterruptSemaphore = InterruptSemaphore(Mutex::new(BTreeMap::new()));
 
-pub enum Error {
-  AlreadyWaiting,
-  ThreadNotWaiting,
-}
-
-impl InterruptWait {
-  pub fn add_yield(&self, t: Thread, i: Interrupt) -> Result<(), Error> {
+impl InterruptSemaphore {
+  pub fn wait(&self, t: Thread, i: Interrupt) -> SemaphoreWaitResult {
     let mut map = self.0.lock();
-    if let Some(_) = map.get(&i) {
-      Err(Error::AlreadyWaiting)
+    if let Some(sem) = map.get(&i) {
+      sem.wait(t)
     } else {
-      map.insert(i, Some(t.clone()));
-      Ok(())
+      let sem = Semaphore::new();
+      sem.wait(t);
+      map.insert(i, sem);
+      SemaphoreWaitResult::Enqueued
     }
   }
 
-  pub fn add_happened(&self, i: Interrupt) -> Result<(), Error> {
+  pub fn signal(&self, i: Interrupt) {
     let mut map = self.0.lock();
-    if let Some(_) = map.get(&i) {
-      Err(Error::AlreadyWaiting)
+    if let Some(sem) = map.get(&i) {
+      sem.signal();
     } else {
-      map.insert(i, None);
-      Ok(())
-    }
-  }
-
-  pub fn get(&self, i: Interrupt) -> Option<Thread> {
-    let map = self.0.lock();
-    match map.get(&i) {
-      None => { None }
-      Some(w) => { w.clone() }
-    }
-  }
-
-  pub fn remove(&self, i: Interrupt) -> Result<(), Error> {
-    let mut map = self.0.lock();
-    match map.remove(&i) {
-      None => Err(Error::ThreadNotWaiting),
-      Some(_) => Ok(()),
+      let sem = Semaphore::new();
+      sem.signal();
+      map.insert(i, sem);
     }
   }
 }
 
 pub fn interrupt(int: Interrupt) {
-  trace!("external {}", int);
-  if let Some(t) = INTERRUPT_WAIT.get(int) {
-    let _ = INTERRUPT_WAIT.remove(int);
-    assert_eq!(t.status(), TsWaitForInterrupt);
-    t.set_status(TsRunnable);
-    crate::driver::timer::next();
-    crate::current_cpu().schedule();
-  } else {
-    let _ = INTERRUPT_WAIT.add_happened(int);
-  }
+  // info!("external {}", int);
+  INT_SEM.signal(int);
 }
 

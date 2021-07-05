@@ -9,6 +9,8 @@ use crate::arch::{ContextFrame, CoreId};
 use crate::lib::address_space::AddressSpace;
 use crate::lib::bitmap::BitMap;
 use crate::lib::cpu::CoreTrait;
+use crate::lib::event::thread_exit_signal;
+use crate::lib::scheduler::scheduler;
 use crate::lib::traits::*;
 
 pub type Tid = u16;
@@ -24,8 +26,6 @@ pub enum Status {
   TsRunnable = 1,
   TsNotRunnable = 2,
   TsIdle = 3,
-  TsWaitForInterrupt = 4,
-  TsWaitForThreadExit = 5,
 }
 
 #[derive(Debug)]
@@ -35,7 +35,6 @@ struct Inner {
   t: Type,
   status: Mutex<Status>,
   context_frame: Mutex<ContextFrame>,
-  running_core: Mutex<Option<CoreId>>,
   itc_peer: Mutex<Option<Thread>>,
 }
 
@@ -73,6 +72,9 @@ impl Thread {
   pub fn set_status(&self, status: Status) {
     let mut lock = self.0.status.lock();
     *lock = status;
+    if status == Status::TsRunnable {
+      scheduler().add(self.clone());
+    }
   }
 
   pub fn runnable(&self) -> bool {
@@ -102,23 +104,13 @@ impl Thread {
     (*lock).clone()
   }
 
-  pub fn assign_to_current_core(&self) -> bool {
-    let mut running_core = self.0.running_core.lock();
-    match *running_core {
-      None => {
-        *running_core = Some(crate::core_id());
-        true
-      }
-      Some(prev) => { prev == crate::core_id() }
-    }
-  }
-
   pub fn destroy(&self) {
     if let Some(t) = crate::current_cpu().running_thread() {
       if self.0.tid == t.tid() {
         crate::current_cpu().set_running_thread(None);
       }
     }
+    thread_exit_signal(self.tid());
     free(self)
   }
 
@@ -169,7 +161,6 @@ impl ThreadPool {
       t: Type::User(a),
       status: Mutex::new(Status::TsNotRunnable),
       context_frame: Mutex::new(ContextFrame::new(pc, sp, arg, false)),
-      running_core: Mutex::new(None),
       itc_peer: Mutex::new(None)
     });
     let mut map = THREAD_MAP.get().unwrap().lock();
@@ -186,7 +177,6 @@ impl ThreadPool {
       t: Type::Kernel,
       status: Mutex::new(Status::TsNotRunnable),
       context_frame: Mutex::new(ContextFrame::new(pc, sp, arg, true)),
-      running_core: Mutex::new(None),
       itc_peer: Mutex::new(None)
     });
     let mut map = THREAD_MAP.get().unwrap().lock();
@@ -243,12 +233,6 @@ pub fn free(t: &Thread) {
     Ok(_) => {}
     Err(_) => { error!("thread_pool: free: thread not found") }
   }
-}
-
-pub fn list() -> Vec<Thread> {
-  let pool = THREAD_POOL.lock();
-  let r = pool.list();
-  r
 }
 
 pub fn lookup(tid: Tid) -> Option<Thread> {
