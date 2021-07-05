@@ -43,11 +43,8 @@ pub fn server() {
         let mut msg = Message::default();
         msg.a = packet.a;
         trace!("handle packet err {:?}", Error::demux(msg.a));
-        loop {
-          let r = msg.send_to(tid);
-          if r.is_ok() {
-            break;
-          }
+        if let Err(_) = msg.send_to(tid) {
+          error!("client {} not recv", tid);
         }
       }
     }

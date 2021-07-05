@@ -414,5 +414,8 @@ pub fn syscall() {
       trace!("#{} {} t{} Err {:x?}", num, SYSCALL_NAMES[num], tid, err);
     }
   }
-  ctx.set_syscall_result(&result);
+  // TODO: schedule happened overwrite ctx's value
+  if num != SYS_ITC_RECV && num != SYS_THREAD_YIELD {
+    ctx.set_syscall_result(&result);
+  }
 }

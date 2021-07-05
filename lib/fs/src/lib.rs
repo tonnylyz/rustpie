@@ -1,5 +1,8 @@
 #![no_std]
 
+#[macro_use]
+extern crate log;
+
 use microcall::message::Message;
 use redox::*;
 use common::server::SERVER_REDOX_FS;

@@ -111,14 +111,11 @@ impl CoreTrait for Core {
   fn run(&mut self, t: Thread) {
     if let Some(prev) = self.running_thread() {
       // Note: normal switch
-
+      prev.set_context(*self.context());
       // add back to scheduler queue
       if prev.runnable() {
         scheduler().add(prev.clone());
       }
-
-      prev.set_context(*self.context());
-
       *self.context_mut() = t.context();
     } else {
       if self.has_context() {
