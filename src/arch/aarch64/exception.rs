@@ -1,7 +1,6 @@
 use cortex_a::{barrier, regs::*};
 
 use crate::arch::ContextFrame;
-use crate::core_id;
 
 global_asm!(include_str!("exception.S"));
 
@@ -35,7 +34,7 @@ unsafe extern "C" fn current_el_spx_serror(ctx: *mut ContextFrame) {
 
 #[no_mangle]
 unsafe extern "C" fn lower_aarch64_synchronous(ctx: *mut ContextFrame) {
-  let core = crate::current_cpu();
+  let core = crate::lib::cpu::cpu();
   core.set_context(ctx);
   if ESR_EL1.matches_all(ESR_EL1::EC::SVC64) {
     crate::lib::syscall::syscall();
@@ -44,10 +43,6 @@ unsafe extern "C" fn lower_aarch64_synchronous(ctx: *mut ContextFrame) {
   } else {
     let ec = ESR_EL1.read(ESR_EL1::EC);
     error!("lower_aarch64_synchronous: ec {:06b} \n{}", ec, ctx.read());
-    error!("thread t{} core{}", crate::current_thread().tid(), core_id());
-    // if let Some(t) = current().running_thread() {
-    //   info!("{:#x?}", t);
-    // }
     crate::lib::exception::handle();
   }
   core.clear_context();
@@ -56,7 +51,7 @@ unsafe extern "C" fn lower_aarch64_synchronous(ctx: *mut ContextFrame) {
 #[no_mangle]
 unsafe extern "C" fn lower_aarch64_irq(ctx: *mut ContextFrame) {
   use crate::lib::interrupt::*;
-  let core = crate::current_cpu();
+  let core = crate::lib::cpu::cpu();
   core.set_context(ctx);
   use crate::driver::{INTERRUPT_CONTROLLER, gic::INT_TIMER};
   let irq = INTERRUPT_CONTROLLER.fetch();
@@ -83,7 +78,7 @@ unsafe extern "C" fn lower_aarch64_irq(ctx: *mut ContextFrame) {
 
 #[no_mangle]
 unsafe extern "C" fn lower_aarch64_serror(ctx: *mut ContextFrame) {
-  let core = crate::current_cpu();
+  let core = crate::lib::cpu::cpu();
   core.set_context(ctx);
   crate::lib::exception::handle();
   core.clear_context();

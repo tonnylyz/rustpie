@@ -31,7 +31,7 @@ struct Process {
   pid: usize,
   parent: Option<usize>,
   asid: u16,
-  tid: usize,
+  main_tid: usize,
   status: ProcessStatus,
 }
 
@@ -52,7 +52,7 @@ impl ProcessManager {
       pid,
       parent,
       asid,
-      tid,
+      main_tid: tid,
       status: ProcessStatus::Running
     };
     let mut vec = self.list.lock();
@@ -73,7 +73,7 @@ impl ProcessManager {
   fn set_status_by_tid(&self, tid: usize, status: ProcessStatus) -> Result<(), ()> {
     let mut vec = self.list.lock();
     for p in vec.iter_mut() {
-      if p.status == ProcessStatus::Running && p.tid == tid {
+      if p.status == ProcessStatus::Running && p.main_tid == tid {
         p.status = status;
         return Ok(());
       }
@@ -81,6 +81,15 @@ impl ProcessManager {
     Err(())
   }
 
+  fn main_tid_to_asid(&self, tid: usize) -> Option<u16> {
+    let vec = self.list.lock();
+    for p in vec.iter() {
+      if p.main_tid == tid {
+        return Some(p.asid);
+      }
+    }
+    None
+  }
 }
 
 static PROCESS_MANAGER: ProcessManager = ProcessManager::new();
@@ -153,6 +162,9 @@ pub fn event_server() {
   loop {
     if let Ok(tid) = microcall::event_wait(common::event::EVENT_THREAD_EXIT, 0) {
       PROCESS_MANAGER.set_status_by_tid(tid, ProcessStatus::Exited);
+      if let Some(asid) = PROCESS_MANAGER.main_tid_to_asid(tid) {
+        microcall::address_space_destroy(asid);
+      }
     } else {
       microcall::thread_yield();
     }

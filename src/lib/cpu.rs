@@ -69,7 +69,7 @@ impl Core {
         let t = crate::lib::thread::new_kernel(
           idle_thread as usize,
           frame.kva() + PAGE_SIZE,
-          crate::core_id());
+          crate::arch::Arch::core_id());
         self.idle_stack.call_once(|| frame);
         self.idle_thread.call_once(|| t).clone()
       }
@@ -126,7 +126,7 @@ impl Core {
 }
 
 pub fn cpu() -> &'static mut Core {
-  let core_id = crate::core_id();
+  let core_id = crate::arch::Arch::core_id();
   unsafe { &mut CORES[core_id] }
 }
 

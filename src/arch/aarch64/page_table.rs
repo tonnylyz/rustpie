@@ -245,11 +245,6 @@ impl PageTableTrait for Aarch64PageTable {
     )));
   }
 
-  fn destroy(&self) {
-    // TODO: remove all frames
-  }
-
-
   fn set_user_page_table(base: usize, asid: AddressSpaceId) {
     use cortex_a::{regs::*, *};
     unsafe {

@@ -43,6 +43,7 @@ pub mod syscall {
   pub const SYS_ADDRESS_SPACE_ALLOC: usize = 10;
   pub const SYS_THREAD_ALLOC: usize = 11;
   pub const SYS_THREAD_SET_STATUS: usize = 12;
+  pub const SYS_ADDRESS_SPACE_DESTROY: usize = 13;
   pub const SYS_ITC_RECV: usize = 15;
   pub const SYS_ITC_SEND: usize = 16;
   pub const SYS_ITC_CALL: usize = 17;
@@ -56,6 +57,7 @@ pub mod syscall {
     pub const ERROR_INTERNAL: usize = 4;
     pub const ERROR_DENIED: usize = 5;
     pub const ERROR_HOLD_ON: usize = 6;
+    pub const ERROR_OOR: usize = 7;
   }
 }
 

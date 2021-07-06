@@ -187,7 +187,6 @@ pub trait PageTableTrait {
   fn lookup_user_page(&self, va: usize) -> Option<UserFrame>;
   fn remove_page(&self, va: usize) -> Result<(), Error>;
   fn recursive_map(&self, va: usize);
-  fn destroy(&self);
 
   fn set_user_page_table(base: usize, asid: AddressSpaceId);
 }

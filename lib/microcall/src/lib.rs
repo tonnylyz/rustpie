@@ -66,6 +66,10 @@ pub fn thread_set_status(tid: usize, status: usize) -> Result<(), Error> {
   syscall_2_0(SYS_THREAD_SET_STATUS, tid, status)
 }
 
+pub fn address_space_destroy(asid: u16) -> Result<(), Error> {
+  syscall_1_0(SYS_ADDRESS_SPACE_DESTROY, asid as usize)
+}
+
 pub fn itc_receive() -> Result<(usize, usize, usize, usize, usize), Error> {
   syscall_0_5(SYS_ITC_RECV)
 }

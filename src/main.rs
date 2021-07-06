@@ -7,8 +7,6 @@
 #![feature(format_args_nl)]
 #![feature(lang_items)]
 #![feature(const_btree_new)]
-#![feature(const_generics)]
-#![feature(const_evaluatable_checked)]
 
 #[macro_use]
 extern crate alloc;
@@ -59,8 +57,6 @@ use lib::interrupt::InterruptController;
 use mm::page_table::PageTableTrait;
 use mm::page_table::PageTableEntryAttrTrait;
 
-pub use util::*;
-
 #[macro_use]
 mod macros {
   #[repr(C)] // guarantee 'bytes' comes after '_align'
@@ -99,10 +95,6 @@ pub unsafe fn main(core_id: arch::CoreId) -> ! {
     info!("heap init ok");
     mm::page_pool::init();
     info!("page pool init ok");
-    lib::address_space::init();
-    info!("address space pool init ok");
-    lib::thread::init();
-    info!("thread pool init ok");
 
     board::launch_other_cores();
     info!("launched other cores");
@@ -144,7 +136,7 @@ pub unsafe fn main(core_id: arch::CoreId) -> ! {
       a.clone(),
       None
     );
-    t.wake();
+    lib::thread::thread_wake(&t);
 
     for device in board::devices() {
       for uf in device.to_user_frames().iter() {
@@ -157,12 +149,17 @@ pub unsafe fn main(core_id: arch::CoreId) -> ! {
     info!("device added to user space");
   }
 
-  barrier();
-  current_cpu().schedule();
+  util::barrier();
+  lib::cpu::cpu().schedule();
 
   extern {
     fn pop_context_first(ctx: usize, core_id: usize) -> !;
   }
-  let ctx = current_thread().context();
-  pop_context_first(&ctx as *const _ as usize, core_id);
+  match lib::cpu::cpu().running_thread() {
+    None => panic!("no running thread"),
+    Some(t) => {
+      let ctx = t.context();
+      pop_context_first(&ctx as *const _ as usize, core_id);
+    }
+  }
 }

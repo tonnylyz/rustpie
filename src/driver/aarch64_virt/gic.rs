@@ -2,6 +2,7 @@ use register::*;
 use register::mmio::*;
 
 use crate::lib::interrupt::InterruptController;
+use crate::lib::traits::ArchTrait;
 
 const GIC_INTERRUPT_NUM: usize = 1024;
 const GIC_SGI_NUM: usize = 16;
@@ -184,7 +185,7 @@ pub struct Gic;
 
 impl InterruptController for Gic {
   fn init(&self) {
-    let core_id = crate::core_id();
+    let core_id = crate::arch::Arch::core_id();
     let gicd = &GICD;
     if core_id == 0 {
       gicd.init();
@@ -195,7 +196,7 @@ impl InterruptController for Gic {
   }
 
   fn enable(&self, int: Interrupt) {
-    let core_id = crate::core_id();
+    let core_id = crate::arch::Arch::core_id();
     let gicd = &GICD;
     gicd.set_enable(int);
     gicd.set_priority(int, 0x7f);

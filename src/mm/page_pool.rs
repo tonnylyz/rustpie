@@ -19,14 +19,8 @@ struct PagePool {
   allocated: Vec<usize>,
 }
 
-pub trait PagePoolTrait {
-  fn init(&mut self, range: Range<usize>);
-  fn allocate(&mut self) -> Result<PageFrame, Error>;
-  fn free(&mut self, pa: usize) -> Result<(), Error>;
-}
-
-impl PagePoolTrait for PagePool {
-  fn init(&mut self, range: Range<usize>) {
+impl PagePool {
+  pub fn init(&mut self, range: Range<usize>) {
     assert_eq!(range.start % PAGE_SIZE, 0);
     assert_eq!(range.end % PAGE_SIZE, 0);
     for pa in range.step_by(PAGE_SIZE) {
@@ -34,7 +28,7 @@ impl PagePoolTrait for PagePool {
     }
   }
 
-  fn allocate(&mut self) -> Result<PageFrame, Error> {
+  pub fn allocate(&mut self) -> Result<PageFrame, Error> {
     if let Some(pa) = self.free.pop() {
       self.allocated.push(pa);
       Ok(PageFrame::new(pa))
@@ -43,7 +37,7 @@ impl PagePoolTrait for PagePool {
     }
   }
 
-  fn free(&mut self, pa: usize) -> Result<(), Error> {
+  pub fn free(&mut self, pa: usize) -> Result<(), Error> {
     if !self.allocated.contains(&pa) {
       Err(FreeNotAllocated)
     } else {

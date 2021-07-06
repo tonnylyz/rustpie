@@ -2,7 +2,7 @@ use alloc::collections::VecDeque;
 
 use spin::Mutex;
 
-use crate::lib::thread::Thread;
+use crate::lib::thread::{Thread, thread_sleep, thread_wake};
 
 struct Inner {
   value: usize,
@@ -31,7 +31,7 @@ impl Semaphore {
   pub fn wait(&self, t: Thread) -> SemaphoreWaitResult {
     let mut inner = self.inner.lock();
     if inner.value == 0 {
-      t.sleep();
+      thread_sleep(&t);
       inner.queue.push_back(t);
       SemaphoreWaitResult::Enqueued
     } else {
@@ -46,8 +46,8 @@ impl Semaphore {
       inner.value += 1;
     } else {
       if let Some(t) = inner.queue.pop_front() {
-        t.wake();
-        crate::current_cpu().schedule();
+        thread_wake(&t);
+        crate::lib::cpu::cpu().schedule();
       }
     }
   }
@@ -56,7 +56,7 @@ impl Semaphore {
     let mut inner = self.inner.lock();
     inner.value = 0;
     if let Some(t) = inner.queue.pop_front() {
-      crate::current_cpu().schedule();
+      crate::lib::cpu::cpu().schedule();
       Some(t)
     } else {
       None
