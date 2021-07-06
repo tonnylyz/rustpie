@@ -6,9 +6,9 @@ pub fn server() {
   info!("server started t{}",  get_tid());
   microcall::server_register(common::server::SERVER_MM).unwrap();
   loop {
-    let (tid, msg) = Message::receive().unwrap();
-    trace!("t{}: {:x?}", tid, msg);
-    let asid = microcall::get_asid(tid).unwrap();
+    let (client_tid, msg) = Message::receive().unwrap();
+    trace!("t{}: {:x?}", client_tid, msg);
+    let asid = microcall::get_asid(client_tid).unwrap();
     let r = match msg.a {
       1 => {
         microcall::mem_alloc(asid, msg.b, Entry::default().attribute());
@@ -21,6 +21,6 @@ pub fn server() {
 
     let mut msg = Message::default();
     msg.a = r;
-    msg.reply_with();
+    msg.send_to(client_tid);
   }
 }

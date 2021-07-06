@@ -7,15 +7,14 @@ use SyscallOutRegisters::*;
 use crate::arch::{ArchPageTableEntry, PAGE_SIZE};
 use crate::current_thread;
 use crate::lib::address_space::AddressSpace;
-use crate::lib::cpu::{CoreTrait, current};
-use crate::lib::event::{Event, thread_exit_sem, thread_exit_signal};
+use crate::lib::cpu::cpu;
+use crate::lib::event::{Event, thread_exit_sem};
 use crate::lib::interrupt::INT_SEM;
 use crate::lib::semaphore::SemaphoreWaitResult;
-use crate::lib::thread::Status::TsRunnable;
-use crate::lib::thread::Thread;
 use crate::lib::traits::*;
 use crate::mm::page_table::{Entry, PageTableEntryAttrTrait, PageTableTrait};
 use crate::util::round_down;
+use crate::lib::thread::{Tid, thread_destroy};
 
 pub type Error = usize;
 
@@ -35,6 +34,7 @@ impl core::convert::From<crate::mm::page_table::Error> for Error {
 }
 
 #[derive(Debug)]
+#[allow(dead_code)]
 pub enum SyscallOutRegisters {
   Unit,
   Single(usize),
@@ -84,30 +84,6 @@ static SYSCALL_NAMES: [&str; 21] = [
   "server_tid",
 ];
 
-pub trait SyscallTrait {
-  fn null() -> SyscallResult;
-  fn putc(c: char) -> SyscallResult;
-  fn get_asid(tid: u16) -> SyscallResult;
-  fn get_tid() -> SyscallResult;
-  fn thread_yield() -> SyscallResult;
-  fn thread_destroy(asid: u16) -> SyscallResult;
-  fn event_wait(event_type: usize, event_num: usize) -> SyscallResult;
-  fn mem_alloc(asid: u16, va: usize, perm: usize) -> SyscallResult;
-  fn mem_map(src_asid: u16, src_va: usize, dst_asid: u16, dst_va: usize, perm: usize) -> SyscallResult;
-  fn mem_unmap(asid: u16, va: usize) -> SyscallResult;
-  fn address_space_alloc() -> SyscallResult;
-  fn thread_alloc(asid: u16, entry: usize, sp: usize, arg: usize) -> SyscallResult;
-  fn thread_set_status(pid: u16, status: usize) -> SyscallResult;
-  fn ipc_receive(dst_va: usize) -> SyscallResult;
-  fn ipc_can_send(pid: u16, value: usize, src_va: usize, perm: usize) -> SyscallResult;
-  fn itc_receive() -> SyscallResult;
-  fn itc_send(tid: u16, a: usize, b: usize, c: usize, d: usize) -> SyscallResult;
-  fn itc_call(tid: u16, a: usize, b: usize, c: usize, d: usize) -> SyscallResult;
-  fn itc_reply(a: usize, b: usize, c: usize, d: usize) -> SyscallResult;
-  fn server_register(a: usize) -> SyscallResult;
-  fn server_tid(a: usize) -> SyscallResult;
-}
-
 pub struct Syscall;
 
 fn lookup_as(asid: u16) -> Result<AddressSpace, Error> {
@@ -122,7 +98,7 @@ fn lookup_as(asid: u16) -> Result<AddressSpace, Error> {
   }
 }
 
-impl SyscallTrait for Syscall {
+impl Syscall {
   fn null() -> SyscallResult {
     Ok(Unit)
   }
@@ -132,14 +108,14 @@ impl SyscallTrait for Syscall {
     Ok(Unit)
   }
 
-  fn get_asid(tid: u16) -> SyscallResult {
+  fn get_asid(tid: Tid) -> SyscallResult {
     if tid == 0 {
       match crate::current_cpu().address_space() {
         None => { Err(ERROR_INTERNAL) }
         Some(a) => { Ok(Single(a.asid() as usize)) }
       }
     } else {
-      match crate::lib::thread::lookup(tid) {
+      match crate::lib::thread::thread_lookup(tid) {
         None => { Err(ERROR_INVARG) }
         Some(t) => {
           match t.address_space() {
@@ -163,18 +139,18 @@ impl SyscallTrait for Syscall {
     Ok(Unit)
   }
 
-  fn thread_destroy(tid: u16) -> SyscallResult {
+  fn thread_destroy(tid: Tid) -> SyscallResult {
     let current_thread = crate::current_thread();
     if tid == 0 {
-      current_thread.destroy();
+      thread_destroy(current_thread);
       Syscall::thread_yield()
     } else {
-      match crate::lib::thread::lookup(tid) {
+      match crate::lib::thread::thread_lookup(tid) {
         None => { Err(ERROR_DENIED) }
         Some(t) => {
           if t.is_child_of(current_thread.tid()) {
             // TODO: check if destroy safe for inter-processor
-            t.destroy();
+            thread_destroy(t);
             Ok(Unit)
           } else {
             Err(ERROR_DENIED)
@@ -256,104 +232,80 @@ impl SyscallTrait for Syscall {
 
   fn thread_alloc(asid: u16, entry: usize, sp: usize, arg: usize) -> SyscallResult {
     let a = lookup_as(asid)?;
-    let child_thread = crate::lib::thread::new_user(entry, sp, arg, a.clone(), Some(current_thread()));
+    let child_thread = crate::lib::thread::new_user(entry, sp, arg, a.clone(), Some(current_thread().tid()));
     Ok(Single(child_thread.tid() as usize))
   }
 
-  fn thread_set_status(tid: u16, status: usize) -> SyscallResult {
+  fn thread_set_status(tid: usize, status: usize) -> SyscallResult {
     use common::thread::*;
-    let status = match status {
-      THREAD_STATUS_NOT_RUNNABLE => crate::lib::thread::Status::TsNotRunnable,
-      THREAD_STATUS_RUNNABLE => crate::lib::thread::Status::TsRunnable,
+    let runnable = match status {
+      THREAD_STATUS_NOT_RUNNABLE => false,
+      THREAD_STATUS_RUNNABLE => true,
       _ => return Err(ERROR_INVARG)
     };
-    match crate::lib::thread::lookup(tid) {
+    match crate::lib::thread::thread_lookup(tid) {
       None => {}
       Some(t) => {
-        t.set_status(status);
+        if runnable {
+          t.wake();
+        } else {
+          t.sleep();
+        }
       }
     }
     Ok(Unit)
   }
 
-  #[allow(unused_variables)]
-  fn ipc_receive(dst_va: usize) -> SyscallResult {
-    todo!()
-  }
-
-  #[allow(unused_variables)]
-  fn ipc_can_send(pid: u16, value: usize, src_va: usize, attr: usize) -> SyscallResult {
-    todo!()
-  }
-
   fn itc_receive() -> SyscallResult {
-    let t = current().running_thread().ok_or_else(|| ERROR_INTERNAL)?;
-    t.clear_peer(); // receive from any sender
+    let t = cpu().running_thread().ok_or_else(|| ERROR_INTERNAL)?;
+    t.ready_to_receive();
+    if let Some(0) = t.is_serving() {
+      t.ready_to_serve();
+    }
     t.sleep();
     crate::current_cpu().schedule();
     Ok(Unit)
   }
 
-  fn itc_send(tid: u16, a: usize, b: usize, c: usize, d: usize) -> SyscallResult {
-    let t = current().running_thread().ok_or_else(|| ERROR_INTERNAL)?;
-    let target = crate::lib::thread::lookup(tid).ok_or_else(|| ERROR_INVARG)?;
-    // if t.address_space() != target.address_space() {
-    //   return Err(ERROR_DENIED);
-    // }
-    if !target.receivable(&t) {
-      return Err(ERROR_INTERNAL);
+  fn itc_send(tid: Tid, a: usize, b: usize, c: usize, d: usize) -> SyscallResult {
+    let t = cpu().running_thread().ok_or_else(|| ERROR_INTERNAL)?;
+    let target = crate::lib::thread::thread_lookup(tid).ok_or_else(|| ERROR_INVARG)?;
+    if target.receive() {
+      target.map_with_context(|ctx| {
+        ctx.set_syscall_result(&SyscallResult::Ok(SyscallOutRegisters::Pentad(t.tid() as usize, a, b, c, d)));
+      });
+      target.wake();
+      if let Some(caller) = t.is_serving() {
+        if caller == target.tid() {
+          t.ready_to_serve();
+        }
+      }
+      Ok(Unit)
+    } else {
+      Err(ERROR_HOLD_ON)
     }
-    let mut ctx = target.context();
-    ctx.set_syscall_result(&SyscallResult::Ok(SyscallOutRegisters::Pentad(t.tid() as usize, a, b, c, d)));
-    target.set_context(ctx);
-    target.wake();
-    Ok(Unit)
   }
 
-  fn itc_call(tid: u16, a: usize, b: usize, c: usize, d: usize) -> SyscallResult {
-    let t = current().running_thread().ok_or_else(|| ERROR_INTERNAL)?;
-    let target = crate::lib::thread::lookup(tid).ok_or_else(|| ERROR_INVARG)?;
-    // if t.address_space() != target.address_space() {
-    //   return Err(PermissionDenied);
-    // }
-    if !target.receivable(&t) {
-      return Err(ERROR_HOLD_ON);
+  fn itc_call(tid: Tid, a: usize, b: usize, c: usize, d: usize) -> SyscallResult {
+    let t = cpu().running_thread().ok_or_else(|| ERROR_INTERNAL)?;
+    let target = crate::lib::thread::thread_lookup(tid).ok_or_else(|| ERROR_INVARG)?;
+
+    if target.serve(t.tid()) {
+      target.map_with_context(|ctx| {
+        ctx.set_syscall_result(&SyscallResult::Ok(SyscallOutRegisters::Pentad(t.tid() as usize, a, b, c, d)));
+      });
+      target.wake();
+      t.ready_to_receive();
+      t.sleep();
+      crate::current_cpu().schedule();
+      Ok(Unit)
+    } else {
+      Err(ERROR_HOLD_ON)
     }
-    let mut ctx = target.context();
-    ctx.set_syscall_result(&SyscallResult::Ok(SyscallOutRegisters::Pentad(t.tid() as usize, a, b, c, d)));
-    target.set_context(ctx);
-    trace!("{} call {}: {:x?}", t.tid(), target.tid(), (t.tid() as usize, a, b, c, d));
-
-    target.wake();
-    target.set_peer(t.clone());
-    t.set_peer(target.clone());
-    t.sleep();
-
-    crate::current_cpu().schedule();
-    Ok(Unit)
-  }
-
-  fn itc_reply(a: usize, b: usize, c: usize, d: usize) -> SyscallResult {
-    let t = current().running_thread().ok_or(ERROR_INTERNAL)?;
-    let target = t.peer().ok_or(ERROR_INTERNAL)?;
-    // if t.address_space() != target.address_space() {
-    //   return Err(PermissionDenied);
-    // }
-    if !target.receivable(&t) {
-      return Err(ERROR_INTERNAL);
-    }
-    let mut ctx = target.context();
-    ctx.set_syscall_result(&SyscallResult::Ok(SyscallOutRegisters::Pentad(t.tid() as usize, a, b, c, d)));
-    target.set_context(ctx);
-
-    target.clear_peer();
-    t.clear_peer();
-    target.wake();
-    Ok(Unit)
   }
 
   fn server_register(server_id: usize) -> SyscallResult {
-    let t = current().running_thread().ok_or(ERROR_INTERNAL)?;
+    let t = cpu().running_thread().ok_or(ERROR_INTERNAL)?;
     super::server::set(server_id, t.tid());
     Ok(Unit)
   }
@@ -379,23 +331,20 @@ pub fn syscall() {
   let result = match num {
     SYS_NULL => Syscall::null(),
     SYS_PUTC => Syscall::putc(arg(0) as u8 as char),
-    SYS_GET_ASID => Syscall::get_asid(arg(0) as u16),
+    SYS_GET_ASID => Syscall::get_asid(arg(0)),
     SYS_GET_TID => Syscall::get_tid(),
     SYS_THREAD_YIELD => Syscall::thread_yield(),
-    SYS_THREAD_DESTROY => Syscall::thread_destroy(arg(0) as u16),
+    SYS_THREAD_DESTROY => Syscall::thread_destroy(arg(0)),
     SYS_EVENT_WAIT => Syscall::event_wait(arg(0), arg(1)),
     SYS_MEM_ALLOC => Syscall::mem_alloc(arg(0) as u16, arg(1), arg(2)),
     SYS_MEM_MAP => Syscall::mem_map(arg(0) as u16, arg(1), arg(2) as u16, arg(3), arg(4)),
     SYS_MEM_UNMAP => Syscall::mem_unmap(arg(0) as u16, arg(1)),
     SYS_ADDRESS_SPACE_ALLOC => Syscall::address_space_alloc(),
     SYS_THREAD_ALLOC => Syscall::thread_alloc(arg(0) as u16, arg(1), arg(2), arg(3)),
-    SYS_THREAD_SET_STATUS => Syscall::thread_set_status(arg(0) as u16, arg(1)),
-    SYS_IPC_RECEIVE => Syscall::ipc_receive(arg(0)),
-    SYS_CAN_SEND => Syscall::ipc_can_send(arg(0) as u16, arg(1), arg(2), arg(3)),
+    SYS_THREAD_SET_STATUS => Syscall::thread_set_status(arg(0), arg(1)),
     SYS_ITC_RECV => Syscall::itc_receive(),
-    SYS_ITC_SEND => Syscall::itc_send(arg(0) as u16, arg(1), arg(2), arg(3), arg(4)),
-    SYS_ITC_CALL => Syscall::itc_call(arg(0) as u16, arg(1), arg(2), arg(3), arg(4)),
-    SYS_ITC_REPLY => Syscall::itc_reply(arg(0), arg(1), arg(2), arg(3)),
+    SYS_ITC_SEND => Syscall::itc_send(arg(0), arg(1), arg(2), arg(3), arg(4)),
+    SYS_ITC_CALL => Syscall::itc_call(arg(0), arg(1), arg(2), arg(3), arg(4)),
     SYS_SERVER_REGISTER => Syscall::server_register(arg(0)),
     SYS_SERVER_TID => Syscall::server_tid(arg(0)),
     _ => {

@@ -2,12 +2,13 @@ use common::CONFIG_USER_LIMIT;
 
 use crate::arch::PAGE_SIZE;
 use crate::core_id;
-use crate::lib::cpu::{CoreTrait, current};
+use crate::lib::cpu::cpu;
 use crate::lib::traits::*;
 use crate::util::*;
+use crate::lib::thread::thread_destroy;
 
 pub fn handle() {
-  let t = current().running_thread();
+  let t = cpu().running_thread();
   if t.is_none() {
     panic!("isr: page_fault: no running thread");
   }
@@ -20,13 +21,13 @@ pub fn handle() {
   trace!("thread t{} core {} page fault {:x}", t.tid(), core_id(), va);
   if va >= CONFIG_USER_LIMIT {
     warn!("isr: page_fault: {:016x} >= CONFIG_USER_LIMIT, process killed", va);
-    t.destroy();
+    thread_destroy(t);
     current_cpu().schedule();
     return;
   }
 
   warn!("isr: page_fault: {:016x}", addr);
   warn!("isr: page_fault: process has no handler, process killed");
-  t.destroy();
+  thread_destroy(t);
   current_cpu().schedule();
 }

@@ -55,7 +55,6 @@ mod logger;
 
 use arch::ContextFrame;
 use lib::traits::*;
-use lib::cpu::CoreTrait;
 use lib::interrupt::InterruptController;
 use mm::page_table::PageTableTrait;
 use mm::page_table::PageTableEntryAttrTrait;
@@ -101,7 +100,7 @@ pub unsafe fn main(core_id: arch::CoreId) -> ! {
     mm::page_pool::init();
     info!("page pool init ok");
     lib::address_space::init();
-    info!("process pool init ok");
+    info!("address space pool init ok");
     lib::thread::init();
     info!("thread pool init ok");
 
@@ -109,8 +108,6 @@ pub unsafe fn main(core_id: arch::CoreId) -> ! {
     info!("launched other cores");
   }
   board::init_per_core();
-
-  current_cpu().create_idle_thread();
   info!("init core {}", core_id);
 
   if core_id == 0 {
@@ -133,7 +130,6 @@ pub unsafe fn main(core_id: arch::CoreId) -> ! {
     info!("embedded trusted {:x}", bin.as_ptr() as usize);
     let (a, entry) = lib::address_space::load_image(bin);
     info!("load_image ok");
-    const INIT_ARG: usize = 3;
 
     let page_table = a.page_table();
 
@@ -141,8 +137,14 @@ pub unsafe fn main(core_id: arch::CoreId) -> ! {
                            mm::UserFrame::new_memory(mm::page_pool::alloc()),
                            mm::page_table::EntryAttribute::user_default()).unwrap();
     info!("user stack ok");
-    let t = crate::lib::thread::new_user(entry, common::CONFIG_USER_STACK_TOP, INIT_ARG, a.clone(), None);
-    t.set_status(crate::lib::thread::Status::TsRunnable);
+    let t = crate::lib::thread::new_user(
+      entry,
+      common::CONFIG_USER_STACK_TOP,
+      0,
+      a.clone(),
+      None
+    );
+    t.wake();
 
     for device in board::devices() {
       for uf in device.to_user_frames().iter() {

@@ -2,21 +2,17 @@ use alloc::collections::VecDeque;
 
 use spin::Mutex;
 
-use crate::lib::cpu::CoreTrait;
 use crate::lib::thread::Thread;
 
-#[derive(Debug)]
 struct Inner {
   value: usize,
   queue: VecDeque<Thread>,
 }
 
-#[derive(Debug)]
 pub struct Semaphore {
   inner: Mutex<Inner>,
 }
 
-#[derive(Debug)]
 pub enum SemaphoreWaitResult {
   Acquired,
   Enqueued,

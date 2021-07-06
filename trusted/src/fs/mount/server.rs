@@ -48,7 +48,7 @@ pub fn server() {
         }
       }
     }
-    Err(e) => { error!("FileSystem::open {}", e.errno); }
+    Err(e) => { error!("FileSystem::open {:?}", e); }
   }
 }
 

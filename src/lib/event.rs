@@ -1,9 +1,9 @@
 use common::event::*;
-use spin::{Mutex, Once};
+use spin::Once;
 
 use crate::lib::semaphore::Semaphore;
 use crate::lib::syscall::{SyscallOutRegisters, SyscallResult};
-use crate::lib::thread::{Thread, Tid};
+use crate::lib::thread::Tid;
 use crate::lib::traits::ContextFrameTrait;
 
 #[derive(Debug, Clone, Copy, PartialEq)]
@@ -36,9 +36,9 @@ pub fn thread_exit_signal(tid_exited: Tid) {
   match thread_exit_sem().try_signal() {
     None => {}
     Some(waiter) => {
-      let mut ctx = waiter.context();
-      ctx.set_syscall_result(&SyscallResult::Ok(SyscallOutRegisters::Single(tid_exited as usize)));
-      waiter.set_context(ctx);
+      waiter.map_with_context(|ctx| {
+        ctx.set_syscall_result(&SyscallResult::Ok(SyscallOutRegisters::Single(tid_exited as usize)));
+      });
       waiter.wake();
     }
   }

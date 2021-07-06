@@ -1,11 +1,6 @@
 use core::panic::PanicInfo;
 
-use crate::lib::cpu::CoreTrait;
 use crate::lib::traits::*;
-
-struct Bomb {
-  enabled: bool,
-}
 
 #[derive(Debug, Clone)]
 struct Frame {
@@ -40,11 +35,9 @@ impl Frame {
 #[inline(always)]
 fn trace_from(mut curframe: Frame, cb: &mut dyn FnMut(&Frame) -> bool) {
   loop {
-    let mut bomb = Bomb { enabled: true };
     let ctxt = curframe.clone();
 
     let keep_going = cb(&ctxt);
-    bomb.enabled = false;
 
     if keep_going {
       unsafe {

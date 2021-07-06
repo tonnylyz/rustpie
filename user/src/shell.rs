@@ -16,6 +16,9 @@ fn _start() -> ! {
     print!("SHELL> ");
     let cmd = exported::stdio::getline();
     println!();
+    if cmd.trim().is_empty() {
+      continue;
+    }
     match exported::pm::exec(cmd.as_str()) {
       Ok(pid) => {
         exported::pm::wait(pid);

@@ -1,5 +1,3 @@
-use crate::lib::cpu::CoreTrait;
-
 const TIMER_SEC_TO_MS: usize = 1000;
 const TIMER_SEC_TO_US: usize = 1000000;
 

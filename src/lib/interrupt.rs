@@ -3,9 +3,7 @@ use alloc::collections::BTreeMap;
 use spin::Mutex;
 
 use crate::driver::Interrupt;
-use crate::lib::cpu::CoreTrait;
 use crate::lib::semaphore::{Semaphore, SemaphoreWaitResult};
-use crate::lib::thread::Status::TsRunnable;
 use crate::lib::thread::Thread;
 
 pub trait InterruptController {

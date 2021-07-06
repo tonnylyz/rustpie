@@ -31,7 +31,7 @@ struct Process {
   pid: usize,
   parent: Option<usize>,
   asid: u16,
-  tid: u16,
+  tid: usize,
   status: ProcessStatus,
 }
 
@@ -46,7 +46,7 @@ impl ProcessManager {
     }
   }
 
-  fn register(&self, asid: u16, tid: u16, parent: Option<usize>) -> usize {
+  fn register(&self, asid: u16, tid: usize, parent: Option<usize>) -> usize {
     let pid = PID_ALLOCATOR.fetch_add(1, Relaxed);
     let p = Process {
       pid,
@@ -70,7 +70,7 @@ impl ProcessManager {
     None
   }
 
-  fn set_status_by_tid(&self, tid: u16, status: ProcessStatus) -> Result<(), ()> {
+  fn set_status_by_tid(&self, tid: usize, status: ProcessStatus) -> Result<(), ()> {
     let mut vec = self.list.lock();
     for p in vec.iter_mut() {
       if p.status == ProcessStatus::Running && p.tid == tid {
@@ -152,7 +152,7 @@ pub fn server() {
 pub fn event_server() {
   loop {
     if let Ok(tid) = microcall::event_wait(common::event::EVENT_THREAD_EXIT, 0) {
-      PROCESS_MANAGER.set_status_by_tid(tid as u16, ProcessStatus::Exited);
+      PROCESS_MANAGER.set_status_by_tid(tid, ProcessStatus::Exited);
     } else {
       microcall::thread_yield();
     }

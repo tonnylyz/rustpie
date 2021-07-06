@@ -1,10 +1,10 @@
-use crate::lib::cpu::CoreTrait;
+use crate::lib::thread::thread_destroy;
 
 pub fn handle() {
   match crate::current_cpu().running_thread() {
     None => { panic!("isr: default: no running thread") }
     Some(t) => {
-      t.destroy();
+      thread_destroy(t);
       crate::current_cpu().schedule();
     }
   }

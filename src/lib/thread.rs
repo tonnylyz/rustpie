@@ -2,244 +2,214 @@ use alloc::collections::BTreeMap;
 use alloc::sync::Arc;
 use alloc::vec::Vec;
 use core::mem::size_of;
+use core::ops::{Deref, DerefMut};
+use core::sync::atomic::AtomicUsize;
+use core::sync::atomic::Ordering::Relaxed;
 
-use spin::Mutex;
+use spin::{Mutex, Once};
 
-use crate::arch::{ContextFrame, CoreId};
+use crate::arch::ContextFrame;
 use crate::lib::address_space::AddressSpace;
 use crate::lib::bitmap::BitMap;
-use crate::lib::cpu::CoreTrait;
 use crate::lib::event::thread_exit_signal;
 use crate::lib::scheduler::scheduler;
 use crate::lib::traits::*;
 
-pub type Tid = u16;
+pub type Tid = usize;
 
 #[derive(Debug)]
-pub enum Type {
-  User(AddressSpace),
+pub enum PrivilegedLevel {
+  User,
   Kernel,
 }
 
 #[derive(Debug, Eq, PartialEq, Copy, Clone)]
-pub enum Status {
-  TsRunnable = 1,
-  TsNotRunnable = 2,
-  TsIdle = 3,
+enum Status {
+  Runnable,
+  Sleep,
 }
 
 #[derive(Debug)]
 struct Inner {
-  tid: Tid,
-  parent: Option<Thread>,
-  t: Type,
-  status: Mutex<Status>,
-  context_frame: Mutex<ContextFrame>,
-  itc_peer: Mutex<Option<Thread>>,
+  uuid: usize,
+  parent: Option<usize>,
+  level: PrivilegedLevel,
+  address_space: Option<AddressSpace>,
 }
 
-pub enum Error {
-  ThreadNotFoundError
+struct InnerMut {
+  status: Status,
+  context_frame: ContextFrame,
+  receiving: bool,
+  caller: Option<Tid>,
 }
 
-#[derive(Debug, Clone)]
-pub struct Thread(Arc<Inner>);
-
-impl PartialEq for Thread {
-  fn eq(&self, other: &Self) -> bool {
-    self.0.tid == other.0.tid
-  }
+struct ControlBlock {
+  inner: Inner,
+  inner_mut: Mutex<InnerMut>,
 }
+
+#[derive(Clone)]
+pub struct Thread(Arc<ControlBlock>);
 
 impl Thread {
   pub fn tid(&self) -> Tid {
-    self.0.tid
+    self.0.inner.uuid
   }
 
   pub fn is_child_of(&self, tid: Tid) -> bool {
-    match &self.0.parent {
+    match &self.0.inner.parent {
       None => { false }
       Some(t) => {
-        t.tid() == tid
+        *t == tid
       }
-    }
-  }
-
-  pub fn status(&self) -> Status {
-    *self.0.status.lock()
-  }
-
-  pub fn set_status(&self, status: Status) {
-    let mut lock = self.0.status.lock();
-    *lock = status;
-    if status == Status::TsRunnable {
-      scheduler().add(self.clone());
     }
   }
 
   pub fn runnable(&self) -> bool {
-    let lock = self.0.status.lock();
-    let r = *lock == Status::TsRunnable;
-    r
+    let lock = self.0.inner_mut.lock();
+    lock.status == Status::Runnable
   }
 
   pub fn address_space(&self) -> Option<AddressSpace> {
-    match &self.0.t {
-      Type::User(p) => {
-        Some(p.clone())
-      }
-      _ => {
-        None
-      }
-    }
+    self.0.inner.address_space.clone()
   }
 
   pub fn set_context(&self, ctx: ContextFrame) {
-    let mut lock = self.0.context_frame.lock();
-    *lock = ctx;
+    let mut lock = self.0.inner_mut.lock();
+    lock.context_frame = ctx;
   }
 
   pub fn context(&self) -> ContextFrame {
-    let lock = self.0.context_frame.lock();
-    (*lock).clone()
+    let mut lock = self.0.inner_mut.lock();
+    lock.context_frame.clone()
   }
 
-  pub fn destroy(&self) {
-    if let Some(t) = crate::current_cpu().running_thread() {
-      if self.0.tid == t.tid() {
-        crate::current_cpu().set_running_thread(None);
-      }
+  pub fn map_with_context<F, T>(&self, f: F) -> T where F: FnOnce(&mut ContextFrame) -> T {
+    let mut lock = self.0.inner_mut.lock();
+    f(&mut lock.deref_mut().context_frame)
+  }
+
+  pub fn serve(&self, caller: Tid) -> bool {
+    let mut lock = self.0.inner_mut.lock();
+    if lock.caller.is_some() || lock.receiving == false {
+      false
+    } else {
+      lock.receiving = false;
+      lock.caller = Some(caller);
+      true
     }
-    thread_exit_signal(self.tid());
-    free(self)
   }
 
-  pub fn peer(&self) -> Option<Thread> {
-    let ptr = self.0.itc_peer.lock();
-    ptr.clone()
+  pub fn is_serving(&self) -> Option<Tid> {
+    let mut lock = self.0.inner_mut.lock();
+    lock.caller.clone()
   }
 
-  pub fn set_peer(&self, sender: Thread) {
-    let mut ptr = self.0.itc_peer.lock();
-    *ptr = Some(sender);
+  pub fn ready_to_serve(&self) {
+    let mut lock = self.0.inner_mut.lock();
+    lock.caller = None;
   }
 
-  pub fn clear_peer(&self) {
-    let mut ptr = self.0.itc_peer.lock();
-    *ptr = None;
+  pub fn receive(&self) -> bool {
+    let mut lock = self.0.inner_mut.lock();
+    if lock.receiving {
+      lock.receiving = false;
+      true
+    } else {
+      false
+    }
   }
 
-  pub fn wake(&self) {
-    self.set_status(Status::TsRunnable);
+  pub fn ready_to_receive(&self) {
+    let mut lock = self.0.inner_mut.lock();
+    lock.receiving = true;
   }
 
   pub fn sleep(&self) {
-    self.set_status(Status::TsNotRunnable);
+    thread_sleep(self);
   }
 
-  pub fn receivable(&self, sender: &Thread) -> bool {
-    (if let Some(peer) = self.peer() {
-      peer.tid() == sender.tid()
-    } else {
-      true
-    })&& self.status() == Status::TsNotRunnable
-  }
-
-}
-
-struct ThreadPool {
-  bitmap: BitMap<{ Tid::MAX as usize / size_of::<usize>() }>,
-  allocated: Vec<Thread>,
-}
-
-impl ThreadPool {
-  fn alloc_user(&mut self, pc: usize, sp: usize, arg: usize, a: AddressSpace, t: Option<Thread>) -> Thread {
-    let id = (self.bitmap.alloc() + 1) as Tid;
-    let arc = Arc::new(Inner {
-      tid: id,
-      parent: t,
-      t: Type::User(a),
-      status: Mutex::new(Status::TsNotRunnable),
-      context_frame: Mutex::new(ContextFrame::new(pc, sp, arg, false)),
-      itc_peer: Mutex::new(None)
-    });
-    let mut map = THREAD_MAP.get().unwrap().lock();
-    map.insert(id, arc.clone());
-    self.allocated.push(Thread(arc.clone()));
-    Thread(arc)
-  }
-
-  fn alloc_kernel(&mut self, pc: usize, sp: usize, arg: usize) -> Thread {
-    let id = (self.bitmap.alloc() + 1) as Tid;
-    let arc = Arc::new(Inner {
-      tid: id,
-      parent: None,
-      t: Type::Kernel,
-      status: Mutex::new(Status::TsNotRunnable),
-      context_frame: Mutex::new(ContextFrame::new(pc, sp, arg, true)),
-      itc_peer: Mutex::new(None)
-    });
-    let mut map = THREAD_MAP.get().unwrap().lock();
-    map.insert(id, arc.clone());
-    self.allocated.push(Thread(arc.clone()));
-    Thread(arc)
-  }
-
-  fn free(&mut self, t: &Thread) -> Result<(), Error> {
-    if self.allocated.contains(t) {
-      self.allocated.retain(|_t| _t.tid() != t.tid());
-      let mut map = THREAD_MAP.get().unwrap().lock();
-      map.remove(&t.tid());
-      self.bitmap.clear((t.tid() - 1) as usize);
-      Ok(())
-    } else {
-      Err(Error::ThreadNotFoundError)
-    }
-  }
-
-  fn list(&self) -> Vec<Thread> {
-    self.allocated.clone()
+  pub fn wake(&self) {
+    thread_wake(self);
   }
 }
 
-static THREAD_MAP: spin::Once<Mutex<BTreeMap<Tid, Arc<Inner>>>> = spin::Once::new();
+static THREAD_UUID_ALLOCATOR: AtomicUsize = AtomicUsize::new(100);
 
-pub fn init() {
-  THREAD_MAP.call_once(|| {
-    Mutex::new(BTreeMap::new())
-  });
+fn new_tid() -> Tid {
+  THREAD_UUID_ALLOCATOR.fetch_add(1, Relaxed)
 }
 
-static THREAD_POOL: Mutex<ThreadPool> = Mutex::new(ThreadPool {
-  bitmap: BitMap::new(),
-  allocated: Vec::new(),
-});
+static THREAD_MAP: Mutex<BTreeMap<Tid, Thread>> = Mutex::new(BTreeMap::new());
 
-pub fn new_user(pc: usize, sp: usize, arg: usize, a: AddressSpace, t: Option<Thread>) -> Thread {
-  let mut pool = THREAD_POOL.lock();
-  let r = pool.alloc_user(pc, sp, arg, a, t);
-  r
+pub fn init() {}
+
+pub fn new_user(pc: usize, sp: usize, arg: usize, a: AddressSpace, parent: Option<Tid>) -> Thread {
+  let id = new_tid();
+  let t = Thread(Arc::new(ControlBlock {
+    inner: Inner {
+      uuid: id,
+      parent,
+      level: PrivilegedLevel::User,
+      address_space: Some(a)
+    },
+    inner_mut: Mutex::new(InnerMut {
+      status: Status::Sleep,
+      context_frame: ContextFrame::new(pc, sp, arg, false),
+      receiving: false,
+      caller: Some(0)
+    })
+  }));
+  let mut map = THREAD_MAP.lock();
+  map.insert(id, t.clone());
+  t
 }
 
 pub fn new_kernel(pc: usize, sp: usize, arg: usize) -> Thread {
-  let mut pool = THREAD_POOL.lock();
-  let r = pool.alloc_kernel(pc, sp, arg);
-  r
+  let id = new_tid();
+  let t = Thread(Arc::new(ControlBlock {
+    inner: Inner {
+      uuid: id,
+      parent: None,
+      level: PrivilegedLevel::Kernel,
+      address_space: None
+    },
+    inner_mut: Mutex::new(InnerMut {
+      status: Status::Sleep,
+      context_frame: ContextFrame::new(pc, sp, arg, true),
+      receiving: false,
+      caller: None
+    })
+  }));
+  let mut map = THREAD_MAP.lock();
+  map.insert(id, t.clone());
+  t
 }
 
-pub fn free(t: &Thread) {
-  let mut pool = THREAD_POOL.lock();
-  match pool.free(t) {
-    Ok(_) => {}
-    Err(_) => { error!("thread_pool: free: thread not found") }
+pub fn thread_lookup(tid: Tid) -> Option<Thread> {
+  let map = THREAD_MAP.lock();
+  map.get(&tid).cloned()
+}
+
+pub fn thread_destroy(t: Thread) {
+  if let Some(current_thread) = crate::current_cpu().running_thread() {
+    if t.tid() == current_thread.tid() {
+      crate::current_cpu().set_running_thread(None);
+    }
   }
+  thread_exit_signal(t.tid());
+  let mut map = THREAD_MAP.lock();
+  map.remove(&t.tid());
 }
 
-pub fn lookup(tid: Tid) -> Option<Thread> {
-  let map = THREAD_MAP.get().unwrap().lock();
-  let r = match map.get(&tid) {
-    Some(arc) => Some(Thread(arc.clone())),
-    None => None
-  };
-  r
+pub fn thread_wake(t: &Thread) {
+  let mut lock = t.0.inner_mut.lock();
+  lock.status = Status::Runnable;
+  scheduler().add(t.clone());
+}
+
+pub fn thread_sleep(t: &Thread) {
+  let mut lock = t.0.inner_mut.lock();
+  lock.status = Status::Sleep;
 }

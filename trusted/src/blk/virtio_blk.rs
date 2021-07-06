@@ -305,7 +305,7 @@ pub struct DiskRequest {
   buf: usize,
   imp: Box<VirtioBlkOutHdr>,
   status: Box<u8>,
-  src: u16,
+  src: usize,
 }
 
 pub struct Disk {
@@ -318,7 +318,7 @@ static DISK: Mutex<Disk> = Mutex::new(Disk {
   requests: Vec::new(),
 });
 
-fn io(sector: usize, count: usize, buf: usize, op: Operation, src: u16) {
+fn io(sector: usize, count: usize, buf: usize, op: Operation, src: usize) {
   let hdr = Box::new(VirtioBlkOutHdr {
     t: match op {
       Operation::Read => 0,
@@ -401,7 +401,7 @@ fn irq() {
         VIRTIO_BLK_S_OK => {
           {
             let msg = microcall::message::Message::default();
-            msg.reply_with();
+            msg.send_to(req.src);
           }
         }
         VIRTIO_BLK_S_IOERR => {
@@ -455,11 +455,11 @@ pub fn server() {
         None => 0,
         Some(s) => *s * 512,
       };
-      msg.reply_with();
+      msg.send_to(client_tid);
     } else {
       let mut msg = microcall::message::Message::default();
       msg.a = 1;
-      msg.reply_with();
+      msg.send_to(client_tid);
     }
   }
 }

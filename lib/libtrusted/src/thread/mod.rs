@@ -256,7 +256,7 @@ impl<T> JoinHandle<T> {
   pub fn thread(&self) -> &Thread {
     &self.0.thread
   }
-  pub fn native(&self) -> u16 {
+  pub fn native(&self) -> usize {
     self.0.native.as_ref().unwrap().id()
   }
   pub fn join(mut self) -> Result<T> {

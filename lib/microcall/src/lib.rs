@@ -20,12 +20,12 @@ pub fn putc(c: char) {
   syscall_1_0(SYS_PUTC, c as usize).unwrap()
 }
 
-pub fn get_asid(tid: u16) -> Result<u16, Error> {
-  syscall_1_1(SYS_GET_ASID, tid as usize).map(|asid| asid as u16)
+pub fn get_asid(tid: usize) -> Result<u16, Error> {
+  syscall_1_1(SYS_GET_ASID, tid).map(|asid| asid as u16)
 }
 
-pub fn get_tid() -> u16 {
-  syscall_0_1(SYS_GET_TID).unwrap() as u16
+pub fn get_tid() -> usize {
+  syscall_0_1(SYS_GET_TID).unwrap()
 }
 
 #[allow(unused_must_use)]
@@ -33,8 +33,8 @@ pub fn thread_yield() {
   syscall_0_0(SYS_THREAD_YIELD);
 }
 
-pub fn thread_destroy(tid: u16) -> Result<(), Error> {
-  syscall_1_0(SYS_THREAD_DESTROY, tid as usize)
+pub fn thread_destroy(tid: usize) -> Result<(), Error> {
+  syscall_1_0(SYS_THREAD_DESTROY, tid)
 }
 
 pub fn event_wait(event_type: usize, event_num: usize) -> Result<usize, Error> {
@@ -58,47 +58,35 @@ pub fn address_space_alloc() -> Result<u16, Error> {
   syscall_0_1(SYS_ADDRESS_SPACE_ALLOC).map(|asid| asid as u16)
 }
 
-pub fn thread_alloc(asid: u16, entry: usize, sp: usize, arg: usize) -> Result<u16, Error> {
-  syscall_4_1(SYS_THREAD_ALLOC, asid as usize, entry, sp, arg).map(|tid| tid as u16)
+pub fn thread_alloc(asid: u16, entry: usize, sp: usize, arg: usize) -> Result<usize, Error> {
+  syscall_4_1(SYS_THREAD_ALLOC, asid as usize, entry, sp, arg)
 }
 
-pub fn thread_set_status(tid: u16, status: usize) -> Result<(), Error> {
-  syscall_2_0(SYS_THREAD_SET_STATUS, tid as usize, status)
+pub fn thread_set_status(tid: usize, status: usize) -> Result<(), Error> {
+  syscall_2_0(SYS_THREAD_SET_STATUS, tid, status)
 }
 
-pub fn ipc_receive() {
-  todo!()
+pub fn itc_receive() -> Result<(usize, usize, usize, usize, usize), Error> {
+  syscall_0_5(SYS_ITC_RECV)
 }
 
-pub fn ipc_can_send() {
-  todo!()
-}
-
-pub fn itc_receive() -> Result<(u16, usize, usize, usize, usize), Error> {
-  syscall_0_5(SYS_ITC_RECV).map(|(tid, a, b, c, d)| (tid as u16, a, b, c, d))
-}
-
-pub fn itc_send(tid: u16, a: usize, b: usize, c: usize, d: usize) -> Result<(), Error> {
+pub fn itc_send(tid: usize, a: usize, b: usize, c: usize, d: usize) -> Result<(), Error> {
   syscall_5_0(SYS_ITC_SEND, tid as usize, a, b, c, d)
 }
 
-pub fn itc_call(tid: u16, a: usize, b: usize, c: usize, d: usize) -> Result<(u16, usize, usize, usize, usize), Error> {
-  syscall_5_5(SYS_ITC_CALL, tid as usize, a, b, c, d).map(|(tid, a, b, c, d)| (tid as u16, a, b, c, d))
-}
-
-pub fn itc_reply(a: usize, b: usize, c: usize, d: usize) -> Result<(), Error> {
-  syscall_4_0(SYS_ITC_REPLY, a, b, c, d)
+pub fn itc_call(tid: usize, a: usize, b: usize, c: usize, d: usize) -> Result<(usize, usize, usize, usize, usize), Error> {
+  syscall_5_5(SYS_ITC_CALL, tid as usize, a, b, c, d)
 }
 
 pub fn server_register(server_id: usize) -> Result<(), Error> {
   syscall_1_0(SYS_SERVER_REGISTER, server_id)
 }
 
-pub fn server_tid(server_id: usize) -> Result<u16, Error> {
-  syscall_1_1(SYS_SERVER_TID, server_id).map(|x| x as u16)
+pub fn server_tid(server_id: usize) -> Result<usize, Error> {
+  syscall_1_1(SYS_SERVER_TID, server_id)
 }
 
-pub fn server_tid_wait(server_id: usize) -> u16 {
+pub fn server_tid_wait(server_id: usize) -> usize {
   loop {
     if let Ok(tid) = server_tid(server_id) {
       break tid;
@@ -127,12 +115,12 @@ pub mod message {
       }
     }
 
-    pub fn receive() -> Result<(u16, Self), super::Error> {
+    pub fn receive() -> Result<(usize, Self), super::Error> {
       super::itc_receive().map(|(tid, a, b, c, d)|
         (tid, Message { a, b, c, d }))
     }
 
-    pub fn send_to(&self, tid: u16) -> Result<(), super::Error> {
+    pub fn send_to(&self, tid: usize) -> Result<(), super::Error> {
       super::itc_send(tid, self.a, self.b, self.c, self.d)
     }
 
@@ -152,10 +140,6 @@ pub mod message {
           }
         }
       }
-    }
-
-    pub fn reply_with(&self) -> Result<(), super::Error> {
-      super::itc_reply(self.a, self.b, self.c, self.d)
     }
   }
 }

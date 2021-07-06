@@ -4,7 +4,7 @@ use common::PAGE_SIZE;
 use microcall::{thread_alloc, thread_yield, thread_set_status};
 
 pub struct Thread {
-  id: u16,
+  id: usize,
 }
 
 unsafe impl Send for Thread {}
@@ -57,11 +57,11 @@ impl Thread {
     unimplemented!()
   }
 
-  pub fn id(&self) -> u16 {
+  pub fn id(&self) -> usize {
     self.id
   }
 
-  pub fn into_id(self) -> u16 {
+  pub fn into_id(self) -> usize {
     let id = self.id;
     core::mem::forget(self);
     id

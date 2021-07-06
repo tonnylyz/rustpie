@@ -2,35 +2,12 @@ use spin::Once;
 
 use crate::arch::{AddressSpaceId, ContextFrame, PAGE_SIZE};
 use crate::board::BOARD_CORE_NUMBER;
-use crate::core_id;
 use crate::lib::address_space::AddressSpace;
 use crate::lib::scheduler::scheduler;
 use crate::lib::thread::Thread;
 use crate::lib::traits::*;
 use crate::mm::page_table::PageTableTrait;
 use crate::mm::PageFrame;
-
-pub trait CoreTrait {
-  fn context(&self) -> &ContextFrame;
-  fn context_mut(&self) -> &mut ContextFrame;
-
-  fn set_context(&mut self, ctx: *mut ContextFrame);
-  fn clear_context(&mut self);
-
-  fn has_context(&self) -> bool;
-  fn running_thread(&self) -> Option<Thread>;
-  fn set_running_thread(&mut self, p: Option<Thread>);
-
-  fn schedule(&mut self);
-
-  fn create_idle_thread(&self);
-  fn idle_thread(&self) -> Thread;
-  fn run(&mut self, t: Thread);
-
-  fn address_space(&self) -> Option<AddressSpace>;
-  fn set_address_space(&mut self, a: AddressSpace);
-  fn clear_address_space(&mut self);
-}
 
 pub struct Core {
   context: Option<*mut ContextFrame>,
@@ -56,56 +33,56 @@ const CORE: Core = Core {
 
 static mut CORES: [Core; BOARD_CORE_NUMBER] = [CORE; BOARD_CORE_NUMBER];
 
-impl CoreTrait for Core {
-  fn context(&self) -> &ContextFrame {
+impl Core {
+  // context
+
+  pub fn context(&self) -> &ContextFrame {
     unsafe { self.context.unwrap().as_ref() }.unwrap()
   }
 
-  fn context_mut(&self) -> &mut ContextFrame {
+  pub fn context_mut(&self) -> &mut ContextFrame {
     unsafe { self.context.unwrap().as_mut() }.unwrap()
   }
 
-  fn set_context(&mut self, ctx: *mut ContextFrame) {
+  pub fn set_context(&mut self, ctx: *mut ContextFrame) {
     self.context = Some(ctx);
   }
 
-  fn clear_context(&mut self) {
+  pub fn clear_context(&mut self) {
     self.context = None;
   }
 
-  fn has_context(&self) -> bool {
-    self.context.is_some()
-  }
+  // thread
 
-  fn running_thread(&self) -> Option<Thread> {
+  pub fn running_thread(&self) -> Option<Thread> {
     self.running_thread.clone()
   }
 
-  fn set_running_thread(&mut self, t: Option<Thread>) {
+  pub fn set_running_thread(&mut self, t: Option<Thread>) {
     self.running_thread = t
   }
 
-  fn schedule(&mut self) {
+  fn idle_thread(&self) -> Thread {
+    match self.idle_thread.get() {
+      None => {
+        let frame = crate::mm::page_pool::alloc();
+        let t = crate::lib::thread::new_kernel(
+          idle_thread as usize,
+          frame.kva() + PAGE_SIZE,
+          crate::core_id());
+        self.idle_stack.call_once(|| frame);
+        self.idle_thread.call_once(|| t).clone()
+      }
+      Some(t) => t.clone(),
+    }
+  }
+
+  pub fn schedule(&mut self) {
     if let Some(t) = scheduler().pop() {
       self.run(t);
     } else {
       self.run(self.idle_thread());
     }
-  }
-
-  fn create_idle_thread(&self) {
-    let frame = crate::mm::page_pool::alloc();
-    let t = crate::lib::thread::new_kernel(
-      idle_thread as usize,
-      frame.kva() + PAGE_SIZE,
-      crate::core_id());
-    t.set_status(crate::lib::thread::Status::TsIdle);
-    self.idle_thread.call_once(|| t);
-    self.idle_stack.call_once(|| frame);
-  }
-
-  fn idle_thread(&self) -> Thread {
-    self.idle_thread.get().unwrap().clone()
   }
 
   fn run(&mut self, t: Thread) {
@@ -118,7 +95,7 @@ impl CoreTrait for Core {
       }
       *self.context_mut() = t.context();
     } else {
-      if self.has_context() {
+      if self.context.is_some() {
         // Note: previous process has been destroyed
         *self.context_mut() = t.context();
       } else {
@@ -132,28 +109,23 @@ impl CoreTrait for Core {
     }
   }
 
-  fn address_space(&self) -> Option<AddressSpace> {
+  pub fn address_space(&self) -> Option<AddressSpace> {
     self.address_space.clone()
   }
 
   fn set_address_space(&mut self, a: AddressSpace) {
-    let mut prev_id = u16::MAX;
     if let Some(prev) = &self.address_space {
-      prev_id = prev.asid();
+      if prev.asid() == a.asid() {
+        return;
+      }
     }
-    if a.asid() != prev_id {
-      self.address_space = Some(a.clone());
-      crate::arch::PageTable::set_user_page_table(a.page_table().base_pa(), a.asid() as AddressSpaceId);
-      crate::arch::Arch::invalidate_tlb();
-    }
-  }
-
-  fn clear_address_space(&mut self) {
-    self.address_space = None
+    self.address_space = Some(a.clone());
+    crate::arch::PageTable::set_user_page_table(a.page_table().base_pa(), a.asid() as AddressSpaceId);
+    crate::arch::Arch::invalidate_tlb();
   }
 }
 
-pub fn current() -> &'static mut Core {
+pub fn cpu() -> &'static mut Core {
   let core_id = crate::core_id();
   unsafe { &mut CORES[core_id] }
 }

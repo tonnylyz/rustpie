@@ -1,7 +1,6 @@
 use cortex_a::{barrier, regs::*};
 
 use crate::arch::ContextFrame;
-use crate::lib::cpu::CoreTrait;
 use crate::core_id;
 
 global_asm!(include_str!("exception.S"));

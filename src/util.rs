@@ -2,7 +2,7 @@ use spin::barrier::Barrier;
 
 use crate::arch::CoreId;
 use crate::board::BOARD_CORE_NUMBER;
-use crate::lib::cpu::{Core, CoreTrait};
+use crate::lib::cpu::Core;
 use crate::lib::thread::Thread;
 use crate::lib::traits::ArchTrait;
 
@@ -29,7 +29,7 @@ pub fn core_id() -> CoreId {
 
 #[inline(always)]
 pub fn current_cpu() -> &'static mut Core {
-  crate::lib::cpu::current()
+  crate::lib::cpu::cpu()
 }
 
 #[inline(always)]
