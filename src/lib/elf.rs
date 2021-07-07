@@ -3,71 +3,66 @@ use xmas_elf::*;
 use crate::arch::{PAGE_SIZE, PageTable};
 use crate::mm::page_table::{EntryAttribute, PageTableEntryAttrTrait, PageTableTrait};
 use crate::util::round_up;
+use crate::lib::traits::Address;
+use common::syscall::error::{ERROR_INVARG, ERROR_OOM};
+use crate::mm::UserFrame;
 
-pub enum Error {
-  ElfHeaderError,
-  ElfPageTableError,
-}
-
-impl core::convert::From<crate::mm::page_table::Error> for Error {
-  fn from(_: crate::mm::page_table::Error) -> Self {
-    Error::ElfPageTableError
-  }
-}
-
-#[inline(always)]
-fn copy(src: &[u8], src_offset: usize, dst: &mut [u8], dst_offset: usize, length: usize) {
-  for i in 0..length {
-    dst[dst_offset + i] = src[src_offset + i];
-  }
-}
+pub type Error = usize;
 
 pub fn load(src: &'static [u8], page_table: &PageTable) -> Result<usize, Error> {
   if let Ok(elf) = ElfFile::new(src) {
     let entry_point = elf.header.pt2.entry_point() as usize;
-    for program_header in elf.program_iter() {
-      if let Ok(program::Type::Load) = program_header.get_type() {
+    for ph in elf.program_iter() {
+      if let Ok(program::Type::Load) = ph.get_type() {
         /* Ignore types other than `Load` */
       } else {
         continue;
       }
-      let va = program_header.virtual_addr() as usize;
-      let file_size = program_header.file_size() as usize;
-      let file_end = va + file_size;
-      let mem_size = program_header.mem_size() as usize;
-      let mem_end = va + mem_size;
 
+      let va = ph.virtual_addr() as usize;
       if va % PAGE_SIZE != 0 {
-        warn!("ignore unaligned section@{:016x}", va);
+        warn!("ignore unaligned program@{:016x}", va);
+        continue;
+      }
+      if va == 0 {
+        warn!("ignore program@{:016x}", va);
         continue;
       }
 
+      let mem_page_num = round_up(ph.mem_size() as usize, PAGE_SIZE) / PAGE_SIZE;
+      let file_page_num = round_up(ph.file_size() as usize, PAGE_SIZE) / PAGE_SIZE;
+      let pa = (src.as_ptr() as usize + ph.offset() as usize).kva2pa();
 
-      let mut i = va;
-      while i < round_up(file_end, PAGE_SIZE) {
-        let frame = crate::mm::page_pool::alloc();
-        frame.zero();
-        let frame_slice = frame.as_mut_slice();
-        let uf = crate::mm::UserFrame::new_memory(frame);
-        // trace!("mapping {:016x} -> {:08x}", i, uf.pa());
-        page_table.insert_page(i, uf, EntryAttribute::user_default())?;
-        let offset = program_header.offset() as usize + (i - va);
-        copy(src, offset, frame_slice, 0, PAGE_SIZE);
+      trace!("map {:08x} to {:08x} len {:x}/{:x} {}", va, pa, file_page_num * PAGE_SIZE, mem_page_num * PAGE_SIZE, ph.flags());
 
-        i += PAGE_SIZE;
+
+      if !(ph.flags().is_read()) {
+        warn!("ignore not readable program@{:016x}", va);
+        continue;
       }
-      while i < round_up(mem_end, PAGE_SIZE) {
-        let frame = crate::mm::page_pool::alloc();
-        frame.zero();
-        let uf = crate::mm::UserFrame::new_memory(frame);
-        // trace!("allocating {:016x} -> {:08x}", i, uf.pa());
-        page_table.insert_page(i, uf, EntryAttribute::user_default())?;
+      let attr = if ph.flags().is_execute() {
+        // R E
+        EntryAttribute::user_executable()
+      } else {
+        if ph.flags().is_write() {
+          // RW
+          EntryAttribute::user_data()
+        } else {
+          // R
+          EntryAttribute::user_readonly()
+        }
+      };
 
-        i += PAGE_SIZE;
+      for i in 0..file_page_num {
+        page_table.map(va + i * PAGE_SIZE, pa + i * PAGE_SIZE, attr);
+      }
+      for i in file_page_num..mem_page_num {
+        let frame = crate::mm::page_pool::try_alloc().map_err(|_| ERROR_OOM)?;
+        page_table.insert_page(va + i * PAGE_SIZE, UserFrame::new_memory(frame), attr);
       }
     }
     Ok(entry_point)
   } else {
-    Err(Error::ElfHeaderError)
+    Err(ERROR_INVARG)
   }
 }

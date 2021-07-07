@@ -88,10 +88,9 @@ pub fn address_space_destroy(a: AddressSpace) {
 pub fn load_image(elf: &'static [u8]) -> (AddressSpace, usize) {
   let a = address_space_alloc().unwrap();
   let page_table = a.page_table();
-  let va_start = elf.as_ptr() as usize;
   let len = round_up(elf.len(), PAGE_SIZE);
   for i in (0..len).step_by(PAGE_SIZE) {
-    let pa = (va_start + i).kva2pa();
+    let pa = (elf.as_ptr() as usize + i).kva2pa();
     page_table.map(CONFIG_ELF_IMAGE + i, pa, EntryAttribute::user_readonly());
   }
   match crate::lib::elf::load(elf, page_table) {
