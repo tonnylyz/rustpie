@@ -4,14 +4,14 @@ use crate::arch::PAGE_SIZE;
 use crate::lib::traits::*;
 
 #[derive(Debug)]
-pub struct PageFrame {
+pub struct PhysicalFrame {
   pa: usize,
 }
 
-impl PageFrame {
+impl PhysicalFrame {
   pub fn new(pa: usize) -> Self {
     assert_eq!(pa % PAGE_SIZE, 0);
-    PageFrame {
+    PhysicalFrame {
       pa
     }
   }
@@ -35,34 +35,42 @@ impl PageFrame {
     unsafe { core::slice::from_raw_parts(self.kva() as *const T, PAGE_SIZE / core::mem::size_of::<T>()) }
   }
 
+  #[allow(dead_code)]
   pub fn as_mut_slice<T>(&self) -> &'static mut [T] {
     unsafe { core::slice::from_raw_parts_mut(self.kva() as *mut T, PAGE_SIZE / core::mem::size_of::<T>()) }
   }
 }
 
 #[derive(Debug, Clone)]
-pub enum UserFrame {
-  Memory(Arc<PageFrame>),
+pub enum Frame {
+  PhysicalMemory(Arc<PhysicalFrame>),
   Device(usize),
 }
 
-impl UserFrame {
-  pub fn new_memory(frame: PageFrame) -> Self {
-    UserFrame::Memory(Arc::new(frame))
+impl From<PhysicalFrame> for Frame {
+  fn from(physical_frame: PhysicalFrame) -> Self {
+    Frame::PhysicalMemory(Arc::new(physical_frame))
   }
-  pub fn new_device(physical_address: usize) -> Self {
-    UserFrame::Device(physical_address)
+}
+
+impl From<usize> for Frame {
+  fn from(device_pa: usize) -> Self {
+    Frame::Device(device_pa)
   }
+}
+
+impl Frame {
   pub fn pa(&self) -> usize {
     match self {
-      UserFrame::Memory(frame) => { frame.pa }
-      UserFrame::Device(pa) => { *pa }
+      Frame::PhysicalMemory(frame) => { frame.pa }
+      Frame::Device(pa) => { *pa }
     }
   }
 }
 
-impl Drop for PageFrame {
+impl Drop for PhysicalFrame {
   fn drop(&mut self) {
     trace!("drop frame {:016x}", self.pa);
+    super::page_pool::page_free(self.pa).expect("physical page drop failed");
   }
 }

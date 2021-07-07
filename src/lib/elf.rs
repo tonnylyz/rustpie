@@ -5,7 +5,7 @@ use crate::mm::page_table::{EntryAttribute, PageTableEntryAttrTrait, PageTableTr
 use crate::util::round_up;
 use crate::lib::traits::Address;
 use common::syscall::error::{ERROR_INVARG, ERROR_OOM};
-use crate::mm::UserFrame;
+use crate::mm::Frame;
 
 pub type Error = usize;
 
@@ -54,11 +54,11 @@ pub fn load(src: &'static [u8], page_table: &PageTable) -> Result<usize, Error> 
       };
 
       for i in 0..file_page_num {
-        page_table.map(va + i * PAGE_SIZE, pa + i * PAGE_SIZE, attr);
+        page_table.map(va + i * PAGE_SIZE, pa + i * PAGE_SIZE, attr)?;
       }
       for i in file_page_num..mem_page_num {
-        let frame = crate::mm::page_pool::try_alloc().map_err(|_| ERROR_OOM)?;
-        page_table.insert_page(va + i * PAGE_SIZE, UserFrame::new_memory(frame), attr);
+        let frame = crate::mm::page_pool::page_alloc().map_err(|_| ERROR_OOM)?;
+        page_table.insert_page(va + i * PAGE_SIZE, Frame::from(frame), attr)?;
       }
     }
     Ok(entry_point)

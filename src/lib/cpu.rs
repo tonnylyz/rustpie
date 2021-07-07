@@ -7,14 +7,14 @@ use crate::lib::scheduler::scheduler;
 use crate::lib::thread::Thread;
 use crate::lib::traits::*;
 use crate::mm::page_table::PageTableTrait;
-use crate::mm::PageFrame;
+use crate::mm::PhysicalFrame;
 
 pub struct Core {
   context: Option<*mut ContextFrame>,
   // pointer points at stack
   running_thread: Option<Thread>,
   idle_thread: Once<Thread>,
-  idle_stack: Once<PageFrame>,
+  idle_stack: Once<PhysicalFrame>,
   address_space: Option<AddressSpace>,
 }
 
@@ -65,7 +65,7 @@ impl Core {
   fn idle_thread(&self) -> Thread {
     match self.idle_thread.get() {
       None => {
-        let frame = crate::mm::page_pool::alloc();
+        let frame = crate::mm::page_pool::page_alloc().expect("fail to allocate idle thread stack");
         let t = crate::lib::thread::new_kernel(
           idle_thread as usize,
           frame.kva() + PAGE_SIZE,
@@ -120,7 +120,7 @@ impl Core {
       }
     }
     self.address_space = Some(a.clone());
-    crate::arch::PageTable::set_user_page_table(a.page_table().base_pa(), a.asid() as AddressSpaceId);
+    crate::arch::PageTable::install_user_page_table(a.page_table().base_pa(), a.asid() as AddressSpaceId);
     crate::arch::Arch::invalidate_tlb();
   }
 }

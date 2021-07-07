@@ -124,9 +124,9 @@ pub unsafe fn main(core_id: arch::CoreId) -> ! {
     info!("load_image ok");
 
     let page_table = a.page_table();
-
+    let stack_frame = mm::page_pool::page_alloc().expect("failed to allocate trusted stack");
     page_table.insert_page(common::CONFIG_USER_STACK_TOP - arch::PAGE_SIZE,
-                           mm::UserFrame::new_memory(mm::page_pool::alloc()),
+                           mm::Frame::from(stack_frame),
                            mm::page_table::EntryAttribute::user_default()).unwrap();
     info!("user stack ok");
     let t = crate::lib::thread::new_user(
@@ -140,7 +140,11 @@ pub unsafe fn main(core_id: arch::CoreId) -> ! {
 
     for device in board::devices() {
       for uf in device.to_user_frames().iter() {
-        a.page_table().insert_page(0x8_0000_0000 + uf.pa(), uf.clone(), mm::page_table::EntryAttribute::user_device()).unwrap();
+        a.page_table().insert_page(
+          0x8_0000_0000 + uf.pa(),
+          uf.clone(),
+          mm::page_table::EntryAttribute::user_device()
+        ).unwrap();
       }
       for i in device.interrupts.iter() {
         crate::driver::INTERRUPT_CONTROLLER.enable(*i);

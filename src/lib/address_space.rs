@@ -9,9 +9,10 @@ use crate::util::round_up;
 use common::{PAGE_SIZE, CONFIG_ELF_IMAGE};
 use crate::lib::traits::Address;
 use core::sync::atomic::{AtomicU16, Ordering};
+use common::syscall::error::{ERROR_OOR, ERROR_OOM};
 
 pub type Asid = u16;
-
+pub type Error = usize;
 #[derive(Debug)]
 struct Inner {
   asid: Asid,
@@ -42,13 +43,6 @@ impl AddressSpace {
   }
 }
 
-fn make_user_page_table() -> PageTable {
-  let frame = crate::mm::page_pool::alloc();
-  let page_table = PageTable::new(frame);
-  page_table.recursive_map(common::CONFIG_RECURSIVE_PAGE_TABLE_BTM);
-  page_table
-}
-
 static ASID_ALLOCATOR: AtomicU16 = AtomicU16::new(1);
 
 fn new_asid() -> Asid {
@@ -57,18 +51,21 @@ fn new_asid() -> Asid {
 
 static ADDRESS_SPACE_MAP: Mutex<BTreeMap<Asid, AddressSpace>> = Mutex::new(BTreeMap::new());
 
-pub fn address_space_alloc() -> Option<AddressSpace> {
+pub fn address_space_alloc() -> Result<AddressSpace, Error> {
   let id = new_asid();
   if id == 0 {
-    return None;
+    return Err(ERROR_OOR);
   }
+  let frame = crate::mm::page_pool::page_alloc().map_err(|_| ERROR_OOM)?;
+  let page_table = PageTable::new(frame);
+  page_table.recursive_map(common::CONFIG_RECURSIVE_PAGE_TABLE_BTM);
   let a = AddressSpace(Arc::new(Inner {
     asid: id,
-    page_table: make_user_page_table(),
+    page_table,
   }));
   let mut map = ADDRESS_SPACE_MAP.lock();
   map.insert(id, a.clone());
-  Some(a)
+  Ok(a)
 }
 
 pub fn address_space_lookup(asid: Asid) -> Option<AddressSpace> {
@@ -91,12 +88,8 @@ pub fn load_image(elf: &'static [u8]) -> (AddressSpace, usize) {
   let len = round_up(elf.len(), PAGE_SIZE);
   for i in (0..len).step_by(PAGE_SIZE) {
     let pa = (elf.as_ptr() as usize + i).kva2pa();
-    page_table.map(CONFIG_ELF_IMAGE + i, pa, EntryAttribute::user_readonly());
+    page_table.map(CONFIG_ELF_IMAGE + i, pa, EntryAttribute::user_readonly()).expect("page_table map error");
   }
-  match crate::lib::elf::load(elf, page_table) {
-    Ok(entry) => {
-      (a, entry)
-    }
-    Err(_) => { panic!("process: create: load err") }
-  }
+  let entry = crate::lib::elf::load(elf, page_table).expect("elf load error");
+  (a, entry)
 }

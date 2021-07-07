@@ -4,11 +4,12 @@ use spin::Mutex;
 
 use crate::arch::*;
 use crate::mm::page_table::{Entry, EntryAttribute, Error, PageTableEntryAttrTrait, PageTableTrait};
-use crate::mm::{PageFrame, UserFrame};
+use crate::mm::{PhysicalFrame, Frame};
 
 use super::vm_descriptor::*;
 
 use crate::lib::traits::*;
+use common::syscall::error::ERROR_INVARG;
 
 pub const PAGE_TABLE_L1_SHIFT: usize = 30;
 pub const PAGE_TABLE_L2_SHIFT: usize = 21;
@@ -16,9 +17,9 @@ pub const PAGE_TABLE_L3_SHIFT: usize = 12;
 
 #[derive(Debug)]
 pub struct Aarch64PageTable {
-  directory: PageFrame,
-  pages: Mutex<Vec<PageFrame>>,
-  user_pages: Mutex<Vec<UserFrame>>,
+  directory: PhysicalFrame,
+  pages: Mutex<Vec<PhysicalFrame>>,
+  user_pages: Mutex<Vec<Frame>>,
 }
 
 #[repr(transparent)]
@@ -129,7 +130,7 @@ impl core::convert::From<Entry> for Aarch64PageTableEntry {
 }
 
 impl PageTableTrait for Aarch64PageTable {
-  fn new(directory: PageFrame) -> Self {
+  fn new(directory: PhysicalFrame) -> Self {
     Aarch64PageTable {
       directory,
       pages: Mutex::new(Vec::new()),
@@ -141,11 +142,11 @@ impl PageTableTrait for Aarch64PageTable {
     self.directory.pa()
   }
 
-  fn map(&self, va: usize, pa: usize, attr: EntryAttribute) {
+  fn map(&self, va: usize, pa: usize, attr: EntryAttribute) -> Result<(), Error> {
     let directory = Aarch64PageTableEntry::from_pa(self.directory.pa());
     let mut l1e = directory.entry(va.l1x());
     if !l1e.valid() {
-      let frame = crate::mm::page_pool::alloc();
+      let frame = crate::mm::page_pool::page_alloc()?;
       l1e = Aarch64PageTableEntry::make_table(frame.pa());
       let mut pages = self.pages.lock();
       pages.push(frame);
@@ -153,13 +154,14 @@ impl PageTableTrait for Aarch64PageTable {
     }
     let mut l2e = l1e.entry(va.l2x());
     if !l2e.valid() {
-      let frame = crate::mm::page_pool::alloc();
+      let frame = crate::mm::page_pool::page_alloc()?;
       l2e = Aarch64PageTableEntry::make_table(frame.pa());
       let mut pages = self.pages.lock();
       pages.push(frame);
       l1e.set_entry(va.l2x(), l2e);
     }
     l2e.set_entry(va.l3x(), Aarch64PageTableEntry::from(Entry::new(attr, pa)));
+    Ok(())
   }
 
   fn unmap(&self, va: usize) {
@@ -171,7 +173,7 @@ impl PageTableTrait for Aarch64PageTable {
     l2e.set_entry(va.l3x(), Aarch64PageTableEntry(0));
   }
 
-  fn insert_page(&self, va: usize, user_frame: crate::mm::UserFrame, attr: EntryAttribute) -> Result<(), Error> {
+  fn insert_page(&self, va: usize, user_frame: crate::mm::Frame, attr: EntryAttribute) -> Result<(), Error> {
     let pa = user_frame.pa();
     let mut user_frames = self.user_pages.lock();
     user_frames.push(user_frame);
@@ -179,15 +181,10 @@ impl PageTableTrait for Aarch64PageTable {
       if p.pa() != pa {
         // replace mapped frame
         self.remove_page(va)?;
-      } else {
-        // update attribute
-        crate::arch::Arch::invalidate_tlb();
-        self.map(va, pa, attr);
-        return Ok(());
       }
     }
     crate::arch::Arch::invalidate_tlb();
-    self.map(va, pa, attr);
+    self.map(va, pa, attr)?;
     Ok(())
   }
 
@@ -209,7 +206,7 @@ impl PageTableTrait for Aarch64PageTable {
     }
   }
 
-  fn lookup_user_page(&self, va: usize) -> Option<UserFrame> {
+  fn lookup_user_page(&self, va: usize) -> Option<Frame> {
     match self.lookup_page(va) {
       None => { None }
       Some(entry) => {
@@ -225,13 +222,13 @@ impl PageTableTrait for Aarch64PageTable {
     }
   }
 
-  fn remove_page(&self, va: usize) -> Result<(), crate::mm::page_table::Error> {
+  fn remove_page(&self, va: usize) -> Result<(), Error> {
     if let Some(_) = self.lookup_page(va) {
       self.unmap(va);
       crate::arch::Arch::invalidate_tlb();
       Ok(())
     } else {
-      Err(crate::mm::page_table::Error::AddressNotMappedError)
+      Err(ERROR_INVARG)
     }
   }
 
@@ -245,7 +242,7 @@ impl PageTableTrait for Aarch64PageTable {
     )));
   }
 
-  fn set_user_page_table(base: usize, asid: AddressSpaceId) {
+  fn install_user_page_table(base: usize, asid: AddressSpaceId) {
     use cortex_a::{regs::*, *};
     unsafe {
       TTBR0_EL1.write(TTBR0_EL1::ASID.val(asid as u64));

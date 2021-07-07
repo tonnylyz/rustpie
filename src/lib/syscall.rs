@@ -72,14 +72,12 @@ pub struct Syscall;
 
 fn lookup_as(asid: u16) -> Result<AddressSpace, Error> {
   // TODO: check permission
-  match if asid == 0 {
-    crate::lib::cpu::cpu().address_space()
+  let a = if asid == 0 {
+    current_thread()?.address_space()
   } else {
     crate::lib::address_space::address_space_lookup(asid)
-  } {
-    None => Err(ERROR_INTERNAL),
-    Some(a) => Ok(a),
-  }
+  };
+  a.ok_or(ERROR_INVARG)
 }
 
 fn current_thread() -> Result<Thread, Error> {
@@ -109,7 +107,7 @@ impl Syscall {
       match crate::lib::thread::thread_lookup(tid) {
         None => Err(ERROR_INVARG),
         Some(t) => match t.address_space() {
-          None => { Err(ERROR_INVARG) }
+          None => Err(ERROR_INVARG),
           Some(a) => Ok(Single(a.asid() as usize)),
         },
       }
@@ -167,17 +165,16 @@ impl Syscall {
   }
 
   fn mem_alloc(asid: u16, va: usize, attr: usize) -> SyscallResult {
+    let va = round_down(va, PAGE_SIZE);
     // if va >= CONFIG_USER_LIMIT {
     //   return Err(MemoryLimitError);
     // }
-    let p = lookup_as(asid)?;
-    let frame = crate::mm::page_pool::try_alloc().map_err(|_| ERROR_OOM)?;
+    let a = lookup_as(asid)?;
+    let frame = crate::mm::page_pool::page_alloc().map_err(|_| ERROR_OOM)?;
     frame.zero();
-    let page_table = p.page_table();
-    let user_attr = Entry::from(ArchPageTableEntry::from_pte(attr)).attribute();
-    let attr = user_attr.filter();
-    let uf = crate::mm::UserFrame::new_memory(frame);
-    page_table.insert_page(va, uf, attr).map_err(|_| ERROR_INTERNAL)?;
+    let attr = Entry::from(ArchPageTableEntry::from_pte(attr)).attribute().filter();
+    let uf = crate::mm::Frame::from(frame);
+    a.page_table().insert_page(va, uf, attr).map_err(|_| ERROR_INTERNAL)?;
     Ok(Unit)
   }
 
@@ -189,12 +186,9 @@ impl Syscall {
     // }
     let src_as = lookup_as(src_asid)?;
     let dst_as = lookup_as(dst_asid)?;
-    let src_pt = src_as.page_table();
-    let user_attr = Entry::from(ArchPageTableEntry::from_pte(attr)).attribute();
-    let attr = user_attr.filter();
-    let dst_pt = dst_as.page_table();
-    if let Some(uf) = src_pt.lookup_user_page(src_va) {
-      dst_pt.insert_page(dst_va, uf, attr).map_err(|_| ERROR_INTERNAL)?;
+    let attr = Entry::from(ArchPageTableEntry::from_pte(attr)).attribute().filter();
+    if let Some(uf) = src_as.page_table().lookup_user_page(src_va) {
+      dst_as.page_table().insert_page(dst_va, uf, attr).map_err(|_| ERROR_INTERNAL)?;
       Ok(Unit)
     } else {
       Err(ERROR_MEM_NOT_MAP)
@@ -202,17 +196,17 @@ impl Syscall {
   }
 
   fn mem_unmap(asid: u16, va: usize) -> SyscallResult {
+    let va = round_down(va, PAGE_SIZE);
     // if va >= CONFIG_USER_LIMIT {
     //   return Err(MemoryLimitError);
     // }
     let a = lookup_as(asid)?;
-    let page_table = a.page_table();
-    page_table.remove_page(va).map_err(|_| ERROR_INTERNAL)?;
+    a.page_table().remove_page(va).map_err(|_| ERROR_INTERNAL)?;
     Ok(Unit)
   }
 
   fn address_space_alloc() -> SyscallResult {
-    let a = crate::lib::address_space::address_space_alloc().ok_or(ERROR_OOR)?;
+    let a = crate::lib::address_space::address_space_alloc()?;
     Ok(Single(a.asid() as usize))
   }
 

@@ -1,7 +1,7 @@
 use core::fmt::{Display, Formatter};
 
 use crate::arch::{AddressSpaceId, PAGE_SHIFT};
-use crate::mm::UserFrame;
+use crate::mm::Frame;
 
 pub trait PageTableEntryAttrTrait {
   fn writable(&self) -> bool;
@@ -198,21 +198,18 @@ impl Display for Entry {
   }
 }
 
-#[derive(Copy, Clone, Debug)]
-pub enum Error {
-  AddressNotMappedError,
-}
+pub type Error = usize;
 
 pub trait PageTableTrait {
-  fn new(directory: crate::mm::PageFrame) -> Self;
+  fn new(directory: crate::mm::PhysicalFrame) -> Self;
   fn base_pa(&self) -> usize;
-  fn map(&self, va: usize, pa: usize, attr: EntryAttribute);
+  fn map(&self, va: usize, pa: usize, attr: EntryAttribute) -> Result<(), Error>;
   fn unmap(&self, va: usize);
-  fn insert_page(&self, va: usize, user_frame: crate::mm::UserFrame, attr: EntryAttribute) -> Result<(), Error>;
+  fn insert_page(&self, va: usize, user_frame: crate::mm::Frame, attr: EntryAttribute) -> Result<(), Error>;
   fn lookup_page(&self, va: usize) -> Option<Entry>;
-  fn lookup_user_page(&self, va: usize) -> Option<UserFrame>;
+  fn lookup_user_page(&self, va: usize) -> Option<Frame>;
   fn remove_page(&self, va: usize) -> Result<(), Error>;
   fn recursive_map(&self, va: usize);
 
-  fn set_user_page_table(base: usize, asid: AddressSpaceId);
+  fn install_user_page_table(base: usize, asid: AddressSpaceId);
 }

@@ -3,7 +3,7 @@ use core::ops::Range;
 
 use crate::arch::PAGE_SIZE;
 use crate::driver::Interrupt;
-use crate::mm::UserFrame;
+use crate::mm::Frame;
 use crate::util::round_down;
 
 #[derive(Debug)]
@@ -24,12 +24,12 @@ impl Device {
     }
   }
 
-  pub fn to_user_frames(&self) -> Vec<UserFrame> {
+  pub fn to_user_frames(&self) -> Vec<Frame> {
     let mut result = Vec::new();
     for range in self.registers.iter() {
       let start = round_down(range.start, PAGE_SIZE);
       for pa in (start..range.end).step_by(PAGE_SIZE) {
-        result.push(UserFrame::new_device(pa));
+        result.push(Frame::from(pa));
       }
     }
     result

@@ -4,15 +4,10 @@ use core::ops::Range;
 use spin::Mutex;
 
 use crate::arch::*;
-use crate::mm::PageFrame;
+use crate::mm::PhysicalFrame;
+use common::syscall::error::{ERROR_OOM, ERROR_INVARG};
 
-use self::Error::*;
-
-#[derive(Copy, Clone, Debug)]
-pub enum Error {
-  OutOfFrame,
-  FreeNotAllocated
-}
+pub type Error = usize;
 
 struct PagePool {
   free: Vec<usize>,
@@ -28,18 +23,18 @@ impl PagePool {
     }
   }
 
-  pub fn allocate(&mut self) -> Result<PageFrame, Error> {
+  pub fn allocate(&mut self) -> Result<PhysicalFrame, Error> {
     if let Some(pa) = self.free.pop() {
       self.allocated.push(pa);
-      Ok(PageFrame::new(pa))
+      Ok(PhysicalFrame::new(pa))
     } else {
-      Err(OutOfFrame)
+      Err(ERROR_OOM)
     }
   }
 
   pub fn free(&mut self, pa: usize) -> Result<(), Error> {
     if !self.allocated.contains(&pa) {
-      Err(FreeNotAllocated)
+      Err(ERROR_INVARG)
     } else {
       self.allocated.retain(|p| { *p != pa });
       self.free.push(pa);
@@ -61,17 +56,12 @@ pub fn init() {
   pool.init(range);
 }
 
-pub fn alloc() -> PageFrame {
+pub fn page_alloc() -> Result<PhysicalFrame, Error> {
   let mut pool = PAGE_POOL.lock();
-  if let Ok(frame) = pool.allocate() {
-    frame
-  } else {
-    panic!("page_pool: alloc failed")
-  }
+  pool.allocate()
 }
 
-pub fn try_alloc() -> Result<PageFrame, Error> {
+pub fn page_free(pa: usize) -> Result<(), Error>{
   let mut pool = PAGE_POOL.lock();
-  let r = pool.allocate();
-  r
+  pool.free(pa)
 }
