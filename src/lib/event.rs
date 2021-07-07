@@ -2,7 +2,7 @@ use common::event::*;
 use spin::Once;
 
 use crate::lib::semaphore::Semaphore;
-use crate::lib::syscall::{SyscallOutRegisters, SyscallResult};
+use crate::lib::syscall::{SyscallOutRegisters, Result as SyscallResult};
 use crate::lib::thread::{Tid, thread_wake};
 use crate::lib::traits::ContextFrameTrait;
 

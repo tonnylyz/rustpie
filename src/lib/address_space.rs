@@ -21,7 +21,7 @@ struct Inner {
 
 impl Drop for Inner {
   fn drop(&mut self) {
-    info!("Drop AS{}", self.asid);
+    trace!("Drop AS{}", self.asid);
   }
 }
 
@@ -77,7 +77,7 @@ pub fn address_space_lookup(asid: Asid) -> Option<AddressSpace> {
 }
 
 pub fn address_space_destroy(a: AddressSpace) {
-  info!("Destroy AS{}", a.asid());
+  trace!("Destroy AS{}", a.asid());
   let mut map = ADDRESS_SPACE_MAP.lock();
   map.remove(&a.asid());
 }

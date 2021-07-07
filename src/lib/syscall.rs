@@ -42,7 +42,7 @@ impl Display for SyscallOutRegisters {
   }
 }
 
-pub type SyscallResult = Result<SyscallOutRegisters, Error>;
+pub type Result = core::result::Result<SyscallOutRegisters, Error>;
 
 static SYSCALL_NAMES: [&str; 21] = [
   "null",
@@ -68,9 +68,9 @@ static SYSCALL_NAMES: [&str; 21] = [
   "server_tid",
 ];
 
-pub struct Syscall;
+struct Syscall;
 
-fn lookup_as(asid: u16) -> Result<AddressSpace, Error> {
+fn lookup_as(asid: u16) -> core::result::Result<AddressSpace, Error> {
   // TODO: check permission
   let a = if asid == 0 {
     current_thread()?.address_space()
@@ -80,7 +80,7 @@ fn lookup_as(asid: u16) -> Result<AddressSpace, Error> {
   a.ok_or(ERROR_INVARG)
 }
 
-fn current_thread() -> Result<Thread, Error> {
+fn current_thread() -> core::result::Result<Thread, Error> {
   match cpu().running_thread() {
     None => Err(ERROR_INTERNAL),
     Some(t) => Ok(t),
@@ -88,16 +88,16 @@ fn current_thread() -> Result<Thread, Error> {
 }
 
 impl Syscall {
-  fn null() -> SyscallResult {
+  fn null() -> Result {
     Ok(Unit)
   }
 
-  fn putc(c: char) -> SyscallResult {
+  fn putc(c: char) -> Result {
     crate::driver::uart::putc(c as u8);
     Ok(Unit)
   }
 
-  fn get_asid(tid: Tid) -> SyscallResult {
+  fn get_asid(tid: Tid) -> Result {
     if tid == 0 {
       match crate::lib::cpu::cpu().address_space() {
         None => Err(ERROR_INTERNAL),
@@ -114,16 +114,16 @@ impl Syscall {
     }
   }
 
-  fn get_tid() -> SyscallResult {
+  fn get_tid() -> Result {
     Ok(Single(current_thread()?.tid()))
   }
 
-  fn thread_yield() -> SyscallResult {
+  fn thread_yield() -> Result {
     crate::lib::cpu::cpu().schedule();
     Ok(Unit)
   }
 
-  fn thread_destroy(tid: Tid) -> SyscallResult {
+  fn thread_destroy(tid: Tid) -> Result {
     let current_thread = current_thread()?;
     if tid == 0 {
       thread_destroy(current_thread);
@@ -144,7 +144,7 @@ impl Syscall {
     }
   }
 
-  fn event_wait(event_type: usize, event_num: usize) -> SyscallResult {
+  fn event_wait(event_type: usize, event_num: usize) -> Result {
     let t = current_thread()?;
     if let Some(e) = Event::from(event_type, event_num) {
       match e {
@@ -164,7 +164,7 @@ impl Syscall {
     }
   }
 
-  fn mem_alloc(asid: u16, va: usize, attr: usize) -> SyscallResult {
+  fn mem_alloc(asid: u16, va: usize, attr: usize) -> Result {
     let va = round_down(va, PAGE_SIZE);
     // if va >= CONFIG_USER_LIMIT {
     //   return Err(MemoryLimitError);
@@ -178,7 +178,7 @@ impl Syscall {
     Ok(Unit)
   }
 
-  fn mem_map(src_asid: u16, src_va: usize, dst_asid: u16, dst_va: usize, attr: usize) -> SyscallResult {
+  fn mem_map(src_asid: u16, src_va: usize, dst_asid: u16, dst_va: usize, attr: usize) -> Result {
     let src_va = round_down(src_va, PAGE_SIZE);
     let dst_va = round_down(dst_va, PAGE_SIZE);
     // if src_va >= CONFIG_USER_LIMIT || dst_va >= CONFIG_USER_LIMIT {
@@ -195,7 +195,7 @@ impl Syscall {
     }
   }
 
-  fn mem_unmap(asid: u16, va: usize) -> SyscallResult {
+  fn mem_unmap(asid: u16, va: usize) -> Result {
     let va = round_down(va, PAGE_SIZE);
     // if va >= CONFIG_USER_LIMIT {
     //   return Err(MemoryLimitError);
@@ -205,19 +205,19 @@ impl Syscall {
     Ok(Unit)
   }
 
-  fn address_space_alloc() -> SyscallResult {
+  fn address_space_alloc() -> Result {
     let a = crate::lib::address_space::address_space_alloc()?;
     Ok(Single(a.asid() as usize))
   }
 
-  fn thread_alloc(asid: u16, entry: usize, sp: usize, arg: usize) -> SyscallResult {
+  fn thread_alloc(asid: u16, entry: usize, sp: usize, arg: usize) -> Result {
     let t = current_thread()?;
     let a = lookup_as(asid)?;
     let child_thread = crate::lib::thread::new_user(entry, sp, arg, a.clone(), Some(t.tid()));
     Ok(Single(child_thread.tid() as usize))
   }
 
-  fn thread_set_status(tid: usize, status: usize) -> SyscallResult {
+  fn thread_set_status(tid: usize, status: usize) -> Result {
     use common::thread::*;
     let runnable = match status {
       THREAD_STATUS_NOT_RUNNABLE => false,
@@ -237,13 +237,13 @@ impl Syscall {
     Ok(Unit)
   }
 
-  fn address_space_destroy(asid: u16) -> SyscallResult {
+  fn address_space_destroy(asid: u16) -> Result {
     let a = lookup_as(asid)?;
     address_space_destroy(a);
     Ok(Unit)
   }
 
-  fn itc_receive() -> SyscallResult {
+  fn itc_receive() -> Result {
     let t = current_thread()?;
     t.ready_to_receive();
     if let Some(0) = t.is_serving() {
@@ -254,12 +254,12 @@ impl Syscall {
     Ok(Unit)
   }
 
-  fn itc_send(tid: Tid, a: usize, b: usize, c: usize, d: usize) -> SyscallResult {
+  fn itc_send(tid: Tid, a: usize, b: usize, c: usize, d: usize) -> Result {
     let t = current_thread()?;
     let target = crate::lib::thread::thread_lookup(tid).ok_or_else(|| ERROR_INVARG)?;
     if target.receive() {
       target.map_with_context(|ctx| {
-        ctx.set_syscall_result(&SyscallResult::Ok(SyscallOutRegisters::Pentad(t.tid() as usize, a, b, c, d)));
+        ctx.set_syscall_result(&Result::Ok(SyscallOutRegisters::Pentad(t.tid() as usize, a, b, c, d)));
       });
       thread_wake(&target);
       if let Some(caller) = t.is_serving() {
@@ -273,13 +273,13 @@ impl Syscall {
     }
   }
 
-  fn itc_call(tid: Tid, a: usize, b: usize, c: usize, d: usize) -> SyscallResult {
+  fn itc_call(tid: Tid, a: usize, b: usize, c: usize, d: usize) -> Result {
     let t = current_thread()?;
     let target = crate::lib::thread::thread_lookup(tid).ok_or_else(|| ERROR_INVARG)?;
 
     if target.serve(t.tid()) {
       target.map_with_context(|ctx| {
-        ctx.set_syscall_result(&SyscallResult::Ok(SyscallOutRegisters::Pentad(t.tid() as usize, a, b, c, d)));
+        ctx.set_syscall_result(&Result::Ok(SyscallOutRegisters::Pentad(t.tid() as usize, a, b, c, d)));
       });
       thread_wake(&target);
       t.ready_to_receive();
@@ -291,13 +291,13 @@ impl Syscall {
     }
   }
 
-  fn server_register(server_id: usize) -> SyscallResult {
+  fn server_register(server_id: usize) -> Result {
     let t = current_thread()?;
     super::server::set(server_id, t.tid());
     Ok(Unit)
   }
 
-  fn server_tid(server_id: usize) -> SyscallResult {
+  fn server_tid(server_id: usize) -> Result {
     match super::server::get(server_id) {
       None => {
         Err(ERROR_INVARG)
@@ -351,8 +351,8 @@ pub fn syscall() {
       trace!("#{} {} t{} Err {:x?}", num, SYSCALL_NAMES[num], tid, err);
     }
   }
-  // TODO: schedule happened overwrite ctx's value
-  if num != SYS_ITC_RECV && num != SYS_THREAD_YIELD {
+
+  if tid == cpu().running_thread().map(|x| {x.tid()}).unwrap_or_default() {
     ctx.set_syscall_result(&result);
   }
 }

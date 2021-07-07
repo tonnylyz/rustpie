@@ -1,6 +1,6 @@
 use core::fmt::Formatter;
 use crate::ContextFrameTrait;
-use crate::lib::syscall::{SyscallResult, SyscallOutRegisters};
+use crate::lib::syscall::{Result as SyscallResult, SyscallOutRegisters};
 
 #[repr(C)]
 #[derive(Copy, Clone, Debug)]

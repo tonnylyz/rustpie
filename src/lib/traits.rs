@@ -1,5 +1,3 @@
-use crate::lib::syscall::SyscallResult;
-
 pub trait Address {
   fn pa2kva(&self) -> usize;
   fn kva2pa(&self) -> usize;
@@ -25,7 +23,7 @@ pub trait ContextFrameTrait {
 
   fn syscall_argument(&self, i: usize) -> usize;
   fn syscall_number(&self) -> usize;
-  fn set_syscall_result(&mut self, v: &SyscallResult);
+  fn set_syscall_result(&mut self, v: &crate::lib::syscall::Result);
   fn exception_pc(&self) -> usize;
   fn set_exception_pc(&mut self, pc: usize);
   fn stack_pointer(&self) -> usize;
