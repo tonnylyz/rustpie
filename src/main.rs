@@ -7,7 +7,7 @@
 #![feature(format_args_nl)]
 #![feature(lang_items)]
 #![feature(const_btree_new)]
-
+#![feature(allocator_api)]
 #[macro_use]
 extern crate alloc;
 extern crate rlibc;

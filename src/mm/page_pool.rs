@@ -6,12 +6,29 @@ use spin::Mutex;
 use crate::arch::*;
 use crate::mm::PhysicalFrame;
 use common::syscall::error::{ERROR_OOM, ERROR_INVARG};
+use buddy_system_allocator::LockedHeap;
+use core::alloc::{Allocator, Layout, AllocError};
+use core::ptr::NonNull;
+use alloc::alloc::Global;
 
 pub type Error = usize;
 
+struct PPAllocator;
+
+unsafe impl Allocator for PPAllocator {
+  fn allocate(&self, layout: Layout) -> Result<NonNull<[u8]>, AllocError> {
+    Global.allocate(layout)
+  }
+
+  unsafe fn deallocate(&self, ptr: NonNull<u8>, layout: Layout) {
+    Global.deallocate(ptr, layout)
+  }
+}
+
+
 struct PagePool {
-  free: Vec<usize>,
-  allocated: Vec<usize>,
+  free: Vec<usize, PPAllocator>,
+  allocated: Vec<usize, PPAllocator>,
 }
 
 impl PagePool {
@@ -46,8 +63,8 @@ impl PagePool {
 
 
 static PAGE_POOL: Mutex<PagePool> = Mutex::new(PagePool {
-  free: Vec::new(),
-  allocated: Vec::new(),
+  free: Vec::new_in(PPAllocator),
+  allocated: Vec::new_in(PPAllocator),
 });
 
 pub fn init() {
