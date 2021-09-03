@@ -6,7 +6,6 @@ use spin::Mutex;
 use crate::arch::*;
 use crate::mm::PhysicalFrame;
 use common::syscall::error::{ERROR_OOM, ERROR_INVARG};
-use buddy_system_allocator::LockedHeap;
 use core::alloc::{Allocator, Layout, AllocError};
 use core::ptr::NonNull;
 use alloc::alloc::Global;

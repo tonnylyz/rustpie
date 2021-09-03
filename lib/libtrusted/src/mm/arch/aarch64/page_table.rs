@@ -1,8 +1,8 @@
 use super::vm_descriptor::*;
-use register::*;
 
 use common::{CONFIG_RECURSIVE_PAGE_TABLE_BTM as RECURSIVE_PAGE_TABLE_BTM, *};
 use crate::mm::EntryLike;
+use tock_registers::LocalRegisterCopy;
 
 const PTE_ADDR_MASK: usize = 0x0000_FFFF_FFFF_F000;
 const PTE_ATTR_MASK: usize = !PTE_ADDR_MASK;

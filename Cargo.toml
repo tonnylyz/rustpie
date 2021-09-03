@@ -5,18 +5,26 @@ edition = "2018"
 authors = ["tonnylyz <lyztonny@gmail.com>"]
 
 [dependencies]
+# to be phased out
 rlibc = "1.0.0"
-register = "1.0.2"
-buddy_system_allocator = "0.7.0"
-spin = "0.9.0"
-xmas-elf = "0.7.0"
+
+# fundamental
 cfg-if = "1.0.0"
-log = "0.4.5"
+log = "0.4.14"
 static_assertions = "1.1.0"
-fallible_collections = "0.4.2"
+fallible_collections = "0.4.3"
+
+buddy_system_allocator = "0.8.0"
+spin = "0.9.2"
+xmas-elf = "0.8.0"
 
 common = { path = "common" }
 unwind = { path = "lib/unwind" }
+
+[dependencies.tock-registers]
+version = "0.7.0"
+default-features = false
+features = ["register_types"]
 
 [target.'cfg(target_arch = "aarch64")'.dependencies]
 cortex-a = { git = "https://github.com/tonnylyz/cortex-a" }

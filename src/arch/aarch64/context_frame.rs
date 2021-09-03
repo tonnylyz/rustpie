@@ -28,7 +28,7 @@ impl core::fmt::Display for Aarch64ContextFrame {
 
 impl ContextFrameTrait for Aarch64ContextFrame {
   fn new(pc: usize, sp: usize, arg: usize, privileged: bool) -> Self {
-    use cortex_a::regs::*;
+    use cortex_a::registers::*;
     let mut r = Aarch64ContextFrame {
       gpr: [0; 31],
       spsr: (

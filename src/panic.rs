@@ -18,8 +18,13 @@ impl Frame {
 
   #[cfg(target_arch = "aarch64")]
   fn current() -> Frame {
-    use cortex_a::regs::*;
-    Frame::new(FP.get(), PC.get())
+    let fp: u64;
+    let pc: u64;
+    unsafe {
+      asm!("mov {}, x29", out(reg) fp);
+      asm!("adr {}, #0", out(reg) pc);
+    }
+    Frame::new(fp, pc)
   }
 
   #[cfg(target_arch = "riscv64")]

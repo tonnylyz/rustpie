@@ -1,9 +1,9 @@
-use cortex_a::{asm::*, regs::*};
-
 use crate::board::BOARD_CORE_NUMBER;
 use core::mem::size_of;
 
 use crate::lib::traits::*;
+use cortex_a::registers::*;
+use tock_registers::interfaces::Readable;
 
 pub const PAGE_SHIFT: usize = 12;
 pub const PAGE_SIZE: usize = 1 << PAGE_SHIFT;
@@ -50,11 +50,11 @@ impl ArchTrait for Aarch64Arch {
   }
 
   fn wait_for_interrupt() {
-    wfi();
+    cortex_a::asm::wfi();
   }
 
   fn nop() {
-    nop();
+    cortex_a::asm::nop();
   }
 
   fn fault_address() -> usize {

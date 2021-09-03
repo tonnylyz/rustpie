@@ -4,7 +4,7 @@
   "disable-redzone": true,
   "executables": true,
   "features": "+strict-align,-neon,-fp-armv8",
-  "is-builtin": true,
+  "is-builtin": false,
   "linker": "rust-lld",
   "linker-flavor": "ld.lld",
   "linker-is-gnu": true,
@@ -17,15 +17,5 @@
     "ld.lld": [
       "-Tsrc/arch/aarch64/linker.ld"
     ]
-  },
-  "unsupported-abis": [
-    "stdcall",
-    "stdcall-unwind",
-    "fastcall",
-    "vectorcall",
-    "thiscall",
-    "thiscall-unwind",
-    "win64",
-    "sysv64"
-  ]
+  }
 }

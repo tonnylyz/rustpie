@@ -1,9 +1,9 @@
-use cortex_a::regs::{CNTFRQ_EL0, RegisterReadOnly, CNTPCT_EL0};
+use cortex_a::registers::{CNTFRQ_EL0, CNTPCT_EL0, CNTV_TVAL_EL0, CNTV_CTL_EL0};
+use tock_registers::interfaces::{Readable, Writeable};
 
 const TIMER_TICK_MS: u64 = 100;
 
 pub fn next() {
-  use cortex_a::regs::*;
   let freq = CNTFRQ_EL0.get();
   let count = TIMER_TICK_MS * freq / 1000;
   CNTV_TVAL_EL0.set(count);

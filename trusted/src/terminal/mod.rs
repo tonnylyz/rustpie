@@ -1,9 +1,10 @@
-use register::*;
-use register::mmio::*;
+use tock_registers::register_structs;
+use tock_registers::registers::*;
 use alloc::vec::Vec;
 use spin::{Mutex, Once, Spin};
 use alloc::collections::VecDeque;
 use microcall::get_tid;
+use tock_registers::interfaces::{Readable, Writeable};
 
 #[cfg(target_arch = "aarch64")]
 const PL011_MMIO_BASE: usize = 0x8_0000_0000 + 0x900_0000;

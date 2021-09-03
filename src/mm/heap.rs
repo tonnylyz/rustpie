@@ -24,7 +24,7 @@ unsafe impl GlobalAlloc for Failure {
 }
 
 #[global_allocator]
-static HEAP_ALLOCATOR: LockedHeap = LockedHeap::empty();
+static HEAP_ALLOCATOR: LockedHeap<32> = LockedHeap::empty();
 
 // #[global_allocator]
 // static HEAP_ALLOCATOR: Failure = Failure;

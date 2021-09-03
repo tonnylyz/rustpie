@@ -1,8 +1,9 @@
-use register::*;
-use register::mmio::*;
+use tock_registers::*;
 
 use crate::lib::interrupt::InterruptController;
 use crate::lib::traits::ArchTrait;
+use tock_registers::registers::*;
+use tock_registers::interfaces::{Writeable, Readable};
 
 const GIC_INTERRUPT_NUM: usize = 1024;
 const GIC_SGI_NUM: usize = 16;

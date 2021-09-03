@@ -1,6 +1,7 @@
 use super::interface::PAGE_SHIFT;
 use super::interface::PAGE_SIZE;
 use super::vm_descriptor::*;
+use tock_registers::interfaces::{Writeable, ReadWriteable};
 
 const ENTRY_PER_PAGE: usize = PAGE_SIZE / 8;
 
@@ -51,8 +52,7 @@ pub unsafe extern "C" fn populate_page_table(pt: &mut PageDirectory) {
 
 #[no_mangle]
 pub unsafe extern "C" fn mmu_init(pt: &PageDirectory) {
-  use cortex_a::regs::*;
-  use cortex_a::*;
+  use cortex_a::registers::*;
   MAIR_EL1.write(
     MAIR_EL1::Attr0_Normal_Outer::WriteBack_NonTransient_ReadWriteAlloc
       + MAIR_EL1::Attr0_Normal_Inner::WriteBack_NonTransient_ReadWriteAlloc
@@ -77,7 +77,8 @@ pub unsafe extern "C" fn mmu_init(pt: &PageDirectory) {
     + TCR_EL1::T0SZ.val(64 - 39)
     + TCR_EL1::T1SZ.val(64 - 39));
 
-  barrier::isb(barrier::SY);
+  use cortex_a::asm::barrier::*;
+  isb(SY);
   SCTLR_EL1.modify(SCTLR_EL1::M::Enable + SCTLR_EL1::C::Cacheable + SCTLR_EL1::I::Cacheable);
-  barrier::isb(barrier::SY);
+  isb(SY);
 }

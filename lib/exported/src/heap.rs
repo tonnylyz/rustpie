@@ -4,7 +4,7 @@ use common::PAGE_SIZE;
 const HEAP_SIZE: usize = 16;
 
 #[global_allocator]
-static HEAP_ALLOCATOR: LockedHeap = LockedHeap::empty();
+static HEAP_ALLOCATOR: LockedHeap<32> = LockedHeap::empty();
 
 pub fn init() {
   for i in 0..HEAP_SIZE {

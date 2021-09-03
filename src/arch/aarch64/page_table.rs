@@ -10,6 +10,7 @@ use super::vm_descriptor::*;
 
 use crate::lib::traits::*;
 use common::syscall::error::ERROR_INVARG;
+use tock_registers::interfaces::Writeable;
 
 pub const PAGE_TABLE_L1_SHIFT: usize = 30;
 pub const PAGE_TABLE_L2_SHIFT: usize = 21;
@@ -86,7 +87,7 @@ impl Index for usize {
 
 impl core::convert::From<Aarch64PageTableEntry> for Entry {
   fn from(u: Aarch64PageTableEntry) -> Self {
-    use register::*;
+    use tock_registers::*;
     let reg = LocalRegisterCopy::<u64, PAGE_DESCRIPTOR::Register>::new(u.0 as u64);
     Entry::new(EntryAttribute::new(
       reg.matches_all(PAGE_DESCRIPTOR::AP::RW_EL1) || reg.matches_all(PAGE_DESCRIPTOR::AP::RW_EL1_EL0),
@@ -243,12 +244,13 @@ impl PageTableTrait for Aarch64PageTable {
   }
 
   fn install_user_page_table(base: usize, asid: AddressSpaceId) {
-    use cortex_a::{regs::*, *};
+    use cortex_a::registers::TTBR0_EL1;
+    use cortex_a::asm::barrier::*;
     unsafe {
       TTBR0_EL1.write(TTBR0_EL1::ASID.val(asid as u64));
       TTBR0_EL1.set_baddr(base as u64);
-      barrier::isb(barrier::SY);
-      barrier::dsb(barrier::SY);
+      isb(SY);
+      dsb(SY);
     }
   }
 }

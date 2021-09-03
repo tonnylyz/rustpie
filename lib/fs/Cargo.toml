@@ -10,4 +10,4 @@ edition = "2018"
 common = { path = "../../common" }
 microcall = { path = "../microcall" }
 redox = { path = "../redox" }
-log = "0.4.5"
+log = "0.4.14"

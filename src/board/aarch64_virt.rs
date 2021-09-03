@@ -16,7 +16,8 @@ pub fn init() {
 }
 
 pub fn init_per_core() {
-  use cortex_a::regs::*;
+  use cortex_a::registers::*;
+  use tock_registers::interfaces::Writeable;
   DAIF.write(DAIF::I::Masked);
   crate::driver::INTERRUPT_CONTROLLER.init();
   crate::driver::INTERRUPT_CONTROLLER.enable(INT_TIMER);

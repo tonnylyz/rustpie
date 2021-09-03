@@ -1,13 +1,13 @@
 use alloc::boxed::Box;
 use alloc::vec::Vec;
 use core::mem::size_of;
-
-use register::*;
-use register::mmio::*;
+use tock_registers::*;
+use tock_registers::registers::*;
 use spin::{Mutex, Once};
 use libtrusted::mm::virt_to_phys;
 use microcall::get_tid;
 use microcall::message::Message;
+use tock_registers::interfaces::{Writeable, Readable};
 
 #[cfg(target_arch = "aarch64")]
 const VIRTIO_MMIO_BASE: usize = 0x8_0000_0000 + 0x0a000000;

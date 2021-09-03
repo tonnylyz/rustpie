@@ -1,4 +1,4 @@
-use register::*;
+use tock_registers::*;
 
 register_bitfields! {u64,
     pub PAGE_DESCRIPTOR [

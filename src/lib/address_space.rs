@@ -59,10 +59,10 @@ pub fn address_space_alloc() -> Result<AddressSpace, Error> {
   let frame = crate::mm::page_pool::page_alloc().map_err(|_| ERROR_OOM)?;
   let page_table = PageTable::new(frame);
   page_table.recursive_map(common::CONFIG_RECURSIVE_PAGE_TABLE_BTM);
-  let a = AddressSpace(Arc::new(Inner {
+  let a = AddressSpace(Arc::try_new(Inner {
     asid: id,
     page_table,
-  }));
+  }).map_err(|_| ERROR_OOM)?);
   let mut map = ADDRESS_SPACE_MAP.lock();
   map.insert(id, a.clone());
   Ok(a)

@@ -1,6 +1,6 @@
-use cortex_a::{barrier, regs::*};
-
+use cortex_a::registers::{ESR_EL1, VBAR_EL1};
 use crate::arch::ContextFrame;
+use tock_registers::interfaces::{Readable, Writeable};
 
 global_asm!(include_str!("exception.S"));
 
@@ -91,6 +91,7 @@ pub fn init() {
   unsafe {
     let addr: u64 = vectors as usize as u64;
     VBAR_EL1.set(addr);
-    barrier::isb(barrier::SY);
+    use cortex_a::asm::barrier::*;
+    isb(SY);
   }
 }
