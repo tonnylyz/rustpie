@@ -8,7 +8,7 @@ use spin::Mutex;
 
 use crate::arch::ContextFrame;
 use crate::lib::address_space::AddressSpace;
-use crate::lib::event::thread_exit_signal;
+use crate::syscall::event::thread_exit_signal;
 use crate::lib::scheduler::scheduler;
 use crate::lib::traits::*;
 

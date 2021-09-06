@@ -18,6 +18,7 @@ microcall = { path = "../lib/microcall" }
 common = { path = "../common" }
 redox = { path = "../lib/redox" }
 fs = { path = "../lib/fs" }
+unwind = { path = "../lib/unwind" }
 
 [dependencies.tock-registers]
 version = "0.7.0"

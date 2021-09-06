@@ -1,10 +1,11 @@
-use common::CONFIG_USER_LIMIT;
+use common::{CONFIG_USER_LIMIT, CONFIG_USER_STACK_BTM, CONFIG_USER_STACK_TOP};
 
 use crate::arch::PAGE_SIZE;
 use crate::lib::cpu::cpu;
 use crate::lib::traits::*;
 use crate::util::*;
 use crate::lib::thread::thread_destroy;
+use crate::mm::page_table::{PageTableTrait, PageTableEntryAttrTrait};
 
 pub fn handle() {
   let t = cpu().running_thread();
@@ -25,7 +26,26 @@ pub fn handle() {
     return;
   }
 
-  warn!("isr: page_fault: {:016x}", addr);
+  warn!("isr: page_fault: addr {:016x} pc {:016x}", addr, cpu().context().exception_pc());
+  // NOTE: allocate stack region automatically
+  if addr > CONFIG_USER_STACK_BTM && addr < CONFIG_USER_STACK_TOP {
+    let a = t.address_space().unwrap();
+    let pt = a.page_table();
+    if pt.lookup_page(va).is_none() {
+      let frame = crate::mm::page_pool::page_alloc();
+      if let Ok(frame) = frame {
+        pt.insert_page(va, crate::mm::Frame::from(frame),
+                       crate::mm::page_table::EntryAttribute::user_default()).map_err(|_e| {
+          warn!("insert page failed");
+        });
+      } else {
+        warn!("oom");
+      }
+      return;
+    } else {
+      warn!("page table entry exists")
+    }
+  }
   warn!("isr: page_fault: process has no handler, process killed");
   thread_destroy(t);
   crate::lib::cpu::cpu().schedule();

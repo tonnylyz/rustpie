@@ -51,6 +51,7 @@ mod mm;
 mod panic;
 mod util;
 mod logger;
+mod syscall;
 
 use arch::ContextFrame;
 use lib::traits::*;

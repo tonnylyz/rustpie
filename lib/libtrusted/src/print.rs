@@ -26,12 +26,12 @@ pub fn print_arg(args: fmt::Arguments) {
 fn panic_handler(info: &core::panic::PanicInfo) -> ! {
   if let Some(m) = info.message() {
     if let Some(l) = info.location() {
-      println!("[TRUSTED][panic] t{} {} \n {}", get_tid(), m, l);
+      println!("          [E][trusted] panic t{} {} {}", get_tid(), m, l);
     } else {
-      println!("[TRUSTED][panic] t{} {}", get_tid(), m);
+      println!("          [E][trusted] panic t{} {}", get_tid(), m);
     }
   } else {
-    println!("[TRUSTED][panic] t{} no message", get_tid());
+    println!("          [E][trusted] panic t{} no message", get_tid());
   }
   match unwind::start_unwinding(5) {
     Ok(_) => {

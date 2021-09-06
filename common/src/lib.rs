@@ -15,6 +15,7 @@ cfg_if::cfg_if! {
 
 pub const CONFIG_USER_LIMIT: usize = 0x3f_a000_0000;
 pub const CONFIG_USER_STACK_TOP: usize = 0x3f_8000_0000;
+pub const CONFIG_USER_STACK_BTM: usize = 0x3f_0000_0000;
 pub const CONFIG_EXCEPTION_STACK_TOP: usize = 0x3f_8000_1000;
 pub const CONFIG_HEAP_BTM: usize = 0x10_0000_0000;
 
@@ -49,6 +50,7 @@ pub mod syscall {
   pub const SYS_ITC_CALL: usize = 17;
   pub const SYS_SERVER_REGISTER: usize = 19;
   pub const SYS_SERVER_TID: usize = 20;
+  pub const SYS_MAX: usize = 21;
 
   pub mod error {
     pub const ERROR_INVARG: usize = 1;

@@ -19,6 +19,8 @@ unsafe extern "C" fn current_el_sp0_irq(ctx: *mut ContextFrame) {
 unsafe extern "C" fn current_el_spx_synchronous(ctx: *mut ContextFrame) {
   let ec = ESR_EL1.read(ESR_EL1::EC);
   error!("current_el_spx_synchronous EC {:#X} \n{}", ec, ctx.read());
+  let page_fault = ESR_EL1.matches_all(ESR_EL1::EC::InstrAbortCurrentEL) | ESR_EL1.matches_all(ESR_EL1::EC::DataAbortCurrentEL);
+  crate::lib::exception::handle_kernel(ctx.as_ref().unwrap(), page_fault);
   loop {}
 }
 
@@ -43,7 +45,7 @@ unsafe extern "C" fn lower_aarch64_synchronous(ctx: *mut ContextFrame) {
   } else {
     let ec = ESR_EL1.read(ESR_EL1::EC);
     error!("lower_aarch64_synchronous: ec {:06b} \n{}", ec, ctx.read());
-    crate::lib::exception::handle();
+    crate::lib::exception::handle_user();
   }
   core.clear_context();
 }
@@ -80,7 +82,7 @@ unsafe extern "C" fn lower_aarch64_irq(ctx: *mut ContextFrame) {
 unsafe extern "C" fn lower_aarch64_serror(ctx: *mut ContextFrame) {
   let core = crate::lib::cpu::cpu();
   core.set_context(ctx);
-  crate::lib::exception::handle();
+  crate::lib::exception::handle_user();
   core.clear_context();
 }
 

@@ -29,7 +29,7 @@ use registers::{
   Registers
 };
 
-mod registers;
+pub mod registers;
 pub mod elf;
 mod lsda;
 pub mod catch;
@@ -383,6 +383,16 @@ fn get_eh_frame_info() -> (&'static [u8], BaseAddresses) {
     ehf.start as usize as *const u8,
     (ehf.end - ehf.start) as usize
   ) }, base_addrs)
+}
+pub fn start_unwinding_from_exception(registers: Registers) -> Result<(), &'static str> {
+  let unwinding_context_ptr = Box::into_raw(Box::new(UnwindingContext {
+    stack_frame_iter: StackFrameIter::new(registers)
+  }));
+  let unwinding_context = unsafe { &mut *unwinding_context_ptr };
+
+  // unwinding_context.stack_frame_iter.next();
+  continue_unwinding(unwinding_context_ptr);
+  cleanup_unwinding_context(unwinding_context_ptr);
 }
 
 pub fn start_unwinding(stack_frames_to_skip: usize) -> Result<(), &'static str> {
