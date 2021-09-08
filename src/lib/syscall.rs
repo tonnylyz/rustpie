@@ -4,7 +4,7 @@ use unwind::catch::catch_unwind;
 use common::syscall::*;
 use common::syscall::error::ERROR_INVARG;
 
-static SYSCALL_NAMES: [&str; 21] = [
+static SYSCALL_NAMES: [&str; SYS_MAX] = [
   "null",
   "putc",
   "get_asid",
@@ -26,6 +26,7 @@ static SYSCALL_NAMES: [&str; 21] = [
   "itc_reply",
   "server_register",
   "server_tid",
+  "set_exception_handler",
 ];
 
 pub fn syscall() {
@@ -56,6 +57,7 @@ pub fn syscall() {
       SYS_ITC_CALL => ipc::itc_call(arg(0), arg(1), arg(2), arg(3), arg(4)),
       SYS_SERVER_REGISTER => server::server_register(arg(0)),
       SYS_SERVER_TID => server::server_tid(arg(0)),
+      SYS_SET_EXCEPTION_HANDLER => misc::set_exception_handler(arg(0)),
       _ => {
         warn!("system call: unrecognized system call number");
         Err(ERROR_INVARG)

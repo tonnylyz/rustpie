@@ -17,6 +17,7 @@ pub type Error = usize;
 struct Inner {
   asid: Asid,
   page_table: PageTable,
+  exception_handler: Mutex<Option<usize>>,
 }
 
 impl Drop for Inner {
@@ -41,6 +42,17 @@ impl AddressSpace {
   pub fn page_table(&self) -> &PageTable {
     &self.0.page_table
   }
+
+  pub fn exception_handler(&self) -> Option<usize> {
+    let lock = self.0.exception_handler.lock();
+    lock.clone()
+  }
+
+  pub fn set_exception_handler(&self, handler: Option<usize>) {
+    let mut lock = self.0.exception_handler.lock();
+    *lock = handler;
+  }
+
 }
 
 static ASID_ALLOCATOR: AtomicU16 = AtomicU16::new(1);
@@ -62,6 +74,7 @@ pub fn address_space_alloc() -> Result<AddressSpace, Error> {
   let a = AddressSpace(Arc::try_new(Inner {
     asid: id,
     page_table,
+    exception_handler: Mutex::new(None)
   }).map_err(|_| ERROR_OOM)?);
   let mut map = ADDRESS_SPACE_MAP.lock();
   map.insert(id, a.clone());

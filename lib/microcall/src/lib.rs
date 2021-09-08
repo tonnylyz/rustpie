@@ -99,6 +99,10 @@ pub fn server_tid_wait(server_id: usize) -> usize {
   }
 }
 
+pub fn set_exception_handler(handler: usize) -> Result<(), Error> {
+  syscall_1_0(SYS_SET_EXCEPTION_HANDLER, handler)
+}
+
 pub mod message {
   #[repr(C)]
   #[derive(Copy, Clone, Debug, Default)]

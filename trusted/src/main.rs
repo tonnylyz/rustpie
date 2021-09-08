@@ -15,6 +15,9 @@ extern crate log;
 #[macro_use]
 extern crate libtrusted;
 
+use unwind::catch::{catch_unwind, PanicError};
+
+
 mod blk;
 mod fs;
 mod root;
@@ -25,10 +28,17 @@ mod logger;
 
 #[no_mangle]
 fn _start(_arg: usize) -> ! {
+  microcall::set_exception_handler(libtrusted::exception::handler as usize);
   libtrusted::mm::heap_init();
   logger::init();
   info!("trusted root start");
-  root::main();
+  let r = catch_unwind(|| {
+    root::main();
+  });
+  match r {
+    Ok(_) => {}
+    Err(_) => error!("root died")
+  }
   microcall::thread_destroy(0);
   loop {};
 }

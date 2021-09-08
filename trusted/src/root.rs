@@ -1,33 +1,35 @@
 use fs::{File, SeekFrom};
 use libtrusted::thread;
+use libtrusted::wrapper::server_wrapper;
+use unwind::catch::catch_unwind;
 
 pub fn main() {
   thread::spawn(|| {
-    crate::blk::virtio_blk::server();
+    server_wrapper(crate::blk::virtio_blk::server);
   });
 
   thread::spawn(|| {
-    crate::fs::server();
+    server_wrapper(crate::fs::server);
   });
 
   thread::spawn(|| {
-    crate::terminal::input_server();
+    server_wrapper(crate::terminal::input_server);
   });
 
   thread::spawn(|| {
-    crate::terminal::server();
+    server_wrapper(crate::terminal::server);
   });
 
   thread::spawn(|| {
-    crate::mm::server();
+    server_wrapper(crate::mm::server);
   });
 
   thread::spawn(|| {
-    crate::pm::server();
+    server_wrapper(crate::pm::server);
   });
 
   thread::spawn(|| {
-    crate::pm::event_server();
+    server_wrapper(crate::pm::event_server);
   });
 
   thread::spawn(|| {

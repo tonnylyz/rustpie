@@ -33,14 +33,7 @@ fn panic_handler(info: &core::panic::PanicInfo) -> ! {
   } else {
     println!("          [E][trusted] panic t{} no message", get_tid());
   }
-  match unwind::start_unwinding(5) {
-    Ok(_) => {
-      println!("BUG: start_unwinding() returned an Ok() value, which is unexpected because it means no unwinding actually occurred.");
-    }
-    Err(e) => {
-      println!("Task was unable to start unwinding procedure, error: {}.", e);
-    }
-  }
+  unwind::start_unwinding(5);
   loop {}
 }
 

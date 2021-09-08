@@ -384,7 +384,7 @@ fn get_eh_frame_info() -> (&'static [u8], BaseAddresses) {
     (ehf.end - ehf.start) as usize
   ) }, base_addrs)
 }
-pub fn start_unwinding_from_exception(registers: Registers) -> Result<(), &'static str> {
+pub fn start_unwinding_from_exception(registers: Registers) {
   let unwinding_context_ptr = Box::into_raw(Box::new(UnwindingContext {
     stack_frame_iter: StackFrameIter::new(registers)
   }));
@@ -395,7 +395,7 @@ pub fn start_unwinding_from_exception(registers: Registers) -> Result<(), &'stat
   cleanup_unwinding_context(unwinding_context_ptr);
 }
 
-pub fn start_unwinding(stack_frames_to_skip: usize) -> Result<(), &'static str> {
+pub fn start_unwinding(stack_frames_to_skip: usize) {
   let unwinding_context_ptr = {
     Box::into_raw(
       Box::new(
@@ -445,7 +445,7 @@ fn continue_unwinding(unwinding_context_ptr: *mut UnwindingContext) -> Result<()
     "continue_unwinding: error getting next stack frame in the call stack"
   })? {
     {
-      info!("Unwinding StackFrame: {:X?}", frame);
+      info!("function addr {:X}", frame.initial_address);
       // info!("  Regs: {:#X?}", stack_frame_iter.registers);
     }
 
@@ -486,7 +486,7 @@ fn continue_unwinding(unwinding_context_ptr: *mut UnwindingContext) -> Result<()
         };
 
 
-        info!("Found call site entry for address {:X}: {:X?}", frame.call_site_address, entry);
+        info!("call site {:X} landing pad {:X?}", frame.call_site_address, entry.landing_pad_address());
         (stack_frame_iter.registers.clone(), entry.landing_pad_address())
       } else {
         error!("  BUG: couldn't find LSDA section (.gcc_except_table) for LSDA address: {:#X}", lsda);
@@ -505,7 +505,7 @@ fn continue_unwinding(unwinding_context_ptr: *mut UnwindingContext) -> Result<()
   let landing_pad_address = match landing_pad_address {
     Some(lpa) => lpa,
     _ => {
-      warn!("continue_unwinding(): stack frame has LSDA but no landing pad");
+      // warn!("continue_unwinding(): stack frame has LSDA but no landing pad");
       return continue_unwinding(unwinding_context_ptr);
     }
   };
@@ -548,12 +548,11 @@ fn continue_unwinding(unwinding_context_ptr: *mut UnwindingContext) -> Result<()
 
 /// This function should be invoked when the unwinding procedure is finished, or cannot be continued any further.
 /// It cleans up the `UnwindingContext` object pointed to by the given pointer and marks the current task as killed.
-fn cleanup_unwinding_context(unwinding_context_ptr: *mut UnwindingContext) -> ! {
+fn cleanup_unwinding_context(unwinding_context_ptr: *mut UnwindingContext) {
   // Recover ownership of the unwinding context from its pointer
   let unwinding_context_boxed = unsafe { Box::from_raw(unwinding_context_ptr) };
   let unwinding_context = *unwinding_context_boxed;
   drop(unwinding_context.stack_frame_iter);
-  loop {}
 }
 
 pub fn unwind_resume(unwinding_context_ptr: usize) -> ! {
@@ -570,5 +569,6 @@ pub fn unwind_resume(unwinding_context_ptr: usize) -> ! {
   }
   // here, cleanup the unwinding state and kill the task
   cleanup_unwinding_context(unwinding_context_ptr);
+  loop {}
 }
 

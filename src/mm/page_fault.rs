@@ -26,7 +26,7 @@ pub fn handle() {
     return;
   }
 
-  warn!("isr: page_fault: addr {:016x} pc {:016x}", addr, cpu().context().exception_pc());
+  warn!("addr {:016x} pc {:016x}", addr, cpu().context().exception_pc());
   // NOTE: allocate stack region automatically
   if addr > CONFIG_USER_STACK_BTM && addr < CONFIG_USER_STACK_TOP {
     let a = t.address_space().unwrap();
@@ -46,7 +46,5 @@ pub fn handle() {
       warn!("page table entry exists")
     }
   }
-  warn!("isr: page_fault: process has no handler, process killed");
-  thread_destroy(t);
-  crate::lib::cpu::cpu().schedule();
+  crate::lib::exception::handle_user();
 }

@@ -125,13 +125,6 @@ pub fn panic_handler(info: &PanicInfo) -> ! {
   backtrace();
   info!("backtrace done");
 
-  match unwind::start_unwinding(5) {
-    Ok(_) => {
-      warn!("BUG: start_unwinding() returned an Ok() value, which is unexpected because it means no unwinding actually occurred.");
-    }
-    Err(e) => {
-      error!("Task was unable to start unwinding procedure, error: {}.", e);
-    }
-  }
+  unwind::start_unwinding(5);
   loop {}
 }

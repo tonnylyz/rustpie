@@ -28,3 +28,5 @@ pub mod thread;
 pub mod mm;
 pub mod loader;
 pub mod foreign_slice;
+pub mod wrapper;
+pub mod exception;
