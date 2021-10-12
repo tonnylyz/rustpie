@@ -48,11 +48,8 @@ pub struct StackFrame {
 
 #[derive(Debug)]
 pub struct StackFrameIter {
-  // namespace: CrateNameSpace,
   registers: Registers,
   state: Option<(UnwindRowReference, u64)>,
-  cfa_adjustment: Option<i64>,
-  last_frame_was_exception_handler: bool,
 }
 
 impl StackFrameIter {
@@ -60,8 +57,6 @@ impl StackFrameIter {
     StackFrameIter {
       registers,
       state: None,
-      cfa_adjustment: None,
-      last_frame_was_exception_handler: false,
     }
   }
 }
@@ -72,31 +67,24 @@ impl FallibleIterator for StackFrameIter {
 
   fn next(&mut self) -> Result<Option<Self::Item>, Self::Error> {
     let registers = &mut self.registers;
-    let prev_cfa_adjustment = self.cfa_adjustment;
     if let Some((unwind_row_ref, cfa)) = self.state.take() {
       let mut new_regs = registers.clone();
       new_regs[Aarch64::X30] = None;
       new_regs[Aarch64::SP] = Some(cfa);
-      if let Some(extra_offset) = prev_cfa_adjustment {
-        new_regs[Aarch64::SP] = Some(cfa.wrapping_add(extra_offset as u64));
-      }
       unwind_row_ref.with_unwind_info(|_fde, row| {
         for &(reg_num, ref rule) in row.registers() {
           if reg_num == Aarch64::SP {
             continue;
           }
           if reg_num == Aarch64::X30 {
-            if let Some(pca) = prev_cfa_adjustment {
-              info!("pca {:x}", pca);
-              continue;
-            }
+            continue;
           }
           new_regs[reg_num] = match *rule {
             RegisterRule::Undefined
             | RegisterRule::Expression(_)
             | RegisterRule::ValExpression(_)
             | RegisterRule::Architectural => {
-              error!("{:?}", *rule);
+              error!("unsupported rule {:?}", *rule);
               return Err("unsupported rule")
             },
             RegisterRule::SameValue => registers[reg_num],
@@ -112,8 +100,6 @@ impl FallibleIterator for StackFrameIter {
         }
         Ok(())
       })?;
-      // info!("old {:X?}", registers);
-      // info!("new {:X?}", new_regs);
       *registers = new_regs;
     }
 
@@ -122,48 +108,40 @@ impl FallibleIterator for StackFrameIter {
       Some(ra) => ra,
     };
     let caller = return_address - 4;
-
     let (eh_frame_sec, base_addrs) = get_eh_frame_info();
-    // info!("{:#X?}", base_addrs);
-    let mut cfa_adjustment = None;
-    let this_frame_is_exception_handler = false;
+
     let row_ref = UnwindRowReference { caller, eh_frame_sec, base_addrs };
     let (cfa, frame) = row_ref.with_unwind_info(|fde, row| {
       let cfa = match *row.cfa() {
         CfaRule::RegisterAndOffset { register, offset } => {
           let reg_value = registers[register].ok_or_else(|| {
-            error!("CFA rule specified register {:?} with offset {:#X}, but register {:?}({}) had no value!", register, offset, register, register.0);
-            "CFA rule specified register with offset, but that register had no value."
+            error!("cfa reg none");
+            "cfa reg none"
           })?;
           reg_value.wrapping_add(offset as u64)
         }
-        CfaRule::Expression(_expr) => {
-          error!("CFA rules based on Expressions are not yet supported. Expression: {:?}", _expr);
-          return Err("CFA rules based on Expressions are not yet supported.");
+        CfaRule::Expression(_) => {
+          error!("cfa expression");
+          return Err("cfa expression");
         }
       };
 
-      cfa_adjustment = None;
-
       let frame = StackFrame {
         personality: None,
-        lsda: fde.lsda().map(|x| unsafe { deref_ptr(x) }),
+        lsda: fde.lsda().map(|x| unsafe {
+          match x {
+            Pointer::Direct(x) => x,
+            Pointer::Indirect(x) => *(x as *const u64),
+          }
+        }),
         initial_address: fde.initial_address(),
         call_site_address: caller,
       };
       Ok((cfa, frame))
     })?;
-    self.cfa_adjustment = cfa_adjustment;
-    self.last_frame_was_exception_handler = this_frame_is_exception_handler;
+
     self.state = Some((row_ref, cfa));
     Ok(Some(frame))
-  }
-}
-
-unsafe fn deref_ptr(ptr: Pointer) -> u64 {
-  match ptr {
-    Pointer::Direct(x) => x,
-    Pointer::Indirect(x) => *(x as *const u64),
   }
 }
 
@@ -277,10 +255,6 @@ pub unsafe extern "C" fn unwind_recorder(
   registers[Aarch64::X27] = Some(saved_regs.r[8]);
   registers[Aarch64::X28] = Some(saved_regs.r[9]);
   registers[Aarch64::X29] = Some(saved_regs.r[10]);
-
-  // for (regnum, v) in saved_regs.vector_half.iter().enumerate() {
-  //   registers[DwarfRegisterAArch64::V8 as u8 + regnum as u8] = Some(*v);
-  // }
   registers[Aarch64::SP] = Some(stack);
   registers[Aarch64::X30] = Some(saved_regs.lr);
 
@@ -288,49 +262,44 @@ pub unsafe extern "C" fn unwind_recorder(
   Box::into_raw(Box::new(res))
 }
 
-pub unsafe fn land(regs: &Registers, landing_pad_address: u64) -> Result<(), &'static str> {
+pub unsafe fn land(regs: &Registers, landing_pad_address: u64) {
   let mut lr = LandingRegisters {
-    r: [0; 29],
+    x: [0; 29],
     fp: regs[Aarch64::X29].unwrap_or(0),
-    // lr: regs[Aarch64::X30].unwrap_or(0),
     lr: landing_pad_address,
     sp: regs[Aarch64::SP].unwrap_or(0),
-    //vector_half: [0; 32]
   };
 
-  lr.r[0] = regs[Aarch64::X0].unwrap_or(0);
-  lr.r[1] = regs[Aarch64::X1].unwrap_or(0);
-  lr.r[2] = regs[Aarch64::X2].unwrap_or(0);
-  lr.r[3] = regs[Aarch64::X3].unwrap_or(0);
-  lr.r[4] = regs[Aarch64::X4].unwrap_or(0);
-  lr.r[5] = regs[Aarch64::X5].unwrap_or(0);
-  lr.r[6] = regs[Aarch64::X6].unwrap_or(0);
-  lr.r[7] = regs[Aarch64::X7].unwrap_or(0);
-  lr.r[8] = regs[Aarch64::X8].unwrap_or(0);
-  lr.r[9] = regs[Aarch64::X9].unwrap_or(0);
-  lr.r[10] = regs[Aarch64::X10].unwrap_or(0);
-  lr.r[11] = regs[Aarch64::X11].unwrap_or(0);
-  lr.r[12] = regs[Aarch64::X12].unwrap_or(0);
-  lr.r[13] = regs[Aarch64::X13].unwrap_or(0);
-  lr.r[14] = regs[Aarch64::X14].unwrap_or(0);
-  lr.r[15] = regs[Aarch64::X15].unwrap_or(0);
-  lr.r[16] = regs[Aarch64::X16].unwrap_or(0);
-  lr.r[17] = regs[Aarch64::X17].unwrap_or(0);
-  lr.r[18] = regs[Aarch64::X18].unwrap_or(0);
-  lr.r[19] = regs[Aarch64::X19].unwrap_or(0);
-  lr.r[20] = regs[Aarch64::X20].unwrap_or(0);
-  lr.r[21] = regs[Aarch64::X21].unwrap_or(0);
-  lr.r[22] = regs[Aarch64::X22].unwrap_or(0);
-  lr.r[23] = regs[Aarch64::X23].unwrap_or(0);
-  lr.r[24] = regs[Aarch64::X24].unwrap_or(0);
-  lr.r[25] = regs[Aarch64::X25].unwrap_or(0);
-  lr.r[26] = regs[Aarch64::X26].unwrap_or(0);
-  lr.r[27] = regs[Aarch64::X27].unwrap_or(0);
-  lr.r[28] = regs[Aarch64::X28].unwrap_or(0);
+  lr.x[0] = regs[Aarch64::X0].unwrap_or(0);
+  lr.x[1] = regs[Aarch64::X1].unwrap_or(0);
+  lr.x[2] = regs[Aarch64::X2].unwrap_or(0);
+  lr.x[3] = regs[Aarch64::X3].unwrap_or(0);
+  lr.x[4] = regs[Aarch64::X4].unwrap_or(0);
+  lr.x[5] = regs[Aarch64::X5].unwrap_or(0);
+  lr.x[6] = regs[Aarch64::X6].unwrap_or(0);
+  lr.x[7] = regs[Aarch64::X7].unwrap_or(0);
+  lr.x[8] = regs[Aarch64::X8].unwrap_or(0);
+  lr.x[9] = regs[Aarch64::X9].unwrap_or(0);
+  lr.x[10] = regs[Aarch64::X10].unwrap_or(0);
+  lr.x[11] = regs[Aarch64::X11].unwrap_or(0);
+  lr.x[12] = regs[Aarch64::X12].unwrap_or(0);
+  lr.x[13] = regs[Aarch64::X13].unwrap_or(0);
+  lr.x[14] = regs[Aarch64::X14].unwrap_or(0);
+  lr.x[15] = regs[Aarch64::X15].unwrap_or(0);
+  lr.x[16] = regs[Aarch64::X16].unwrap_or(0);
+  lr.x[17] = regs[Aarch64::X17].unwrap_or(0);
+  lr.x[18] = regs[Aarch64::X18].unwrap_or(0);
+  lr.x[19] = regs[Aarch64::X19].unwrap_or(0);
+  lr.x[20] = regs[Aarch64::X20].unwrap_or(0);
+  lr.x[21] = regs[Aarch64::X21].unwrap_or(0);
+  lr.x[22] = regs[Aarch64::X22].unwrap_or(0);
+  lr.x[23] = regs[Aarch64::X23].unwrap_or(0);
+  lr.x[24] = regs[Aarch64::X24].unwrap_or(0);
+  lr.x[25] = regs[Aarch64::X25].unwrap_or(0);
+  lr.x[26] = regs[Aarch64::X26].unwrap_or(0);
+  lr.x[27] = regs[Aarch64::X27].unwrap_or(0);
+  lr.x[28] = regs[Aarch64::X28].unwrap_or(0);
 
-  // for (i, v) in lr.vector_half.iter_mut().enumerate() {
-  //   *v = regs[DwarfRegisterAArch64::V0 as u8 + i as u8].unwrap_or(0);
-  // }
   unwind_lander(&lr);
 }
 
@@ -384,191 +353,124 @@ fn get_eh_frame_info() -> (&'static [u8], BaseAddresses) {
     (ehf.end - ehf.start) as usize
   ) }, base_addrs)
 }
+
 pub fn start_unwinding_from_exception(registers: Registers) {
-  let unwinding_context_ptr = Box::into_raw(Box::new(UnwindingContext {
+  let ctx = Box::into_raw(Box::new(UnwindingContext {
     stack_frame_iter: StackFrameIter::new(registers)
   }));
-  let unwinding_context = unsafe { &mut *unwinding_context_ptr };
-
-  // unwinding_context.stack_frame_iter.next();
-  continue_unwinding(unwinding_context_ptr);
-  cleanup_unwinding_context(unwinding_context_ptr);
+  continue_unwinding(ctx);
+  cleanup(ctx);
 }
 
 pub fn start_unwinding(stack_frames_to_skip: usize) {
-  let unwinding_context_ptr = {
-    Box::into_raw(
-      Box::new(
-        UnwindingContext {
-          stack_frame_iter: StackFrameIter::new(Registers::default())
-        }
-      )
-    )
-  };
+  let ctx = Box::into_raw(Box::new(UnwindingContext {
+    stack_frame_iter: StackFrameIter::new(Registers::default())
+  }));
 
-  let res = invoke_with_current_registers(|registers| {
+  let _ = invoke_with_current_registers(|registers| {
     let unwinding_context = unsafe {
-      &mut *unwinding_context_ptr
+      &mut *ctx
     };
     unwinding_context.stack_frame_iter.registers = registers;
     for _i in 0..stack_frames_to_skip {
-      unwinding_context.stack_frame_iter.next()
-        .map_err(|_e| {
-          error!("error skipping call stack frame {} in unwinder", _i);
-          "error skipping call stack frame in unwinder"
-        })?
-        .ok_or("call stack frame did not exist (we were trying to skip it)")?;
+      let _ = unwinding_context.stack_frame_iter.next();
     }
-
-    continue_unwinding(unwinding_context_ptr)
+    continue_unwinding(ctx)
   });
-
-  match &res {
-    &Ok(()) => {
-      debug!("unwinding procedure has reached the end of the stack.");
-    }
-    &Err(e) => {
-      error!("BUG: unwinding the first stack frame returned unexpectedly. Error: {}", e);
-    }
-  }
-
-  cleanup_unwinding_context(unwinding_context_ptr);
+  cleanup(ctx);
 }
 
 fn continue_unwinding(unwinding_context_ptr: *mut UnwindingContext) -> Result<(), &'static str> {
   let stack_frame_iter = unsafe { &mut (*unwinding_context_ptr).stack_frame_iter };
 
-  trace!("continue_unwinding(): stack_frame_iter: {:X?}", stack_frame_iter);
+  let (mut regs, landing_pad_address) =
+    match stack_frame_iter.next()? {
+      None => {
+        error!("no frame left");
+        return Ok(());
+      }
+      Some(frame) => {
+        info!("function addr {:016x}", frame.initial_address);
+        info!("call site {:016x}", frame.call_site_address);
+        match frame.lsda {
+          None => {
+            error!("frame has no lsda");
+            return continue_unwinding(unwinding_context_ptr);
+          }
+          Some(lsda) => {
+            match elf::section_by_addr(lsda as usize) {
+              None => {
+                error!("cannot find lsda in elf");
+                return Err("cannot find lsda in elf");
+              }
+              Some(lsda_slice) => {
+                let table = lsda::GccExceptTableArea::new(lsda_slice, gimli::NativeEndian, frame.initial_address);
+                let entry = match table.call_site_table_entry_for_address(frame.call_site_address) {
+                  Ok(x) => x,
+                  Err(e) => {
+                    error!("call site has no entry {:016x} {}", frame.call_site_address, e);
 
-  let (mut regs, landing_pad_address) = if let Some(frame) = stack_frame_iter.next().map_err(|e| {
-    error!("continue_unwinding: error getting next stack frame in the call stack: {}", e);
-    "continue_unwinding: error getting next stack frame in the call stack"
-  })? {
-    {
-      info!("function addr {:X}", frame.initial_address);
-      // info!("  Regs: {:#X?}", stack_frame_iter.registers);
-    }
+                    // Now we don't have an exact match. We try to use the previous
+                    let mut iter = table.call_site_table_entries().map_err(|_e| { "Couldn't find call_site_table_entries" })?;
 
-    if let Some(lsda) = frame.lsda {
-      let lsda = lsda as usize;
-      if let Some(lsda_slice) = elf::section_by_addr(lsda) {
-        let table = lsda::GccExceptTableArea::new(lsda_slice, gimli::NativeEndian, frame.initial_address);
+                    let mut closest_entry = None;
+                    while let Some(entry) = iter.next().map_err(|_e| { "Couldn't iterate through the entries" })? {
+                      if entry.range_of_covered_addresses().start < frame.call_site_address {
+                        closest_entry = Some(entry);
+                      }
+                    }
 
-        // {
-        //     let mut iter = table.call_site_table_entries().map_err(|_| "BAD TABLE")?;
-        //     while let Some(entry) = iter.next().map_err(|_| "BAD ITER")? {
-        //         debug!("    {:#X?}", entry);
-        //     }
-        // }
-
-        let entry = match table.call_site_table_entry_for_address(frame.call_site_address) {
-          Ok(x) => x,
-          Err(e) => {
-            error!("continue_unwinding(): couldn't find a call site table entry for this stack frame's call site address {:#X}. Error: {}", frame.call_site_address, e);
-
-            // Now we don't have an exact match. We try to use the previous
-            let mut iter = table.call_site_table_entries().map_err(|_e| { "Couldn't find call_site_table_entries" })?;
-
-            let mut closest_entry = None;
-            while let Some(entry) = iter.next().map_err(|_e| { "Couldn't iterate through the entries" })? {
-              if entry.range_of_covered_addresses().start < frame.call_site_address {
-                closest_entry = Some(entry);
+                    if let Some(closest_entry) = closest_entry {
+                      closest_entry
+                    } else {
+                      error!("no closest entry");
+                      return Err("no closest entry");
+                    }
+                  }
+                };
+                (stack_frame_iter.registers.clone(), entry.landing_pad_address())
               }
             }
-
-            if let Some(closest_entry) = closest_entry {
-              debug!("No unwind info for address. Using the closeset");
-              closest_entry
-            } else {
-              return Err("continue_unwinding(): couldn't find a call site table entry for this stack frame's call site address.");
-            }
           }
-        };
-
-
-        info!("call site {:X} landing pad {:X?}", frame.call_site_address, entry.landing_pad_address());
-        (stack_frame_iter.registers.clone(), entry.landing_pad_address())
-      } else {
-        error!("  BUG: couldn't find LSDA section (.gcc_except_table) for LSDA address: {:#X}", lsda);
-        return Err("BUG: couldn't find LSDA section (.gcc_except_table) for LSDA address specified in stack frame");
+        }
       }
-    } else {
-      info!("continue_unwinding(): stack frame has no LSDA");
-      return continue_unwinding(unwinding_context_ptr);
-    }
-  } else {
-    info!("continue_unwinding(): NO REMAINING STACK FRAMES");
-    return Ok(());
-  };
+    };
 
-  // Even if this frame has LSDA, it may still not have a landing pad function.
   let landing_pad_address = match landing_pad_address {
     Some(lpa) => lpa,
     _ => {
-      // warn!("continue_unwinding(): stack frame has LSDA but no landing pad");
+      warn!("frame has lsda but no landing pad");
       return continue_unwinding(unwinding_context_ptr);
     }
   };
-
-  // Exception/interrupt handlers appear to have no real cleanup routines, despite having an LSDA entry.
-  // Thus, we skip unwinding an exception handler frame because its landing pad will point to an invalid instruction (usually `ud2`).
-  if stack_frame_iter.last_frame_was_exception_handler {
-    let landing_pad_value: u16 = unsafe { *(landing_pad_address as *const u16) };
-
-    warn!("Skipping exception/interrupt handler's landing pad (cleanup function) at {:#X}, which points to {:#X} (UD2: {})",
-          landing_pad_address, landing_pad_value, landing_pad_value == 0x0B0F,  // the `ud2` instruction
-    );
-    return continue_unwinding(unwinding_context_ptr);
-  }
 
   unsafe {
     // brk #?
     if (landing_pad_address as usize as *const u32).read() & 0xFF_E0_00_00 == 0xd4_20_00_00 {
-      error!("landing to {:X} is `brk #?`", landing_pad_address);
+      error!("land at {:016x} is `brk #?`", landing_pad_address);
       return continue_unwinding(unwinding_context_ptr);
     }
   }
 
-  // Jump to the actual landing pad function, or rather, a function that will jump there after setting up register values properly.
-
-  info!("Jumping to landing pad (cleanup function) at {:#X}", landing_pad_address);
-  // Once the unwinding cleanup function is done, it will call _Unwind_Resume (technically, it jumps to it),
-  // and pass the value in the landing registers' RAX register as the argument to _Unwind_Resume.
-  // So, whatever we put into RAX in the landing regs will be placed into the first arg (RDI) in _Unwind_Resume.
-  // This is arch-specific; for x86_64 the transfer is from RAX -> RDI, for ARM/AARCH64, the transfer is from R0 -> R1 or X0 -> X1.
-  // See this for more mappings: <https://github.com/rust-lang/rust/blob/master/src/libpanic_unwind/gcc.rs#L102>
+  info!("land at {:016x}", landing_pad_address);
   regs[Aarch64::X0] = Some(unwinding_context_ptr as u64);
   unsafe {
-    land(&regs, landing_pad_address)?;
+    land(&regs, landing_pad_address);
   }
-  error!("BUG: call to unwind::land() returned, which should never happen!");
-  Err("BUG: call to unwind::land() returned, which should never happen!")
+  Err("should not return")
 }
 
-
-/// This function should be invoked when the unwinding procedure is finished, or cannot be continued any further.
-/// It cleans up the `UnwindingContext` object pointed to by the given pointer and marks the current task as killed.
-fn cleanup_unwinding_context(unwinding_context_ptr: *mut UnwindingContext) {
-  // Recover ownership of the unwinding context from its pointer
+fn cleanup(unwinding_context_ptr: *mut UnwindingContext) {
   let unwinding_context_boxed = unsafe { Box::from_raw(unwinding_context_ptr) };
   let unwinding_context = *unwinding_context_boxed;
   drop(unwinding_context.stack_frame_iter);
 }
 
 pub fn unwind_resume(unwinding_context_ptr: usize) -> ! {
-  // trace!("unwind_resume(): unwinding_context_ptr value: {:#X}", unwinding_context_ptr);
   let unwinding_context_ptr = unwinding_context_ptr as *mut UnwindingContext;
 
-  match continue_unwinding(unwinding_context_ptr) {
-    Ok(()) => {
-      debug!("unwind_resume(): continue_unwinding() returned Ok(), meaning it's at the end of the call stack.");
-    }
-    Err(e) => {
-      error!("BUG: in unwind_resume(): continue_unwinding() returned an error: {}", e);
-    }
-  }
-  // here, cleanup the unwinding state and kill the task
-  cleanup_unwinding_context(unwinding_context_ptr);
+  continue_unwinding(unwinding_context_ptr);
+  cleanup(unwinding_context_ptr);
+  error!("unwind_resume end");
   loop {}
 }
-

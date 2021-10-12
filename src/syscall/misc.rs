@@ -1,5 +1,4 @@
 use super::{Result, SyscallOutRegisters::*};
-use crate::lib::address_space::AddressSpace;
 use common::syscall::error::ERROR_INVARG;
 
 #[inline(never)]

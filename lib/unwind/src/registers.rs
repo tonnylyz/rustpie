@@ -105,7 +105,7 @@ impl IndexMut<gimli::Register> for Registers {
 
 #[repr(C)]
 pub struct LandingRegisters {
-  pub r: [u64; 29], // x0-x28
+  pub x: [u64; 29], // x0-x28
   pub fp: u64,      // x29, Frame Pointer
   pub lr: u64,      // x30, Link Register
   pub sp: u64,      // x31, Stack Pointer
