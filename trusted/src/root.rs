@@ -5,6 +5,10 @@ use unwind::catch::catch_unwind;
 
 pub fn main() {
   thread::spawn(|| {
+    server_wrapper(crate::test::server);
+  });
+
+  thread::spawn(|| {
     server_wrapper(crate::blk::virtio_blk::server);
   });
 

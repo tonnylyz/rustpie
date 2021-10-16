@@ -189,6 +189,7 @@ pub struct CallSiteTableEntry {
   /// The offset from the `landing_pad_base` at which the landing pad entry function exists.
   /// If `0`, then there is no landing pad function that should be run.
   landing_pad_offset: u64,
+
   /// The offset into the action table that specifies what additional action to undertake.
   /// If `0`, there is no action;
   /// otherwise, this value plus 1 (`action_offset + 1`) should be used to locate the action table entry.

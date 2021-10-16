@@ -1,6 +1,8 @@
 use core::fmt::Formatter;
 
 use riscv::regs::*;
+use unwind::registers::{Registers, Riscv64};
+use crate::syscall::{Result as SyscallResult, SyscallOutRegisters};
 
 #[repr(C)]
 #[derive(Copy, Clone, Debug)]
@@ -45,6 +47,45 @@ static REG_ABI_NAMES: [&str; 32] = [
   "T6",
 ];
 
+impl Into<Registers> for Riscv64ContextFrame {
+  fn into(self) -> Registers {
+    let mut reg = Registers::default();
+    reg[Riscv64::X0] = Some(self.gpr[0]);
+    reg[Riscv64::X1] = Some(self.gpr[1]);
+    reg[Riscv64::X2] = Some(self.gpr[2]);
+    reg[Riscv64::X3] = Some(self.gpr[3]);
+    reg[Riscv64::X4] = Some(self.gpr[4]);
+    reg[Riscv64::X5] = Some(self.gpr[5]);
+    reg[Riscv64::X6] = Some(self.gpr[6]);
+    reg[Riscv64::X7] = Some(self.gpr[7]);
+    reg[Riscv64::X8] = Some(self.gpr[8]);
+    reg[Riscv64::X9] = Some(self.gpr[9]);
+    reg[Riscv64::X10] = Some(self.gpr[10]);
+    reg[Riscv64::X11] = Some(self.gpr[11]);
+    reg[Riscv64::X12] = Some(self.gpr[12]);
+    reg[Riscv64::X13] = Some(self.gpr[13]);
+    reg[Riscv64::X14] = Some(self.gpr[14]);
+    reg[Riscv64::X15] = Some(self.gpr[15]);
+    reg[Riscv64::X16] = Some(self.gpr[16]);
+    reg[Riscv64::X17] = Some(self.gpr[17]);
+    reg[Riscv64::X18] = Some(self.gpr[18]);
+    reg[Riscv64::X19] = Some(self.gpr[19]);
+    reg[Riscv64::X20] = Some(self.gpr[20]);
+    reg[Riscv64::X21] = Some(self.gpr[21]);
+    reg[Riscv64::X22] = Some(self.gpr[22]);
+    reg[Riscv64::X23] = Some(self.gpr[23]);
+    reg[Riscv64::X24] = Some(self.gpr[24]);
+    reg[Riscv64::X25] = Some(self.gpr[25]);
+    reg[Riscv64::X26] = Some(self.gpr[26]);
+    reg[Riscv64::X27] = Some(self.gpr[27]);
+    reg[Riscv64::X28] = Some(self.gpr[28]);
+    reg[Riscv64::X29] = Some(self.gpr[29]);
+    reg[Riscv64::X30] = Some(self.gpr[30]);
+    reg[Riscv64::X31] = Some(self.gpr[31]);
+    reg
+  }
+}
+
 impl core::fmt::Display for Riscv64ContextFrame {
   fn fmt(&self, f: &mut Formatter<'_>) -> Result<(), core::fmt::Error> {
     for i in 0..32 {
@@ -83,9 +124,43 @@ impl crate::lib::traits::ContextFrameTrait for Riscv64ContextFrame {
     self.gpr[17] as usize
   }
 
-  fn set_syscall_return_value(&mut self, v: usize) {
-    // a0 -> x10
-    self.gpr[10] = v as u64;
+  fn set_syscall_result(&mut self, v: &SyscallResult) {
+    match v {
+      Ok(regs) => {
+        self.gpr[16] = 0;
+        match regs {
+          SyscallOutRegisters::Unit => {}
+          SyscallOutRegisters::Single(a) => {
+            self.gpr[10] = *a as u64;
+          }
+          SyscallOutRegisters::Double(a, b) => {
+            self.gpr[10] = *a as u64;
+            self.gpr[11] = *b as u64;
+          }
+          SyscallOutRegisters::Triple(a, b, c) => {
+            self.gpr[10] = *a as u64;
+            self.gpr[11] = *b as u64;
+            self.gpr[12] = *c as u64;
+          }
+          SyscallOutRegisters::Quadruple(a, b, c, d) => {
+            self.gpr[10] = *a as u64;
+            self.gpr[11] = *b as u64;
+            self.gpr[12] = *c as u64;
+            self.gpr[13] = *d as u64;
+          }
+          SyscallOutRegisters::Pentad(a, b, c, d, e) => {
+            self.gpr[10] = *a as u64;
+            self.gpr[11] = *b as u64;
+            self.gpr[12] = *c as u64;
+            self.gpr[13] = *d as u64;
+            self.gpr[14] = *e as u64;
+          }
+        }
+      }
+      Err(e) => {
+        self.gpr[16] = *e as u64;
+      }
+    }
   }
 
   fn exception_pc(&self) -> usize {

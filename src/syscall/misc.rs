@@ -1,5 +1,29 @@
+use alloc::boxed::Box;
 use super::{Result, SyscallOutRegisters::*};
 use common::syscall::error::ERROR_INVARG;
+
+struct ResourceA;
+struct ResourceB;
+impl Drop for ResourceA {
+  fn drop(&mut self) {
+    info!("resource a drop")
+  }
+}
+#[inline(never)]
+fn make_page_fault() {
+  unsafe { (0xdeadbeef0000 as *mut usize).write(0); }
+  panic!(); // indicates an exception may happen
+}
+#[inline(never)]
+pub fn null2() -> Result {
+  info!("null called");
+  let a = Box::new(ResourceA);
+  make_page_fault();
+  let b = Box::new(ResourceB);
+  Box::leak(a);
+  Box::leak(b);
+  Ok(Unit)
+}
 
 #[inline(never)]
 pub fn null() -> Result {

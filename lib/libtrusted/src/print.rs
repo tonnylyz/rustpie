@@ -33,7 +33,7 @@ fn panic_handler(info: &core::panic::PanicInfo) -> ! {
   } else {
     println!("          [E][trusted] panic t{} no message", get_tid());
   }
-  unwind::start_unwinding(5);
+  unwind::start_unwinding(1);
   loop {}
 }
 

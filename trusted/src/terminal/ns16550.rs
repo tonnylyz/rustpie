@@ -1,12 +1,11 @@
-const NS16550_MMIO_BASE: usize = 0xffff_ffff_0000_0000 + 0x1000_0000;
+const NS16550_MMIO_BASE: usize = 0x8_0000_0000 + 0x1000_0000;
 
-use spin::Once;
 use tock_registers::{
   register_bitfields,
   register_structs,
   registers::*,
 };
-use tock_registers::interfaces::{Readable, ReadWriteable, Writeable};
+use tock_registers::interfaces::{Readable, Writeable};
 
 
 register_bitfields! {
@@ -309,38 +308,40 @@ register_structs! {
 }
 
 struct Ns16550Mmio {
-    base_addr: usize,
+  base_addr: usize,
 }
 
 impl core::ops::Deref for Ns16550Mmio {
-    type Target = Ns16550MmioBlock;
+  type Target = Ns16550MmioBlock;
 
-    fn deref(&self) -> &Self::Target {
-        unsafe { &*self.ptr() }
-    }
+  fn deref(&self) -> &Self::Target {
+    unsafe { &*self.ptr() }
+  }
 }
 
 impl Ns16550Mmio {
-    const fn new(base_addr: usize) -> Self { Ns16550Mmio { base_addr } }
-    fn ptr(&self) -> *const Ns16550MmioBlock { self.base_addr as *const _ }
+  const fn new(base_addr: usize) -> Self { Ns16550Mmio { base_addr } }
+  fn ptr(&self) -> *const Ns16550MmioBlock { self.base_addr as *const _ }
 }
 
 static NS16550_MMIO: Ns16550Mmio = Ns16550Mmio::new(NS16550_MMIO_BASE);
 
-pub fn init() {
-}
-
-fn send(c: u8) {
-    let uart = &NS16550_MMIO;
-    while !uart.UART_LSR_0.is_set(UART_LSR_0::THRE) {
-        // Wait until it is possible to write data.
+pub fn irq() {
+  let ns16550 = &NS16550_MMIO;
+  loop {
+    if !ns16550.UART_LSR_0.is_set(UART_LSR_0::RDR) {
+      break;
     }
-    uart.UART_THR_DLAB_0_0.set(c);
+    let c = ns16550.UART_THR_DLAB_0_0.get() as u8;
+    let mut buf = super::buffer().lock();
+    buf.push_back(c);
+  }
+  // if ns16550.UART_IIR_FCR_0.matches_all(UART_IIR_FCR_0::IS_STA::IntrPend) {
+  //
+  // }
 }
 
-pub fn putc(c: u8) {
-  if c == b'\n' {
-    send(b'\r');
-  }
-  send(c);
+pub fn enable_irq() {
+  let uart = &NS16550_MMIO;
+  uart.UART_IER_DLAB_0_0.write(UART_IER_DLAB_0_0::IE_RHR::SET);
 }

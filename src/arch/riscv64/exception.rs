@@ -1,7 +1,7 @@
 use riscv::regs::*;
+use tock_registers::interfaces::{Readable, Writeable};
 
 use crate::lib::traits::*;
-use crate::lib::cpu::CoreTrait;
 use crate::panic::exception_trace;
 use crate::lib::interrupt::InterruptController;
 use crate::arch::ContextFrame;
@@ -38,7 +38,7 @@ static mut PANIC: bool = false;
 #[no_mangle]
 unsafe extern "C" fn exception_entry(ctx: *mut ContextFrame) {
   let from_kernel = SSTATUS.is_set(SSTATUS::SPP);
-  let core = crate::current_cpu();
+  let core = crate::lib::cpu::cpu();
   core.set_context(ctx);
   if PANIC {
     loop {}
@@ -78,7 +78,7 @@ unsafe extern "C" fn exception_entry(ctx: *mut ContextFrame) {
       | EXCEPTION_LOAD_ADDRESS_MISALIGNED
       | EXCEPTION_LOAD_ACCESS_FAULT
       | EXCEPTION_STORE_ADDRESS_MISALIGNED
-      | EXCEPTION_STORE_ACCESS_FAULT => crate::lib::exception::handle(),
+      | EXCEPTION_STORE_ACCESS_FAULT => crate::lib::exception::handle_user(),
       EXCEPTION_ENVIRONMENT_CALL_FROM_USER_MODE => {
         // Note: we need to set epc to next instruction before doing system call
         //       pay attention to yield and process_alloc

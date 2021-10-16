@@ -1,7 +1,7 @@
 [package]
 name = "rustpi"
 version = "0.1.0"
-edition = "2018"
+edition = "2021"
 authors = ["tonnylyz <lyztonny@gmail.com>"]
 
 [dependencies]
@@ -30,8 +30,8 @@ features = ["register_types"]
 cortex-a = { git = "https://github.com/tonnylyz/cortex-a" }
 
 [target.'cfg(target_arch = "riscv64")'.dependencies]
-riscv = { git = "https://github.com/tonnylyz/riscv" }
-
+#riscv = { git = "https://github.com/tonnylyz/riscv" }
+riscv = { path = "../riscv" }
 [features]
 default = ["user_release"]
 user_release = []

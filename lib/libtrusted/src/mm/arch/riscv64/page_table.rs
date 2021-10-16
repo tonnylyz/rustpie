@@ -1,10 +1,9 @@
-use register::*;
-
-use crate::constants::*;
+use tock_registers::LocalRegisterCopy;
 
 use super::vm_descriptor::*;
-use crate::traits::EntryLike;
+use crate::mm::EntryLike;
 
+use common::{PAGE_SIZE, PAGE_TABLE_L1_SHIFT, PAGE_TABLE_L2_SHIFT, PAGE_TABLE_L3_SHIFT};
 use common::CONFIG_READ_ONLY_LEVEL_3_PAGE_TABLE_BTM;
 use common::CONFIG_READ_ONLY_LEVEL_2_PAGE_TABLE_BTM;
 use common::CONFIG_READ_ONLY_LEVEL_1_PAGE_TABLE_BTM;
@@ -25,9 +24,9 @@ fn read_level_2_entry(l1_index: usize, l2_index: usize, l3_index: usize) -> usiz
 }
 
 fn read_page_table_entry(va: usize) -> Option<usize> {
-  let l1x = (va >> PAGE_TABLE_L1_SHIFT) & (PAGE_SIZE / WORD_SIZE - 1);
-  let l2x = (va >> PAGE_TABLE_L2_SHIFT) & (PAGE_SIZE / WORD_SIZE - 1);
-  let l3x = (va >> PAGE_TABLE_L3_SHIFT) & (PAGE_SIZE / WORD_SIZE - 1);
+  let l1x = (va >> PAGE_TABLE_L1_SHIFT) & (PAGE_SIZE / core::mem::size_of::<usize>() - 1);
+  let l2x = (va >> PAGE_TABLE_L2_SHIFT) & (PAGE_SIZE / core::mem::size_of::<usize>() - 1);
+  let l3x = (va >> PAGE_TABLE_L3_SHIFT) & (PAGE_SIZE / core::mem::size_of::<usize>() - 1);
   if read_directory_entry(l1x) & 0b1 != 0 {
     if read_level_1_entry(l1x, l2x) & 0b1 != 0 {
       let r = read_level_2_entry(l1x, l2x, l3x);
@@ -175,12 +174,12 @@ pub fn query(va: usize) -> Option<Entry> {
 }
 
 pub fn traverse<F>(limit: usize, f: F) where F: Fn(usize, Entry) -> () {
-  for l1x in 0..(PAGE_SIZE / WORD_SIZE) {
+  for l1x in 0..(PAGE_SIZE / core::mem::size_of::<usize>()) {
     let l1e = read_directory_entry(l1x);
     if l1e & 0b1 == 0 || l1e & (1 << 4) == 0 {
       continue;
     }
-    for l2x in 0..(PAGE_SIZE / WORD_SIZE) {
+    for l2x in 0..(PAGE_SIZE / core::mem::size_of::<usize>()) {
       let va = (l1x << PAGE_TABLE_L1_SHIFT) + (l2x << PAGE_TABLE_L2_SHIFT);
       if va >= limit {
         return;
@@ -189,7 +188,7 @@ pub fn traverse<F>(limit: usize, f: F) where F: Fn(usize, Entry) -> () {
       if l2e & 0b1 == 0 {
         continue;
       }
-      for l3x in 0..(PAGE_SIZE / WORD_SIZE) {
+      for l3x in 0..(PAGE_SIZE / core::mem::size_of::<usize>()) {
         let va = (l1x << PAGE_TABLE_L1_SHIFT) + (l2x << PAGE_TABLE_L2_SHIFT) + (l3x << PAGE_TABLE_L3_SHIFT);
         if va >= limit {
           return;

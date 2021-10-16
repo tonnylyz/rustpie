@@ -70,6 +70,7 @@ pub mod server {
   pub const SERVER_TERMINAL: usize = 2;
   pub const SERVER_MM: usize = 3;
   pub const SERVER_PM: usize = 4;
+  pub const SERVER_TEST: usize = 5;
 }
 
 pub mod thread {

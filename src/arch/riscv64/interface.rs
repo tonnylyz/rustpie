@@ -2,6 +2,7 @@ use riscv::{asm::*, regs::*};
 
 use crate::lib::traits::*;
 use core::mem::size_of;
+use tock_registers::interfaces::Readable;
 
 pub const PAGE_SHIFT: usize = 12;
 pub const PAGE_SIZE: usize = 1 << PAGE_SHIFT;

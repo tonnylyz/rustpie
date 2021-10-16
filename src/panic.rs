@@ -29,7 +29,14 @@ impl Frame {
 
   #[cfg(target_arch = "riscv64")]
   fn current() -> Frame {
-    Frame::new(0, 0)
+
+    let fp: u64;
+    let pc: u64;
+    unsafe {
+      asm!("mv {}, x8", out(reg) fp);
+      asm!("auipc {}, 0", out(reg) pc);
+    }
+    Frame::new(fp, pc)
   }
 
   fn ip(&self) -> *mut u8 {
@@ -125,6 +132,6 @@ pub fn panic_handler(info: &PanicInfo) -> ! {
   backtrace();
   info!("backtrace done");
 
-  unwind::start_unwinding(5);
+  unwind::start_unwinding(1);
   loop {}
 }

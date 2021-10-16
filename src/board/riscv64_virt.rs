@@ -13,6 +13,7 @@ pub const BOARD_NORMAL_MEMORY_RANGE: Range<usize> = 0x8000_0000..0xc000_0000;
 #[allow(dead_code)]
 pub const BOARD_DEVICE_MEMORY_RANGE: Range<usize> = 0x0000_0000..0x8000_0000;
 
+#[no_mangle]
 pub fn init() {
   crate::driver::uart::init();
 }
@@ -63,8 +64,16 @@ pub fn devices() -> Vec<Device> {
         0x10001000..0x10002000
       ],
       vec![
-        0x01
+        1
       ]),
-
+    Device::new(
+      "ns16550",
+      vec![
+        0x1000_0000..0x1000_1000
+      ],
+      vec![
+        10
+      ]
+    ),
   ]
 }

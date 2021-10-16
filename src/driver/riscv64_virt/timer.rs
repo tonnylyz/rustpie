@@ -1,4 +1,5 @@
 use riscv::regs::*;
+use tock_registers::interfaces::{Readable, Writeable};
 
 use super::sbi::{sbi_call, SBI_EID_TIMER, SBI_FID_SET_TIMER};
 

@@ -7,9 +7,9 @@
 #[allow(unused_parens, dead_code)]
 mod arch;
 
-// #[cfg(target_arch = "riscv64")]
-// #[path = "arch/riscv64/mod.rs"]
-// mod arch;
+#[cfg(target_arch = "riscv64")]
+#[path = "arch/riscv64/mod.rs"]
+mod arch;
 
 use arch::*;
 use common::syscall::*;

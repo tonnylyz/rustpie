@@ -2,13 +2,14 @@ use riscv::regs::*;
 
 use crate::arch::*;
 use crate::mm::page_table::{Entry, EntryAttribute, Error, PageTableEntryAttrTrait, PageTableTrait};
-use crate::mm::{PageFrame, UserFrame};
+use crate::mm::{PhysicalFrame, Frame};
 use crate::lib::traits::*;
 
 use super::vm_descriptor::*;
-use super::vm_descriptor::TABLE_DESCRIPTOR;
 use spin::Mutex;
 use alloc::vec::Vec;
+use common::syscall::error::ERROR_INVARG;
+use tock_registers::interfaces::Writeable;
 
 pub const PAGE_TABLE_L1_SHIFT: usize = 30;
 pub const PAGE_TABLE_L2_SHIFT: usize = 21;
@@ -16,9 +17,9 @@ pub const PAGE_TABLE_L3_SHIFT: usize = 12;
 
 #[derive(Debug)]
 pub struct Riscv64PageTable {
-  directory: PageFrame,
-  pages: Mutex<Vec<PageFrame>>,
-  user_pages: Mutex<Vec<UserFrame>>,
+  directory: PhysicalFrame,
+  pages: Mutex<Vec<PhysicalFrame>>,
+  user_pages: Mutex<Vec<Frame>>,
 }
 
 #[repr(transparent)]
@@ -93,7 +94,7 @@ impl Index for usize {
 
 impl core::convert::From<Riscv64PageTableEntry> for Entry {
   fn from(u: Riscv64PageTableEntry) -> Self {
-    use register::*;
+    use tock_registers::*;
     let reg = LocalRegisterCopy::<u64, PAGE_DESCRIPTOR::Register>::new(u.0 as u64);
     Entry::new(EntryAttribute::new(
       reg.is_set(PAGE_DESCRIPTOR::W),
@@ -144,7 +145,7 @@ impl Riscv64PageTable {
 }
 
 impl PageTableTrait for Riscv64PageTable {
-  fn new(directory: PageFrame) -> Self {
+  fn new(directory: PhysicalFrame) -> Self {
     let r = Riscv64PageTable {
       directory,
       pages: Mutex::new(Vec::new()),
@@ -161,11 +162,11 @@ impl PageTableTrait for Riscv64PageTable {
     self.directory.pa()
   }
 
-  fn map(&self, va: usize, pa: usize, attr: EntryAttribute) {
+  fn map(&self, va: usize, pa: usize, attr: EntryAttribute) -> Result<(), Error> {
     let directory = Riscv64PageTableEntry::from_pa(self.directory.pa());
     let mut l1e = directory.entry(va.l1x());
     if !l1e.valid() {
-      let frame = crate::mm::page_pool::alloc();
+      let frame = crate::mm::page_pool::page_alloc()?;
       l1e = Riscv64PageTableEntry::make_table(frame.pa());
       let mut pages = self.pages.lock();
       pages.push(frame);
@@ -177,7 +178,7 @@ impl PageTableTrait for Riscv64PageTable {
     }
     let mut l2e = l1e.entry(va.l2x());
     if !l2e.valid() {
-      let frame = crate::mm::page_pool::alloc();
+      let frame = crate::mm::page_pool::page_alloc()?;
       l2e = Riscv64PageTableEntry::make_table(frame.pa());
       let mut pages = self.pages.lock();
       pages.push(frame);
@@ -188,6 +189,7 @@ impl PageTableTrait for Riscv64PageTable {
       l1e.set_entry(va.l2x(), l2e);
     }
     l2e.set_entry(va.l3x(), Riscv64PageTableEntry::from(Entry::new(attr, pa)));
+    Ok(())
   }
 
   fn unmap(&self, va: usize) {
@@ -199,7 +201,7 @@ impl PageTableTrait for Riscv64PageTable {
     l2e.set_entry(va.l3x(), Riscv64PageTableEntry(0));
   }
 
-  fn insert_page(&self, va: usize, user_frame: crate::mm::UserFrame, attr: EntryAttribute) -> Result<(), Error> {
+  fn insert_page(&self, va: usize, user_frame: crate::mm::Frame, attr: EntryAttribute) -> Result<(), Error> {
     let pa = user_frame.pa();
     let mut user_frames = self.user_pages.lock();
     user_frames.push(user_frame);
@@ -237,7 +239,7 @@ impl PageTableTrait for Riscv64PageTable {
     }
   }
 
-  fn lookup_user_page(&self, va: usize) -> Option<UserFrame> {
+  fn lookup_user_page(&self, va: usize) -> Option<Frame> {
     match self.lookup_page(va) {
       None => { None }
       Some(entry) => {
@@ -259,7 +261,7 @@ impl PageTableTrait for Riscv64PageTable {
       crate::arch::Arch::invalidate_tlb();
       Ok(())
     } else {
-      Err(crate::mm::page_table::Error::AddressNotMappedError)
+      Err(ERROR_INVARG)
     }
   }
 
@@ -267,11 +269,7 @@ impl PageTableTrait for Riscv64PageTable {
     self.map(common::CONFIG_READ_ONLY_LEVEL_1_PAGE_TABLE_BTM, self.directory.pa(), EntryAttribute::user_readonly());
   }
 
-  fn destroy(&self) {
-    // TODO: remove all frames
-  }
-
-  fn set_user_page_table(base: usize, asid: AddressSpaceId) {
+  fn install_user_page_table(base: usize, asid: AddressSpaceId) {
     SATP.write(SATP::MODE::Sv39 + SATP::ASID.val(asid as u64) + SATP::PPN.val((base >> PAGE_SHIFT) as u64));
     riscv::barrier::sfence_vma_all();
   }

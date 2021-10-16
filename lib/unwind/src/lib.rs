@@ -25,9 +25,14 @@ use gimli::{
 use registers::{
   LandingRegisters,
   SavedRegs,
-  Aarch64,
   Registers
 };
+
+#[cfg(target_arch = "aarch64")]
+use registers::Aarch64;
+
+#[cfg(target_arch = "riscv64")]
+use registers::Riscv64;
 
 pub mod registers;
 pub mod elf;
@@ -69,14 +74,22 @@ impl FallibleIterator for StackFrameIter {
     let registers = &mut self.registers;
     if let Some((unwind_row_ref, cfa)) = self.state.take() {
       let mut new_regs = registers.clone();
-      new_regs[Aarch64::X30] = None;
-      new_regs[Aarch64::SP] = Some(cfa);
+      #[cfg(target_arch = "aarch64")] {
+        new_regs[Aarch64::X30] = None;
+        new_regs[Aarch64::SP] = Some(cfa);
+      }
+      #[cfg(target_arch = "riscv64")] {
+        new_regs[Riscv64::X1] = None;
+        new_regs[Riscv64::X2] = Some(cfa);
+      }
       unwind_row_ref.with_unwind_info(|_fde, row| {
         for &(reg_num, ref rule) in row.registers() {
+          #[cfg(target_arch = "aarch64")]
           if reg_num == Aarch64::SP {
             continue;
           }
-          if reg_num == Aarch64::X30 {
+          #[cfg(target_arch = "riscv64")]
+          if reg_num == Riscv64::X2 {
             continue;
           }
           new_regs[reg_num] = match *rule {
@@ -102,8 +115,13 @@ impl FallibleIterator for StackFrameIter {
       })?;
       *registers = new_regs;
     }
-
-    let return_address = match registers[Aarch64::X30] {
+    #[cfg(target_arch = "aarch64")]
+      let return_address = match registers[Aarch64::X30] {
+      Some(0) | None => return Ok(None),
+      Some(ra) => ra,
+    };
+    #[cfg(target_arch = "riscv64")]
+      let return_address = match registers[Riscv64::X1] {
       Some(0) | None => return Ok(None),
       Some(ra) => ra,
     };
@@ -167,6 +185,7 @@ extern "C" {
   fn unwind_lander(regs: *const LandingRegisters) -> !;
 }
 
+#[cfg(target_arch = "aarch64")]
 global_asm! {
 r#"
 .global unwind_trampoline
@@ -233,6 +252,72 @@ unwind_lander:
 "#
 }
 
+#[cfg(target_arch = "riscv64")]
+global_asm! {
+r#"
+.global unwind_trampoline
+unwind_trampoline:
+.cfi_startproc
+     mv a1, sp
+     addi sp, sp, -0x70
+     sd x8, 0 * 8(sp)
+     sd x9, 1 * 8(sp)
+     sd x18, 2 * 8(sp)
+     sd x19, 3 * 8(sp)
+     sd x20, 4 * 8(sp)
+     sd x21, 5 * 8(sp)
+     sd x22, 6 * 8(sp)
+     sd x23, 7 * 8(sp)
+     sd x24, 8 * 8(sp)
+     sd x25, 9 * 8(sp)
+     sd x26, 10 * 8(sp)
+     sd x27, 11 * 8(sp)
+     sd ra, 12 * 8(sp)
+     mv a2, sp
+     jal unwind_recorder
+     ld ra, 12 * 8(sp)
+     addi sp, sp, 0x70
+     ret
+.cfi_endproc
+.global unwind_lander
+unwind_lander:
+    ld x1, 1 * 8(a0)
+    ld x2, 2 * 8(a0)
+    ld x3, 3 * 8(a0)
+    ld x4, 4 * 8(a0)
+    ld x5, 5 * 8(a0)
+    ld x6, 6 * 8(a0)
+    ld x7, 7 * 8(a0)
+    ld x8, 8 * 8(a0)
+    ld x9, 9 * 8(a0)
+    // skip x10(a0)
+    ld x11, 11 * 8(a0)
+    ld x12, 12 * 8(a0)
+    ld x13, 13 * 8(a0)
+    ld x14, 14 * 8(a0)
+    ld x15, 15 * 8(a0)
+    ld x16, 16 * 8(a0)
+    ld x17, 17 * 8(a0)
+    ld x18, 18 * 8(a0)
+    ld x19, 19 * 8(a0)
+    ld x20, 20 * 8(a0)
+    ld x21, 21 * 8(a0)
+    ld x22, 22 * 8(a0)
+    ld x23, 23 * 8(a0)
+    ld x24, 24 * 8(a0)
+    ld x25, 25 * 8(a0)
+    ld x26, 26 * 8(a0)
+    ld x27, 27 * 8(a0)
+    ld x28, 28 * 8(a0)
+    ld x29, 29 * 8(a0)
+    ld x30, 30 * 8(a0)
+    ld x31, 31 * 8(a0)
+    ld a0, 10 * 8(a0)
+    ret
+"#
+}
+
+#[cfg(target_arch = "aarch64")]
 #[no_mangle]
 pub unsafe extern "C" fn unwind_recorder(
   func: *const RefFuncWithRegisters,
@@ -262,6 +347,38 @@ pub unsafe extern "C" fn unwind_recorder(
   Box::into_raw(Box::new(res))
 }
 
+#[cfg(target_arch = "riscv64")]
+#[no_mangle]
+pub unsafe extern "C" fn unwind_recorder(
+  func: *const RefFuncWithRegisters,
+  stack: u64,
+  saved_regs: *mut SavedRegs,
+) -> *mut Result<(), &'static str> {
+  let func = &*func;
+  let saved_regs = &*saved_regs;
+
+  let mut registers = Registers::default();
+
+  registers[Riscv64::X8] = Some(saved_regs.s0);
+  registers[Riscv64::X9] = Some(saved_regs.s1);
+  registers[Riscv64::X18] = Some(saved_regs.r[0]);
+  registers[Riscv64::X19] = Some(saved_regs.r[1]);
+  registers[Riscv64::X20] = Some(saved_regs.r[2]);
+  registers[Riscv64::X21] = Some(saved_regs.r[3]);
+  registers[Riscv64::X22] = Some(saved_regs.r[4]);
+  registers[Riscv64::X23] = Some(saved_regs.r[5]);
+  registers[Riscv64::X24] = Some(saved_regs.r[6]);
+  registers[Riscv64::X25] = Some(saved_regs.r[7]);
+  registers[Riscv64::X26] = Some(saved_regs.r[8]);
+  registers[Riscv64::X27] = Some(saved_regs.r[9]);
+  registers[Riscv64::X2] = Some(stack);
+  registers[Riscv64::X1] = Some(saved_regs.ra);
+
+  let res = func(registers);
+  Box::into_raw(Box::new(res))
+}
+
+#[cfg(target_arch = "aarch64")]
 pub unsafe fn land(regs: &Registers, landing_pad_address: u64) {
   let mut lr = LandingRegisters {
     x: [0; 29],
@@ -299,6 +416,45 @@ pub unsafe fn land(regs: &Registers, landing_pad_address: u64) {
   lr.x[26] = regs[Aarch64::X26].unwrap_or(0);
   lr.x[27] = regs[Aarch64::X27].unwrap_or(0);
   lr.x[28] = regs[Aarch64::X28].unwrap_or(0);
+
+  unwind_lander(&lr);
+}
+
+#[cfg(target_arch = "riscv64")]
+pub unsafe fn land(regs: &Registers, landing_pad_address: u64) {
+  let mut lr = LandingRegisters::default();
+  lr.x[0] = regs[Riscv64::X0].unwrap_or(0);
+  lr.x[1] = landing_pad_address;
+  lr.x[2] = regs[Riscv64::X2].unwrap_or(0);
+  lr.x[3] = regs[Riscv64::X3].unwrap_or(0);
+  lr.x[4] = regs[Riscv64::X4].unwrap_or(0);
+  lr.x[5] = regs[Riscv64::X5].unwrap_or(0);
+  lr.x[6] = regs[Riscv64::X6].unwrap_or(0);
+  lr.x[7] = regs[Riscv64::X7].unwrap_or(0);
+  lr.x[8] = regs[Riscv64::X8].unwrap_or(0);
+  lr.x[9] = regs[Riscv64::X9].unwrap_or(0);
+  lr.x[10] = regs[Riscv64::X10].unwrap_or(0);
+  lr.x[11] = regs[Riscv64::X11].unwrap_or(0);
+  lr.x[12] = regs[Riscv64::X12].unwrap_or(0);
+  lr.x[13] = regs[Riscv64::X13].unwrap_or(0);
+  lr.x[14] = regs[Riscv64::X14].unwrap_or(0);
+  lr.x[15] = regs[Riscv64::X15].unwrap_or(0);
+  lr.x[16] = regs[Riscv64::X16].unwrap_or(0);
+  lr.x[17] = regs[Riscv64::X17].unwrap_or(0);
+  lr.x[18] = regs[Riscv64::X18].unwrap_or(0);
+  lr.x[19] = regs[Riscv64::X19].unwrap_or(0);
+  lr.x[20] = regs[Riscv64::X20].unwrap_or(0);
+  lr.x[21] = regs[Riscv64::X21].unwrap_or(0);
+  lr.x[22] = regs[Riscv64::X22].unwrap_or(0);
+  lr.x[23] = regs[Riscv64::X23].unwrap_or(0);
+  lr.x[24] = regs[Riscv64::X24].unwrap_or(0);
+  lr.x[25] = regs[Riscv64::X25].unwrap_or(0);
+  lr.x[26] = regs[Riscv64::X26].unwrap_or(0);
+  lr.x[27] = regs[Riscv64::X27].unwrap_or(0);
+  lr.x[28] = regs[Riscv64::X28].unwrap_or(0);
+  lr.x[29] = regs[Riscv64::X29].unwrap_or(0);
+  lr.x[30] = regs[Riscv64::X30].unwrap_or(0);
+  lr.x[31] = regs[Riscv64::X31].unwrap_or(0);
 
   unwind_lander(&lr);
 }
@@ -453,7 +609,12 @@ fn continue_unwinding(unwinding_context_ptr: *mut UnwindingContext) -> Result<()
   }
 
   info!("land at {:016x}", landing_pad_address);
-  regs[Aarch64::X0] = Some(unwinding_context_ptr as u64);
+  #[cfg(target_arch = "aarch64")] {
+    regs[Aarch64::X0] = Some(unwinding_context_ptr as u64);
+  }
+  #[cfg(target_arch = "riscv64")] {
+    regs[Riscv64::X10] = Some(unwinding_context_ptr as u64);
+  }
   unsafe {
     land(&regs, landing_pad_address);
   }

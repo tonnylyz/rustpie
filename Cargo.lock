@@ -44,7 +44,7 @@ name = "cortex-a"
 version = "6.1.0"
 source = "git+https://github.com/tonnylyz/cortex-a#950a6caca0152ee3a728ea93ae4e793789a1bdcd"
 dependencies = [
- "tock-registers 0.7.0",
+ "tock-registers",
 ]
 
 [[package]]
@@ -90,20 +90,10 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "72ef4a56884ca558e5ddb05a1d1e7e1bfd9a68d9ed024c21704cc98872dae1bb"
 
 [[package]]
-name = "register"
-version = "0.5.1"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "deaba5b0e477d21f61a57504bb5cef4a1e86de30300b457d38971c1cfc98b815"
-dependencies = [
- "tock-registers 0.5.0",
-]
-
-[[package]]
 name = "riscv"
-version = "0.1.0"
-source = "git+https://github.com/tonnylyz/riscv#f3e306c1bcbf0b1681ee2f266bdb832c0b511062"
+version = "0.1.1"
 dependencies = [
- "register",
+ "tock-registers",
 ]
 
 [[package]]
@@ -125,7 +115,7 @@ dependencies = [
  "rlibc",
  "spin 0.9.2",
  "static_assertions",
- "tock-registers 0.7.0",
+ "tock-registers",
  "unwind",
  "xmas-elf",
 ]
@@ -162,12 +152,6 @@ name = "static_assertions"
 version = "1.1.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "a2eb9349b6444b326872e140eb1cf5e7c522154d69e7a0ffb0fb81c06b37543f"
-
-[[package]]
-name = "tock-registers"
-version = "0.5.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "70323afdb8082186c0986da0e10f6e4ed103d681c921c00597e98d9806dac20f"
 
 [[package]]
 name = "tock-registers"

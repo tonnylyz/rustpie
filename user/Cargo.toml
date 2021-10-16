@@ -29,7 +29,13 @@ path = "src/touch.rs"
 name = "rm"
 path = "src/rm.rs"
 
+[[bin]]
+name = "test"
+path = "src/test.rs"
+
 [dependencies]
 exported = { path = "../lib/exported" }
 fs = { path = "../lib/fs" }
+microcall = { path = "../lib/microcall" }
+common = { path = "../common" }
 rlibc = "1.0.0"

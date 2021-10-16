@@ -25,6 +25,7 @@ mod terminal;
 mod mm;
 mod pm;
 mod logger;
+mod test;
 
 #[no_mangle]
 fn _start(_arg: usize) -> ! {
