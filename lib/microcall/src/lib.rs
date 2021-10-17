@@ -103,6 +103,10 @@ pub fn set_exception_handler(handler: usize) -> Result<(), Error> {
   syscall_1_0(SYS_SET_EXCEPTION_HANDLER, handler)
 }
 
+pub fn getc() -> Result<u8, Error> {
+  syscall_0_1(SYS_GETC).map(|c| c as u8)
+}
+
 pub mod message {
   #[repr(C)]
   #[derive(Copy, Clone, Debug, Default)]

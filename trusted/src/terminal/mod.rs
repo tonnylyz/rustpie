@@ -6,33 +6,23 @@ use microcall::get_tid;
 #[cfg(target_arch = "aarch64")]
 mod pl011;
 
-#[cfg(target_arch = "riscv64")]
-mod ns16550;
-
 #[cfg(target_arch = "aarch64")]
-fn wait_for_irq() {
-  microcall::event_wait(common::event::EVENT_INTERRUPT, 0x1 + 32);
+pub fn input_server() {
+  pl011::enable_irq();
+  loop {
+    microcall::event_wait(common::event::EVENT_INTERRUPT, 0x1 + 32);
+    pl011::irq();
+  }
 }
 
 #[cfg(target_arch = "riscv64")]
-fn wait_for_irq() {
-  microcall::event_wait(common::event::EVENT_INTERRUPT, 10);
-}
-
 pub fn input_server() {
-
-  #[cfg(target_arch = "aarch64")]
-    pl011::enable_irq();
-
-  #[cfg(target_arch = "riscv64")]
-    ns16550::enable_irq();
-
   loop {
-    wait_for_irq();
-    #[cfg(target_arch = "aarch64")]
-      pl011::irq();
-    #[cfg(target_arch = "riscv64")]
-      ns16550::irq();
+    if let Ok(c) = microcall::getc() {
+      let mut buf = buffer().lock();
+      buf.push_back(c);
+    }
+    microcall::thread_yield();
   }
 }
 

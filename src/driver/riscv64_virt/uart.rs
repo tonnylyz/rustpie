@@ -12,8 +12,8 @@ use tock_registers::interfaces::{Readable, ReadWriteable, Writeable};
 register_bitfields! {
     u8,
 
-    /// Bitfields of the `UART_THR_DLAB_0_0` register.
-    pub UART_THR_DLAB_0_0 [
+    /// Bitfields of the `RHR_THR_DLL` register.
+    pub RHR_THR_DLL [
         /// The Transmit Holding Register.
         ///
         /// It holds the characters to be transmitted by the UART.
@@ -21,14 +21,14 @@ register_bitfields! {
         /// the end of the FIFO.
         ///
         /// NOTE: These bits are write-only.
-        THR_A OFFSET(0) NUMBITS(8) [],
+        THR OFFSET(0) NUMBITS(8) [],
 
         /// The Receive Buffer Register.
         ///
         /// Rx data can be read from here.
         ///
         /// NOTE: These bits are read-only.
-        RBR_A OFFSET(0) NUMBITS(8) [],
+        RHR OFFSET(0) NUMBITS(8) [],
 
         /// The Divisor Latch LSB register.
         ///
@@ -36,11 +36,11 @@ register_bitfields! {
         /// Baud Divisor.
         ///
         /// NOTE: These bits are read-only.
-        DLL_A OFFSET(0) NUMBITS(8) []
+        DLL_LSB OFFSET(0) NUMBITS(8) []
     ],
 
-    /// Bitfields of the `UART_IER_DLAB_0_0` register.
-    pub UART_IER_DLAB_0_0 [
+    /// Bitfields of the `IER_DLM` register.
+    pub IER_DLM [
         /// Interrupt Enable for End of Received Data.
         IE_EORD OFFSET(5) NUMBITS(1) [],
 
@@ -60,8 +60,8 @@ register_bitfields! {
         IE_RHR OFFSET(0) NUMBITS(1) []
     ],
 
-    /// Bitfields of the `UART_IIR_FCR_0` register.
-    pub UART_IIR_FCR_0 [
+    /// Bitfields of the `ISR_FCR` register.
+    pub ISR_FCR [
         /// FIFO Mode Status.
         EN_FIFO OFFSET(6) NUMBITS(2) [
             /// 16450 Mode.
@@ -137,8 +137,8 @@ register_bitfields! {
         FCR_EN_FIFO OFFSET(0) NUMBITS(1) []
     ],
 
-    /// Bitfields of the `UART_LCR_0` register.
-    pub UART_LCR_0 [
+    /// Bitfields of the `LCR` register.
+    pub LCR [
         /// Whether the Divisor Latch Access Bit should be enabled.
         ///
         /// NOTE: Set this bit to allow programming of the DLH and DLM Divisors.
@@ -178,8 +178,8 @@ register_bitfields! {
         ]
     ],
 
-    /// Bitfields of the `UART_MCR_0` register.
-    pub UART_MCR_0 [
+    /// Bitfields of the `MCR` register.
+    pub MCR [
         /// Whether the old SIR decode path should be used instead of the new one.
         OLD_SIR_DECODE OFFSET(10) NUMBITS(1) [],
 
@@ -220,8 +220,8 @@ register_bitfields! {
         DTR OFFSET(0) NUMBITS(1) []
     ],
 
-    /// Bitfields of the `UART_LSR_0` register.
-    pub UART_LSR_0 [
+    /// Bitfields of the `LSR` register.
+    pub LSR [
         /// Whether the RX FIFO is empty.
         RX_FIFO_EMPTY OFFSET(9) NUMBITS(1) [],
 
@@ -257,8 +257,8 @@ register_bitfields! {
         RDR OFFSET(0) NUMBITS(1) []
     ],
 
-    /// Bitfields of the `UART_MSR_0` register.
-    pub UART_MSR_0 [
+    /// Bitfields of the `MSR` register.
+    pub MSR [
         /// State of Carrier detect pin.
         CD OFFSET(7) NUMBITS(1) [],
 
@@ -284,8 +284,8 @@ register_bitfields! {
         DCTS OFFSET(0) NUMBITS(1) []
     ],
 
-    /// Bitfields of the `UART_SPR_0` register.
-    pub UART_SPR_0 [
+    /// Bitfields of the `SPR` register.
+    pub SPR [
         /// Scratchpad register (not used internally).
         SPR_A OFFSET(0) NUMBITS(8) []
     ],
@@ -296,14 +296,14 @@ register_structs! {
     /// Representation of the UART registers.
     #[allow(non_snake_case)]
     pub Ns16550MmioBlock {
-        (0x00 => pub UART_THR_DLAB_0_0: ReadWrite<u8, UART_THR_DLAB_0_0::Register>),
-        (0x01 => pub UART_IER_DLAB_0_0: ReadWrite<u8, UART_IER_DLAB_0_0::Register>),
-        (0x02 => pub UART_IIR_FCR_0: ReadWrite<u8, UART_IIR_FCR_0::Register>),
-        (0x03 => pub UART_LCR_0: ReadWrite<u8, UART_LCR_0::Register>),
-        (0x04 => pub UART_MCR_0: ReadWrite<u8, UART_MCR_0::Register>),
-        (0x05 => pub UART_LSR_0: ReadOnly<u8, UART_LSR_0::Register>),
-        (0x06 => pub UART_MSR_0: ReadWrite<u8, UART_MSR_0::Register>),
-        (0x07 => pub UART_SPR_0: ReadWrite<u8, UART_SPR_0::Register>),
+        (0x00 => pub RHR_THR_DLL: ReadWrite<u8, RHR_THR_DLL::Register>),
+        (0x01 => pub IER_DLM: ReadWrite<u8, IER_DLM::Register>),
+        (0x02 => pub ISR_FCR: ReadWrite<u8, ISR_FCR::Register>),
+        (0x03 => pub LCR: ReadWrite<u8, LCR::Register>),
+        (0x04 => pub MCR: ReadWrite<u8, MCR::Register>),
+        (0x05 => pub LSR: ReadOnly<u8, LSR::Register>),
+        (0x06 => pub MSR: ReadWrite<u8, MSR::Register>),
+        (0x07 => pub SPR: ReadWrite<u8, SPR::Register>),
         (0x08 => @END),
     }
 }
@@ -328,14 +328,17 @@ impl Ns16550Mmio {
 static NS16550_MMIO: Ns16550Mmio = Ns16550Mmio::new(NS16550_MMIO_BASE);
 
 pub fn init() {
+    let uart = &NS16550_MMIO;
+    uart.ISR_FCR
+      .write(ISR_FCR::EN_FIFO::Mode16550);
 }
 
 fn send(c: u8) {
     let uart = &NS16550_MMIO;
-    while !uart.UART_LSR_0.is_set(UART_LSR_0::THRE) {
+    while !uart.LSR.is_set(LSR::THRE) {
         // Wait until it is possible to write data.
     }
-    uart.UART_THR_DLAB_0_0.set(c);
+    uart.RHR_THR_DLL.set(c);
 }
 
 pub fn putc(c: u8) {
@@ -343,4 +346,13 @@ pub fn putc(c: u8) {
     send(b'\r');
   }
   send(c);
+}
+
+pub fn getc() -> Option<u8> {
+    let uart = &NS16550_MMIO;
+    if uart.LSR.is_set(LSR::RDR) {
+        Some(uart.RHR_THR_DLL.get() as u8)
+    } else {
+        None
+    }
 }

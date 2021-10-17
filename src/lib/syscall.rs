@@ -27,6 +27,7 @@ static SYSCALL_NAMES: [&str; SYS_MAX] = [
   "server_register",
   "server_tid",
   "set_exception_handler",
+  "getc",
 ];
 
 pub fn syscall() {
@@ -58,6 +59,7 @@ pub fn syscall() {
       SYS_SERVER_REGISTER => server::server_register(arg(0)),
       SYS_SERVER_TID => server::server_tid(arg(0)),
       SYS_SET_EXCEPTION_HANDLER => misc::set_exception_handler(arg(0)),
+      SYS_GETC => misc::getc(),
       _ => {
         warn!("system call: unrecognized system call number");
         Err(ERROR_INVARG)

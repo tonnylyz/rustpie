@@ -1,6 +1,6 @@
 use alloc::boxed::Box;
 use super::{Result, SyscallOutRegisters::*};
-use common::syscall::error::ERROR_INVARG;
+use common::syscall::error::{ERROR_HOLD_ON, ERROR_INVARG};
 
 struct ResourceA;
 struct ResourceB;
@@ -34,6 +34,19 @@ pub fn null() -> Result {
 pub fn putc(c: char) -> Result {
   crate::driver::uart::putc(c as u8);
   Ok(Unit)
+}
+
+#[cfg(target_arch = "aarch64")]
+#[inline(never)]
+pub fn getc() -> Result { Ok(Unit) }
+
+#[cfg(target_arch = "riscv64")]
+#[inline(never)]
+pub fn getc() -> Result {
+  match crate::driver::uart::getc() {
+    None => Err(ERROR_HOLD_ON),
+    Some(c) => Ok(Single(c as usize))
+  }
 }
 
 #[inline(never)]
