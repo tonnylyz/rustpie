@@ -4,6 +4,7 @@
 #![feature(const_btree_new)]
 #![feature(allocator_api)]
 #![feature(try_reserve)]
+#![feature(asm)]
 
 #[macro_use]
 extern crate alloc;

@@ -43,9 +43,7 @@ pub fn server() {
         let mut msg = Message::default();
         msg.a = packet.a;
         trace!("handle packet err {:?}", Error::demux(msg.a));
-        if let Err(_) = msg.send_to(tid) {
-          error!("client {} not recv", tid);
-        }
+        let _ = msg.send_to(tid);
       }
     }
     Err(e) => { error!("FileSystem::open {:?}", e); }

@@ -8,6 +8,7 @@ use spin::Mutex;
 
 use crate::arch::ContextFrame;
 use crate::lib::address_space::AddressSpace;
+use crate::lib::cpu::cpu;
 use crate::syscall::event::thread_exit_signal;
 use crate::lib::scheduler::scheduler;
 use crate::lib::traits::*;
@@ -21,9 +22,12 @@ pub enum PrivilegedLevel {
 }
 
 #[derive(Debug, Eq, PartialEq, Copy, Clone)]
-enum Status {
+pub enum Status {
   Runnable,
   Sleep,
+  WaitForEvent,
+  WaitForReply,
+  WaitForRequest,
 }
 
 #[derive(Debug)]
@@ -35,15 +39,13 @@ struct Inner {
 }
 
 struct InnerMut {
-  status: Status,
-  context_frame: ContextFrame,
-  receiving: bool,
-  caller: Option<Tid>,
+  status: Mutex<Status>,
+  context_frame: Mutex<ContextFrame>,
 }
 
 struct ControlBlock {
   inner: Inner,
-  inner_mut: Mutex<InnerMut>,
+  inner_mut: InnerMut,
 }
 
 impl Drop for ControlBlock {
@@ -70,8 +72,36 @@ impl Thread {
   }
 
   pub fn runnable(&self) -> bool {
-    let lock = self.0.inner_mut.lock();
-    lock.status == Status::Runnable
+    let lock = self.0.inner_mut.status.lock();
+    *lock == Status::Runnable
+  }
+
+  pub fn wait_for_reply<F>(&self, f: F, next_status: Status) -> bool where F: FnOnce() {
+    let mut status = self.0.inner_mut.status.lock();
+    if *status == Status::WaitForReply {
+      f();
+      *status = next_status;
+      if next_status == Status::Runnable {
+        scheduler().add(self.clone());
+      }
+      true
+    } else {
+      false
+    }
+  }
+
+  pub fn wait_for_request<F>(&self, f: F, next_status: Status) -> bool where F: FnOnce() {
+    let mut status = self.0.inner_mut.status.lock();
+    if *status == Status::WaitForRequest {
+      f();
+      *status = next_status;
+      if next_status == Status::Runnable {
+        scheduler().add(self.clone());
+      }
+      true
+    } else {
+      false
+    }
   }
 
   pub fn address_space(&self) -> Option<AddressSpace> {
@@ -79,54 +109,18 @@ impl Thread {
   }
 
   pub fn set_context(&self, ctx: ContextFrame) {
-    let mut lock = self.0.inner_mut.lock();
-    lock.context_frame = ctx;
+    let mut context_frame = self.0.inner_mut.context_frame.lock();
+    *context_frame = ctx;
   }
 
   pub fn context(&self) -> ContextFrame {
-    let lock = self.0.inner_mut.lock();
-    lock.context_frame.clone()
+    let lock = self.0.inner_mut.context_frame.lock();
+    lock.clone()
   }
 
   pub fn map_with_context<F, T>(&self, f: F) -> T where F: FnOnce(&mut ContextFrame) -> T {
-    let mut lock = self.0.inner_mut.lock();
-    f(&mut lock.deref_mut().context_frame)
-  }
-
-  pub fn serve(&self, caller: Tid) -> bool {
-    let mut lock = self.0.inner_mut.lock();
-    if lock.caller.is_some() || lock.receiving == false {
-      false
-    } else {
-      lock.receiving = false;
-      lock.caller = Some(caller);
-      true
-    }
-  }
-
-  pub fn is_serving(&self) -> Option<Tid> {
-    let lock = self.0.inner_mut.lock();
-    lock.caller.clone()
-  }
-
-  pub fn ready_to_serve(&self) {
-    let mut lock = self.0.inner_mut.lock();
-    lock.caller = None;
-  }
-
-  pub fn receive(&self) -> bool {
-    let mut lock = self.0.inner_mut.lock();
-    if lock.receiving {
-      lock.receiving = false;
-      true
-    } else {
-      false
-    }
-  }
-
-  pub fn ready_to_receive(&self) {
-    let mut lock = self.0.inner_mut.lock();
-    lock.receiving = true;
+    let mut context_frame = self.0.inner_mut.context_frame.lock();
+    f(&mut *context_frame)
   }
 }
 
@@ -145,14 +139,12 @@ pub fn new_user(pc: usize, sp: usize, arg: usize, a: AddressSpace, parent: Optio
       uuid: id,
       parent,
       level: PrivilegedLevel::User,
-      address_space: Some(a)
+      address_space: Some(a),
     },
-    inner_mut: Mutex::new(InnerMut {
-      status: Status::Sleep,
-      context_frame: ContextFrame::new(pc, sp, arg, false),
-      receiving: false,
-      caller: Some(0)
-    })
+    inner_mut: InnerMut {
+      status: Mutex::new(Status::Sleep),
+      context_frame: Mutex::new(ContextFrame::new(pc, sp, arg, false)),
+    },
   }));
   let mut map = THREAD_MAP.lock();
   map.insert(id, t.clone());
@@ -166,14 +158,12 @@ pub fn new_kernel(pc: usize, sp: usize, arg: usize) -> Thread {
       uuid: id,
       parent: None,
       level: PrivilegedLevel::Kernel,
-      address_space: None
+      address_space: None,
     },
-    inner_mut: Mutex::new(InnerMut {
-      status: Status::Sleep,
-      context_frame: ContextFrame::new(pc, sp, arg, true),
-      receiving: false,
-      caller: None
-    })
+    inner_mut: InnerMut {
+      status: Mutex::new(Status::Sleep),
+      context_frame: Mutex::new(ContextFrame::new(pc, sp, arg, true)),
+    },
   }));
   let mut map = THREAD_MAP.lock();
   map.insert(id, t.clone());
@@ -198,12 +188,19 @@ pub fn thread_destroy(t: Thread) {
 }
 
 pub fn thread_wake(t: &Thread) {
-  let mut lock = t.0.inner_mut.lock();
-  lock.status = Status::Runnable;
+  let mut status = t.0.inner_mut.status.lock();
+  *status = Status::Runnable;
   scheduler().add(t.clone());
 }
 
-pub fn thread_sleep(t: &Thread) {
-  let mut lock = t.0.inner_mut.lock();
-  lock.status = Status::Sleep;
+pub fn thread_sleep(t: &Thread, reason: Status) {
+  assert_ne!(reason, Status::Runnable);
+  let mut status = t.0.inner_mut.status.lock();
+  *status = reason;
+  drop(status);
+  if let Some(current) = cpu().running_thread() {
+    if current.tid() == t.tid() {
+      cpu().schedule();
+    }
+  }
 }

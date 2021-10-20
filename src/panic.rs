@@ -1,4 +1,5 @@
 use core::panic::PanicInfo;
+use spin::Once;
 
 use crate::lib::traits::*;
 
@@ -128,10 +129,20 @@ pub fn panic_handler(info: &PanicInfo) -> ! {
   if let Some(location) = info.location() {
     error!("Location: {}:{}", location.file(), location.line());
   }
-
-  backtrace();
-  info!("backtrace done");
+  //
+  // backtrace();
+  // info!("backtrace done");
 
   unwind::start_unwinding(1);
   loop {}
+}
+
+static mut PANICKED: bool = false;
+pub fn random_panic() {
+  unsafe {
+    if !PANICKED {
+      PANICKED = true;
+      panic!("[[RANDOM]]");
+    }
+  }
 }

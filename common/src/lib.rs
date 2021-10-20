@@ -62,6 +62,7 @@ pub mod syscall {
     pub const ERROR_DENIED: usize = 5;
     pub const ERROR_HOLD_ON: usize = 6;
     pub const ERROR_OOR: usize = 7;
+    pub const ERROR_PANIC: usize = 8;
   }
 }
 

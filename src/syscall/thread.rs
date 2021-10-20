@@ -9,7 +9,10 @@ pub fn get_tid() -> Result {
 
 #[inline(never)]
 pub fn thread_yield() -> Result {
+  // let icntr = crate::lib::timer::current_cycle();
   crate::lib::cpu::cpu().schedule();
+  // let icntr2 = crate::lib::timer::current_cycle();
+  // info!("as create cycle {}", icntr2 - icntr);
   Ok(Unit)
 }
 
@@ -21,7 +24,7 @@ pub fn thread_destroy(tid: Tid) -> Result {
     thread_yield()
   } else {
     match crate::lib::thread::thread_lookup(tid) {
-      None => Err(ERROR_DENIED),
+      None => Err(ERROR_INVARG),
       Some(t) => {
         if t.is_child_of(current_thread.tid()) {
           // TODO: check if destroy safe for inter-processor
@@ -52,14 +55,14 @@ pub fn thread_set_status(tid: usize, status: usize) -> Result {
     _ => return Err(ERROR_INVARG)
   };
   match crate::lib::thread::thread_lookup(tid) {
-    None => {}
+    None => Err(ERROR_INVARG),
     Some(t) => {
       if runnable {
         thread_wake(&t);
       } else {
-        thread_sleep(&t);
+        thread_sleep(&t, crate::lib::thread::Status::Sleep);
       }
+      Ok(Unit)
     }
   }
-  Ok(Unit)
 }

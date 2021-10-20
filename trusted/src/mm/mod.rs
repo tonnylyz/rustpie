@@ -20,7 +20,7 @@ fn process(msg: Message, tid: usize) -> () {
 
   let mut msg = Message::default();
   msg.a = r;
-  msg.send_to(tid);
+  let _ = msg.send_to(tid);
 }
 
 pub fn server() {

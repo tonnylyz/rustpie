@@ -27,7 +27,7 @@ KERNEL := target/${ARCH}/${PROFILE}/rustpi
 all: ${KERNEL} ${KERNEL}.bin ${KERNEL}.asm
 
 ${KERNEL}: trusted_image
-	cargo build --target src/target/${ARCH}.json -Z build-std=core,alloc ${CARGO_FLAGS}
+	cargo build --target src/target/${ARCH}.json -Z build-std=core,alloc,std ${CARGO_FLAGS}
 
 trusted_image:
 	make ARCH=${ARCH} TRUSTED_PROFILE=${TRUSTED_PROFILE} -C trusted

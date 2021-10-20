@@ -2,7 +2,7 @@ use crate::lib::cpu::cpu;
 use crate::lib::traits::ContextFrameTrait;
 use unwind::catch::catch_unwind;
 use common::syscall::*;
-use common::syscall::error::ERROR_INVARG;
+use common::syscall::error::{ERROR_HOLD_ON, ERROR_INVARG};
 
 static SYSCALL_NAMES: [&str; SYS_MAX] = [
   "null",
@@ -74,7 +74,10 @@ pub fn syscall() {
         }
       }
       Err(err) => {
-        trace!("#{} {} t{} Err {:x?}", num, SYSCALL_NAMES[num], tid, err);
+        if *err != ERROR_HOLD_ON {
+          info!("#{} {} t{} Err {:x?}", num, SYSCALL_NAMES[num], tid, err);
+        }
+
       }
     }
     Err(_) => {
@@ -86,7 +89,7 @@ pub fn syscall() {
   if tid == cpu().running_thread().map(|x| {x.tid()}).unwrap_or_default() {
     match result {
       Ok(ref r) => {ctx.set_syscall_result(r);}
-      Err(_) => {ctx.set_syscall_result(&Err(999))}
+      Err(_) => {ctx.set_syscall_result(&Err(common::syscall::error::ERROR_PANIC))}
     }
   }
 }

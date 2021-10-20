@@ -1,53 +1,43 @@
 use super::{Result, SyscallOutRegisters::*};
 use crate::lib::thread::{thread_sleep, thread_wake, Tid};
 use common::syscall::error::*;
+use crate::lib::cpu::cpu;
+use crate::lib::scheduler::scheduler;
 use crate::lib::traits::ContextFrameTrait;
+use crate::lib::thread::Status as ThreadStatus;
 
 #[inline(never)]
 pub fn itc_receive() -> Result {
   let t = super::current_thread()?;
-  t.ready_to_receive();
-  if let Some(0) = t.is_serving() {
-    t.ready_to_serve();
-  }
-  thread_sleep(&t);
-  crate::lib::cpu::cpu().schedule();
+  thread_sleep(&t, ThreadStatus::WaitForRequest);
   Ok(Unit)
 }
 
 #[inline(never)]
 pub fn itc_send(tid: Tid, a: usize, b: usize, c: usize, d: usize) -> Result {
-  let t = super::current_thread()?;
+  let current = super::current_thread()?;
   let target = crate::lib::thread::thread_lookup(tid).ok_or_else(|| ERROR_INVARG)?;
-  if target.receive() {
+  if target.wait_for_reply(|| {
     target.map_with_context(|ctx| {
-      ctx.set_syscall_result(&Result::Ok(Pentad(t.tid() as usize, a, b, c, d)));
+      ctx.set_syscall_result(&Result::Ok(Pentad(current.tid() as usize, a, b, c, d)));
     });
-    thread_wake(&target);
-    if let Some(caller) = t.is_serving() {
-      if caller == target.tid() {
-        t.ready_to_serve();
-      }
-    }
+  }, ThreadStatus::Runnable) {
     Ok(Unit)
   } else {
-    Err(ERROR_HOLD_ON)
+    Err(ERROR_DENIED)
   }
 }
 
 #[inline(never)]
 pub fn itc_call(tid: Tid, a: usize, b: usize, c: usize, d: usize) -> Result {
-  let t = super::current_thread()?;
+  let current = super::current_thread()?;
   let target = crate::lib::thread::thread_lookup(tid).ok_or_else(|| ERROR_INVARG)?;
-
-  if target.serve(t.tid()) {
+  if target.wait_for_request(|| {
     target.map_with_context(|ctx| {
-      ctx.set_syscall_result(&Result::Ok(Pentad(t.tid() as usize, a, b, c, d)));
+      ctx.set_syscall_result(&Result::Ok(Pentad(current.tid() as usize, a, b, c, d)));
     });
-    thread_wake(&target);
-    t.ready_to_receive();
-    thread_sleep(&t);
-    crate::lib::cpu::cpu().schedule();
+    thread_sleep(&current, crate::lib::thread::Status::WaitForReply);
+  }, ThreadStatus::Runnable) {
     Ok(Unit)
   } else {
     Err(ERROR_HOLD_ON)

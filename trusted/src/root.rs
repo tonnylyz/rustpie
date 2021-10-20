@@ -1,9 +1,37 @@
 use fs::{File, SeekFrom};
 use libtrusted::thread;
 use libtrusted::wrapper::server_wrapper;
+use microcall::{thread_alloc, thread_set_status, thread_yield};
 use unwind::catch::catch_unwind;
 
+#[cfg(target_arch = "aarch64")]
+pub fn current_cycle() -> usize {
+  let r;
+  unsafe {
+    asm!("mrs {}, pmccntr_el0", out(reg) r);
+  }
+  r
+}
+
+#[cfg(target_arch = "riscv64")]
+pub fn current_cycle() -> usize {
+  let r;
+  unsafe {
+    asm!("rdcycle {}", out(reg) r);
+  }
+  r
+}
+
 pub fn main() {
+  // let icntr = current_cycle();
+  // microcall::null();
+  // let icntr2 = current_cycle();
+  // info!("syscall cycle {}", icntr2 - icntr);
+
+  // microcall::get_asid(0);
+  // microcall::get_asid(0);
+  // info!("[[RECOVERY]]");
+  // loop{}
   thread::spawn(|| {
     server_wrapper(crate::test::server);
   });

@@ -401,7 +401,7 @@ fn irq() {
         VIRTIO_BLK_S_OK => {
           {
             let msg = microcall::message::Message::default();
-            msg.send_to(req.src);
+            let _ = msg.send_to(req.src);
           }
         }
         VIRTIO_BLK_S_IOERR => {
@@ -455,11 +455,11 @@ pub fn server() {
         None => 0,
         Some(s) => *s * 512,
       };
-      msg.send_to(client_tid);
+      let _ = msg.send_to(client_tid);
     } else {
       let mut msg = microcall::message::Message::default();
       msg.a = 1;
-      msg.send_to(client_tid);
+      let _ = msg.send_to(client_tid);
     }
   }
 }

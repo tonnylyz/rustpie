@@ -154,7 +154,7 @@ pub fn server() {
         result.a = e;
       }
     }
-    result.send_to(tid);
+    let _ = result.send_to(tid);
   }
 }
 

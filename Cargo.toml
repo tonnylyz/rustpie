@@ -20,6 +20,7 @@ xmas-elf = "0.8.0"
 
 common = { path = "common" }
 unwind = { path = "lib/unwind" }
+inject = { path = "inject" }
 
 [dependencies.tock-registers]
 version = "0.7.0"

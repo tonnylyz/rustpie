@@ -47,6 +47,6 @@ pub fn server() {
       None => { msg.a = 0 }
       Some(c) => { msg.a = c as usize }
     }
-    msg.send_to(client_tid);
+    let _ = msg.send_to(client_tid);
   }
 }

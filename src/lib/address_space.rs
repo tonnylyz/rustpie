@@ -96,7 +96,10 @@ pub fn address_space_destroy(a: AddressSpace) {
 }
 
 pub fn load_image(elf: &'static [u8]) -> (AddressSpace, usize) {
+  // let icntr = crate::lib::timer::current_cycle();
   let a = address_space_alloc().unwrap();
+  // let icntr2 = crate::lib::timer::current_cycle();
+  // info!("as create cycle {}", icntr2 - icntr);
   let page_table = a.page_table();
   let len = round_up(elf.len(), PAGE_SIZE);
   for i in (0..len).step_by(PAGE_SIZE) {

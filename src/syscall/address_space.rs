@@ -3,6 +3,7 @@ use common::syscall::error::*;
 use crate::lib::thread::Tid;
 
 #[inline(never)]
+// #[inject::random_panic]
 pub fn get_asid(tid: Tid) -> Result {
   if tid == 0 {
     match crate::lib::cpu::cpu().address_space() {

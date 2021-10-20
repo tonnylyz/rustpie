@@ -31,7 +31,7 @@ impl Semaphore {
   pub fn wait(&self, t: Thread) -> SemaphoreWaitResult {
     let mut inner = self.inner.lock();
     if inner.value == 0 {
-      thread_sleep(&t);
+      thread_sleep(&t, crate::lib::thread::Status::WaitForEvent);
       inner.queue.push_back(t);
       SemaphoreWaitResult::Enqueued
     } else {
