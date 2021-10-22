@@ -57,7 +57,7 @@ emu: ${KERNEL}.bin ${KERNEL}.asm disk
 	${QEMU_CMD} ${QEMU_COMMON_OPTIONS} ${QEMU_DISK_OPTIONS} -kernel $<
 
 debug: ${KERNEL}.bin ${KERNEL}.asm disk
-	${QEMU_CMD} ${QEMU_COMMON_OPTIONS} ${QEMU_DISK_OPTIONS} -kernel $< -s -S
+	${QEMU_CMD} ${QEMU_COMMON_OPTIONS} ${QEMU_DISK_OPTIONS} -kernel $< -s
 
 clean:
 	-cargo clean

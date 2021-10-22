@@ -5,6 +5,7 @@ use crate::lib::thread::Tid;
 use super::{Result, SyscallOutRegisters::*};
 
 #[inline(never)]
+#[inject::count_stmts]
 pub fn server_register(server_id: usize) -> Result {
   let t = super::current_thread()?;
   set(server_id, t.tid());
@@ -12,6 +13,7 @@ pub fn server_register(server_id: usize) -> Result {
 }
 
 #[inline(never)]
+#[inject::count_stmts]
 pub fn server_tid(server_id: usize) -> Result {
   match get(server_id) {
     None => {

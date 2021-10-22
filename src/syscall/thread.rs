@@ -3,11 +3,13 @@ use crate::lib::thread::{Tid, thread_wake, thread_sleep};
 use common::syscall::error::{ERROR_DENIED, ERROR_INVARG};
 
 #[inline(never)]
+#[inject::count_stmts]
 pub fn get_tid() -> Result {
   Ok(Single(super::current_thread()?.tid()))
 }
 
 #[inline(never)]
+#[inject::count_stmts]
 pub fn thread_yield() -> Result {
   // let icntr = crate::lib::timer::current_cycle();
   crate::lib::cpu::cpu().schedule();
@@ -17,6 +19,7 @@ pub fn thread_yield() -> Result {
 }
 
 #[inline(never)]
+#[inject::count_stmts]
 pub fn thread_destroy(tid: Tid) -> Result {
   let current_thread = super::current_thread()?;
   if tid == 0 {
@@ -39,6 +42,7 @@ pub fn thread_destroy(tid: Tid) -> Result {
 }
 
 #[inline(never)]
+#[inject::count_stmts]
 pub fn thread_alloc(asid: u16, entry: usize, sp: usize, arg: usize) -> Result {
   let t = super::current_thread()?;
   let a = super::lookup_as(asid)?;
@@ -47,6 +51,7 @@ pub fn thread_alloc(asid: u16, entry: usize, sp: usize, arg: usize) -> Result {
 }
 
 #[inline(never)]
+#[inject::count_stmts]
 pub fn thread_set_status(tid: usize, status: usize) -> Result {
   use common::thread::*;
   let runnable = match status {

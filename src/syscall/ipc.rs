@@ -7,6 +7,7 @@ use crate::lib::traits::ContextFrameTrait;
 use crate::lib::thread::Status as ThreadStatus;
 
 #[inline(never)]
+#[inject::count_stmts]
 pub fn itc_receive() -> Result {
   let t = super::current_thread()?;
   thread_sleep(&t, ThreadStatus::WaitForRequest);
@@ -14,6 +15,7 @@ pub fn itc_receive() -> Result {
 }
 
 #[inline(never)]
+#[inject::count_stmts]
 pub fn itc_send(tid: Tid, a: usize, b: usize, c: usize, d: usize) -> Result {
   let current = super::current_thread()?;
   let target = crate::lib::thread::thread_lookup(tid).ok_or_else(|| ERROR_INVARG)?;
@@ -29,6 +31,7 @@ pub fn itc_send(tid: Tid, a: usize, b: usize, c: usize, d: usize) -> Result {
 }
 
 #[inline(never)]
+#[inject::count_stmts]
 pub fn itc_call(tid: Tid, a: usize, b: usize, c: usize, d: usize) -> Result {
   let current = super::current_thread()?;
   let target = crate::lib::thread::thread_lookup(tid).ok_or_else(|| ERROR_INVARG)?;

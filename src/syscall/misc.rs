@@ -31,6 +31,7 @@ pub fn null() -> Result {
 }
 
 #[inline(never)]
+#[inject::count_stmts]
 pub fn putc(c: char) -> Result {
   crate::driver::uart::putc(c as u8);
   Ok(Unit)
@@ -50,6 +51,7 @@ pub fn getc() -> Result {
 }
 
 #[inline(never)]
+#[inject::count_stmts]
 pub fn set_exception_handler(handler: usize) -> Result {
   let t = super::current_thread()?;
   match t.address_space() {
