@@ -1,11 +1,11 @@
-use unwind::start_unwinding_from_exception;
+use unwind::unwind_from_exception;
 use unwind::registers::Registers;
 
 #[cfg(target_arch = "aarch64")]
-use unwind::registers::Aarch64;
+use unwind::arch::Aarch64;
 
 #[cfg(target_arch = "riscv64")]
-use unwind::registers::Riscv64;
+use unwind::arch::Riscv64;
 
 #[cfg(target_arch = "aarch64")]
 #[repr(C)]
@@ -110,6 +110,6 @@ pub fn handler(ctx: &ContextFrame) {
   info!("exception handler");
   let ctx = ctx.clone();
   let reg = ctx.into();
-  start_unwinding_from_exception(reg);
+  unwind_from_exception(reg);
   error!("unwinding return! thread probably dead");
 }

@@ -15,10 +15,11 @@ fn make_page_fault() {
   panic!(); // indicates an exception may happen
 }
 #[inline(never)]
-pub fn null2() -> Result {
+pub fn null() -> Result {
   info!("null called");
   let a = Box::new(ResourceA);
   make_page_fault();
+  // panic!();
   let b = Box::new(ResourceB);
   Box::leak(a);
   Box::leak(b);
@@ -26,7 +27,7 @@ pub fn null2() -> Result {
 }
 
 #[inline(never)]
-pub fn null() -> Result {
+pub fn null2() -> Result {
   Ok(Unit)
 }
 

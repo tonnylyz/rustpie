@@ -17,7 +17,8 @@ impl Drop for ResourceA {
 fn process(_msg: Message, _tid: usize) {
   info!("server called");
   let a = Box::new(ResourceA);
-  panic!();
+  // panic!();
+  make_page_fault();
   let b = Box::new(ResourceB);
   Box::leak(a);
   Box::leak(b);

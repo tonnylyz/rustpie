@@ -1,6 +1,6 @@
 use crate::lib::thread::thread_destroy;
 use crate::arch::ContextFrame;
-use unwind::start_unwinding_from_exception;
+use unwind::unwind_from_exception;
 use crate::lib::cpu::cpu;
 use crate::lib::traits::ContextFrameTrait;
 use crate::util::round_up;
@@ -50,5 +50,5 @@ pub fn handle_kernel(ctx: &ContextFrame, is_page_fault: bool) {
   }
   let ctx = ctx.clone();
   let reg = ctx.into();
-  start_unwinding_from_exception(reg);
+  unwind_from_exception(reg);
 }

@@ -1,7 +1,8 @@
 use core::fmt::Formatter;
 
 use riscv::regs::*;
-use unwind::registers::{Registers, Riscv64};
+use unwind::registers::Registers;
+use unwind::arch::Riscv64;
 use crate::syscall::{Result as SyscallResult, SyscallOutRegisters};
 
 #[repr(C)]

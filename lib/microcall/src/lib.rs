@@ -21,7 +21,12 @@ pub fn putc(c: char) {
 }
 
 pub fn get_asid(tid: usize) -> Result<u16, Error> {
-  syscall_1_1(SYS_GET_ASID, tid).map(|asid| asid as u16)
+  let r = syscall_1_1(SYS_GET_ASID, tid).map(|asid| asid as u16);
+  if r.is_ok() {
+    r
+  } else {
+    syscall_1_1(SYS_GET_ASID, tid).map(|asid| asid as u16)
+  }
 }
 
 pub fn get_tid() -> usize {

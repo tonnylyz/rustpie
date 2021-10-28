@@ -16,7 +16,7 @@ fn enlarge(heap: &mut buddy_system_allocator::Heap<32>, _layout: &Layout) {
   for i in 0..HEAP_DELTA_SIZE {
     mem_alloc(0, delta + i * PAGE_SIZE, Entry::default().attribute());
   }
-  info!("Enlarge heap {:x} ~ {:x}", delta, delta + PAGE_SIZE * HEAP_DELTA_SIZE);
+  // info!("Enlarge heap {:x} ~ {:x}", delta, delta + PAGE_SIZE * HEAP_DELTA_SIZE);
   unsafe { heap.add_to_heap(delta, delta + PAGE_SIZE * HEAP_DELTA_SIZE); }
 }
 

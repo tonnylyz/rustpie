@@ -1,7 +1,8 @@
 use core::fmt::Formatter;
 use crate::ContextFrameTrait;
 use crate::syscall::{Result as SyscallResult, SyscallOutRegisters};
-use unwind::registers::{Registers, Aarch64};
+use unwind::registers::Registers;
+use unwind::arch::Aarch64;
 
 #[repr(C)]
 #[derive(Copy, Clone, Debug)]

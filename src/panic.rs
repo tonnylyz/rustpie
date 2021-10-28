@@ -133,7 +133,7 @@ pub fn panic_handler(info: &PanicInfo) -> ! {
   // backtrace();
   // info!("backtrace done");
 
-  unwind::start_unwinding(1);
+  unwind::unwind_from_panic(1);
   loop {}
 }
 
