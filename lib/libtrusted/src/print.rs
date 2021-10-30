@@ -34,7 +34,6 @@ fn panic_handler(info: &core::panic::PanicInfo) -> ! {
     println!("          [E][trusted] panic t{} no message", get_tid());
   }
   unwind::unwind_from_panic(1);
-  loop {}
 }
 
 #[lang = "eh_personality"]

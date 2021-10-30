@@ -6,7 +6,7 @@ use crate::arch::*;
 use crate::mm::page_table::{Entry, EntryAttribute, Error, PageTableEntryAttrTrait, PageTableTrait};
 use crate::mm::{PhysicalFrame, Frame};
 
-use super::vm_descriptor::*;
+use common::mm::vm_descriptor::*;
 
 use crate::lib::traits::*;
 use common::syscall::error::ERROR_INVARG;

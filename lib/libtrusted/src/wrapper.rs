@@ -1,4 +1,4 @@
-use unwind::catch::{catch_unwind, PanicError};
+use unwind::catch::catch_unwind;
 use microcall::message::Message;
 
 pub type Error = usize;

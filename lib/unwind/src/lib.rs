@@ -10,13 +10,7 @@ extern crate log;
 use alloc::boxed::Box;
 
 use fallible_iterator::FallibleIterator;
-use gimli::{
-  CfaRule,
-  Pointer,
-  UninitializedUnwindContext,
-  UnwindSection,
-  read::RegisterRule,
-};
+use gimli::{CfaRule, Pointer, UninitializedUnwindContext, UnwindSection, read::RegisterRule};
 
 use registers::Registers;
 
@@ -29,6 +23,7 @@ pub mod arch;
 pub mod arch;
 
 use arch::*;
+
 
 pub mod registers;
 
@@ -161,25 +156,9 @@ impl FallibleIterator for StackFrameIter {
 }
 
 extern "C" {
-  fn unwind_trampoline(_func: *const RefFuncWithRegisters) -> *mut Result<(), &'static str>;
+  #[allow(improper_ctypes)]
+  fn unwind_trampoline(_func: *const dyn Fn(Registers) -> ());
 }
-
-pub trait FuncWithRegisters = Fn(Registers) -> Result<(), &'static str>;
-
-pub type RefFuncWithRegisters<'a> = &'a dyn FuncWithRegisters;
-
-pub fn invoke_with_current_registers<F>(f: F) -> Result<(), &'static str>
-  where F: FuncWithRegisters
-{
-  let f: RefFuncWithRegisters = &f;
-  let result = unsafe {
-    let res_ptr = unwind_trampoline(&f);
-    let res_boxed = Box::from_raw(res_ptr);
-    *res_boxed
-  };
-  return result;
-}
-
 
 pub fn unwind_from_exception(registers: Registers) -> ! {
   let ctx = Box::into_raw(Box::new(UnwindingContext {
@@ -195,17 +174,18 @@ pub fn unwind_from_panic(stack_frames_to_skip: usize) -> ! {
   let ctx = Box::into_raw(Box::new(UnwindingContext {
     stack_frame_iter: StackFrameIter::new(Registers::default())
   }));
-
-  let _ = invoke_with_current_registers(|registers| {
-    let unwinding_context = unsafe {
-      &mut *ctx
-    };
-    unwinding_context.stack_frame_iter.registers = registers;
+  let ctx_addr = ctx as usize;
+  let f = move |registers: Registers| {
+    let ctx = unsafe { (ctx_addr as *mut UnwindingContext).as_mut().unwrap() };
+    ctx.stack_frame_iter.registers = registers;
     for _i in 0..stack_frames_to_skip {
-      let _ = unwinding_context.stack_frame_iter.next();
+      let _ = ctx.stack_frame_iter.next();
     }
-    unwind(ctx)
-  });
+    unwind(ctx_addr as *mut UnwindingContext);
+  };
+  unsafe {
+    unwind_trampoline(&f);
+  }
   cleanup(ctx);
   error!("unwind failed!");
   loop {}
@@ -244,15 +224,30 @@ fn unwind(ctx: *mut UnwindingContext) {
                 Ok(x) => x,
                 Err(e) => {
                   warn!("call site has no entry {:016x} {}", frame.call_site_address, e);
-                  let mut iter = table.call_site_table_entries().map_err(|_e| { "Couldn't find call_site_table_entries" })?;
-
+                  let mut iter = match table.call_site_table_entries() {
+                    Ok(iter) => iter,
+                    Err(_) => {
+                      error!("call_site_table_entries failed");
+                      return;
+                    }
+                  };
                   let mut closest_entry = None;
-                  while let Some(entry) = iter.next().map_err(|_e| { "Couldn't iterate through the entries" })? {
-                    if entry.range_of_covered_addresses().start < frame.call_site_address {
-                      closest_entry = Some(entry);
+                  loop {
+                    let next = match iter.next() {
+                      Ok(next) => next,
+                      Err(_) => {
+                        error!("iter call site table failed");
+                        return;
+                      }
+                    };
+                    if let Some(entry) = next {
+                      if entry.range_of_covered_addresses().start < frame.call_site_address {
+                        closest_entry = Some(entry);
+                      }
+                    } else {
+                      break;
                     }
                   }
-
                   if let Some(closest_entry) = closest_entry {
                     closest_entry
                   } else {

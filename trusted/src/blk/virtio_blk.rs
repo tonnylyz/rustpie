@@ -6,7 +6,7 @@ use tock_registers::registers::*;
 use spin::{Mutex, Once};
 use libtrusted::mm::virt_to_phys;
 use microcall::get_tid;
-use microcall::message::Message;
+
 use tock_registers::interfaces::{Writeable, Readable};
 
 #[cfg(target_arch = "aarch64")]
@@ -111,11 +111,11 @@ const VIRTIO_BLK_F_TOPOLOGY: usize = 10; /* Topology information is available */
 /* Legacy feature bits */
 // const VIRTIO_BLK_F_BARRIER: usize = 0;     /* Does host support barriers? */
 // const VIRTIO_BLK_F_SCSI: usize = 7;        /* Supports scsi command passthru */
-const VIRTIO_BLK_F_FLUSH: usize = 9;          /* Flush command supported */
-const VIRTIO_BLK_F_CONFIG_WCE: usize = 11;    /* Writeback mode available in config */
+// const VIRTIO_BLK_F_FLUSH: usize = 9;          /* Flush command supported */
+// const VIRTIO_BLK_F_CONFIG_WCE: usize = 11;    /* Writeback mode available in config */
 
-const VIRTIO_BLK_F_DISCARD: usize = 13;
-const VIRTIO_BLK_F_WRITE_ZEROES: usize = 14;
+// const VIRTIO_BLK_F_DISCARD: usize = 13;
+// const VIRTIO_BLK_F_WRITE_ZEROES: usize = 14;
 /* Can the device handle any descriptor layout? */
 // const VIRTIO_F_ANY_LAYOUT: u32 = 27;
 /*
@@ -125,9 +125,9 @@ const VIRTIO_BLK_F_WRITE_ZEROES: usize = 14;
  * The Host publishes the avail index for which it expects a kick
  * at the end of the used ring. Guest should ignore the used->flags field.
  */
-const VIRTIO_RING_F_EVENT_IDX: usize = 29;
+// const VIRTIO_RING_F_EVENT_IDX: usize = 29;
 /* We support indirect buffer descriptors */
-const VIRTIO_RING_F_INDIRECT_DESC: usize = 28;
+// const VIRTIO_RING_F_INDIRECT_DESC: usize = 28;
 
 static VIRTIO_MMIO: VirtioMmio = VirtioMmio::new(VIRTIO_MMIO_BASE);
 

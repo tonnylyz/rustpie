@@ -1,7 +1,7 @@
 use microcall::message::Message;
-use libtrusted::mm::{Entry, EntryLike};
+use libtrusted::mm::{default_page_attribute, Entry, PageAttribute};
 use microcall::get_tid;
-use libtrusted::wrapper::{request_wrapper, Error};
+use libtrusted::wrapper::request_wrapper;
 
 // static mut PANICKED: bool = false;
 
@@ -10,7 +10,7 @@ fn process(msg: Message, tid: usize) -> () {
   let asid = microcall::get_asid(tid).unwrap();
   let r = match msg.a {
     1 => {
-      microcall::mem_alloc(asid, msg.b, Entry::default().attribute());
+      microcall::mem_alloc(asid, msg.b, default_page_attribute());
       0
     },
     _ => {

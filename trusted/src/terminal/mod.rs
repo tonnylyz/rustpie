@@ -1,5 +1,5 @@
-use alloc::vec::Vec;
-use spin::{Mutex, Once, Spin};
+
+use spin::{Mutex, Once};
 use alloc::collections::VecDeque;
 use microcall::get_tid;
 

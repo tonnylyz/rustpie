@@ -1,5 +1,5 @@
 use core::panic::PanicInfo;
-use spin::Once;
+
 
 use crate::lib::traits::*;
 
@@ -80,7 +80,6 @@ fn trace(cb: &mut dyn FnMut(&Frame) -> bool) {
   trace_from(Frame::current(), cb);
 }
 
-#[allow(dead_code)]
 pub fn exception_trace() {
   let ctx = crate::lib::cpu::cpu().context();
   #[cfg(target_arch = "aarch64")]
@@ -134,7 +133,6 @@ pub fn panic_handler(info: &PanicInfo) -> ! {
   // info!("backtrace done");
 
   unwind::unwind_from_panic(1);
-  loop {}
 }
 
 static mut PANICKED: bool = false;

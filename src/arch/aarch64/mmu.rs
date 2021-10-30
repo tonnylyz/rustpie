@@ -1,6 +1,6 @@
 use super::interface::PAGE_SHIFT;
 use super::interface::PAGE_SIZE;
-use super::vm_descriptor::*;
+use common::mm::vm_descriptor::*;
 use tock_registers::interfaces::{Writeable, ReadWriteable};
 
 const ENTRY_PER_PAGE: usize = PAGE_SIZE / 8;

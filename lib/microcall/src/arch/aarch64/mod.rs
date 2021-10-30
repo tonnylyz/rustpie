@@ -5,6 +5,8 @@ macro_rules! syscall {
     ($($name:ident($a:ident, $($b:ident, $($c:ident, $($d:ident, $($e:ident, $($f:ident, )?)?)?)?)?) -> ($($oa:ident:$ta:tt, $($ob:ident:$tb:tt, $($oc:ident:$tc:tt, $($od:ident:$td:tt, $($oe:ident:$te:tt, )?)?)?)?)?);)+) => {
         $(
             #[inline(always)]
+            #[allow(unused_parens)]
+            #[allow(dead_code)]
             pub fn $name($a: usize, $($b: usize, $($c: usize, $($d: usize, $($e: usize, $($f: usize)?)?)?)?)?) -> Result<($($ta$(, $tb$(, $tc$(, $td$(, $te)?)?)?)?)?), Error> {
                 let ret: usize;
                 $(let $oa: $ta;

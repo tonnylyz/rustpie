@@ -1,8 +1,8 @@
 use super::{Result, SyscallOutRegisters::*};
-use crate::lib::thread::{thread_sleep, thread_wake, Tid};
+use crate::lib::thread::{thread_sleep, Tid};
 use common::syscall::error::*;
-use crate::lib::cpu::cpu;
-use crate::lib::scheduler::scheduler;
+
+
 use crate::lib::traits::ContextFrameTrait;
 use crate::lib::thread::Status as ThreadStatus;
 

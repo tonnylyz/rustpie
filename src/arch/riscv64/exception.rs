@@ -33,23 +33,29 @@ const EXCEPTION_INSTRUCTION_PAGE_FAULT: usize = 12;
 const EXCEPTION_LOAD_PAGE_FAULT: usize = 13;
 const EXCEPTION_STORE_PAGE_FAULT: usize = 15;
 
-static mut PANIC: bool = false;
-
 #[no_mangle]
 unsafe extern "C" fn exception_entry(ctx: *mut ContextFrame) {
   let from_kernel = SSTATUS.is_set(SSTATUS::SPP);
   let core = crate::lib::cpu::cpu();
   core.set_context(ctx);
-  if PANIC {
-    loop {}
-  }
   let cause = SCAUSE.get();
   let irq = (cause >> 63) != 0;
   let code = (cause & 0xf) as usize;
   if from_kernel && !irq {
-    PANIC = true;
-    error!("[kernel exception] {:x} irq:{} code:{} \n{}", cause, irq, code, *ctx);
-    exception_trace();
+    match code {
+      EXCEPTION_INSTRUCTION_ADDRESS_MISALIGNED
+      | EXCEPTION_INSTRUCTION_ACCESS_FAULT
+      | EXCEPTION_ILLEGAL_INSTRUCTION
+      | EXCEPTION_BREAKPOINT
+      | EXCEPTION_LOAD_ADDRESS_MISALIGNED
+      | EXCEPTION_LOAD_ACCESS_FAULT
+      | EXCEPTION_STORE_ADDRESS_MISALIGNED
+      | EXCEPTION_STORE_ACCESS_FAULT => crate::lib::exception::handle_kernel(ctx.as_ref().unwrap(), false),
+      EXCEPTION_INSTRUCTION_PAGE_FAULT
+      | EXCEPTION_LOAD_PAGE_FAULT
+      | EXCEPTION_STORE_PAGE_FAULT => crate::lib::exception::handle_kernel(ctx.as_ref().unwrap(), true),
+      _ => panic!("unhandled kernel exception"),
+    }
   }
   if irq {
     match code {

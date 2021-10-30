@@ -4,7 +4,6 @@
 
 #[cfg(target_arch = "aarch64")]
 #[path = "arch/aarch64/mod.rs"]
-#[allow(unused_parens, dead_code)]
 mod arch;
 
 #[cfg(target_arch = "riscv64")]
@@ -33,9 +32,8 @@ pub fn get_tid() -> usize {
   syscall_0_1(SYS_GET_TID).unwrap()
 }
 
-#[allow(unused_must_use)]
 pub fn thread_yield() {
-  syscall_0_0(SYS_THREAD_YIELD);
+  let _ = syscall_0_0(SYS_THREAD_YIELD);
 }
 
 pub fn thread_destroy(tid: usize) -> Result<(), Error> {

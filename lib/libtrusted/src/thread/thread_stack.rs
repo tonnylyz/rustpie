@@ -1,7 +1,7 @@
 use core::ops::Range;
 use spin::Mutex;
 use common::PAGE_SIZE;
-use crate::mm::{Entry, EntryLike};
+use crate::mm::{Entry, PageAttribute, default_page_attribute};
 use microcall::mem_alloc;
 
 const THREAD_STACK_MAX: usize = 2 * 1024 * 1024; // 2 MB 0x200000
@@ -23,9 +23,8 @@ impl Stack {
     let r = Stack {
       range: *ptr..(*ptr + THREAD_STACK_MAX)
     };
-    // TODO: page fault handler re-entrance BUG!
     for i in r.range.clone().step_by(PAGE_SIZE) {
-      mem_alloc(0, i, Entry::default().attribute());
+      mem_alloc(0, i, default_page_attribute());
     }
     *ptr += THREAD_STACK_MAX;
     r

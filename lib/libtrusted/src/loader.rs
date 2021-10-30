@@ -1,8 +1,8 @@
 use fs::{File, SeekFrom};
 use common::PAGE_SIZE;
-use crate::mm::{EntryLike, Entry};
-use xmas_elf::program::SegmentData;
-use alloc::string::String;
+use crate::mm::{PageAttribute, Entry, default_page_attribute};
+
+
 
 #[inline(always)]
 pub fn round_up(addr: usize, n: usize) -> usize {
@@ -16,14 +16,14 @@ pub fn round_down(addr: usize, n: usize) -> usize {
 pub fn spawn<P: AsRef<str>>(cmd: P) -> Result<(u16, usize), &'static str> {
   let mut iter = cmd.as_ref().trim().split_ascii_whitespace();
   if let Some(bin) = iter.next() {
-    let asid = microcall::address_space_alloc().map_err(|e| "address_space_alloc failed")?;
+    let asid = microcall::address_space_alloc().map_err(|_e| "address_space_alloc failed")?;
     let mut f = File::open(bin).map_err(|e| e.text())?;
     let file_size = f.seek(SeekFrom::End(0)).map_err(|e| e.text())? as usize;
     let page_num = round_up(file_size, PAGE_SIZE) / PAGE_SIZE;
     let buf = crate::mm::valloc(page_num);
     let buf = unsafe { core::slice::from_raw_parts_mut(buf, file_size) };
     f.seek(SeekFrom::Start(0)).map_err(|e| e.text())? as usize;
-    let read = f.read(buf).map_err(|e| e.text())?;
+    let _read = f.read(buf).map_err(|e| e.text())?;
     // println!("read {} byte", read);
     // for i in 0..read {
     //   print!("{:02x} ", buf[i]);
@@ -44,12 +44,12 @@ pub fn spawn<P: AsRef<str>>(cmd: P) -> Result<(u16, usize), &'static str> {
       let va_end = round_up(va_start + ph.mem_size() as usize, PAGE_SIZE);
       let mut va = round_down(va_start, PAGE_SIZE);
       while va < va_end {
-        microcall::mem_alloc(asid, va, crate::mm::Entry::default().attribute()).map_err(|e| "out of memory")?;
+        microcall::mem_alloc(asid, va, crate::mm::default_page_attribute()).map_err(|_e| "out of memory")?;
         // println!("alloc @{:016x}", va);
         unsafe {
           if va < va_start + ph.file_size() as usize {
-            microcall::mem_map(asid, va, 0, va_tmp, crate::mm::Entry::default().attribute())
-              .map_err(|e| "mem_map failed");
+            microcall::mem_map(asid, va, 0, va_tmp, crate::mm::default_page_attribute())
+              .map_err(|_e| "mem_map failed")?;
             let va_slice = core::slice::from_raw_parts_mut(va_tmp as *mut u8, PAGE_SIZE);
             let offset = ph.offset() as usize + (va - va_start);
             // println!("offset {:x}", offset);
@@ -57,15 +57,15 @@ pub fn spawn<P: AsRef<str>>(cmd: P) -> Result<(u16, usize), &'static str> {
               va_slice[i] = buf[offset + i];
             }
             // println!("copy into {:016x}", va);
-            microcall::mem_unmap(0, va_tmp).map_err(|e| "mem_unmap failed")?;
+            microcall::mem_unmap(0, va_tmp).map_err(|_e| "mem_unmap failed")?;
           }
         }
 
         va += PAGE_SIZE;
       }
     }
-    microcall::mem_alloc(asid, common::CONFIG_USER_STACK_TOP - PAGE_SIZE, crate::mm::Entry::default().attribute());
-    microcall::mem_map(asid, common::CONFIG_USER_STACK_TOP - PAGE_SIZE, 0, va_tmp, Entry::default().attribute());
+    microcall::mem_alloc(asid, common::CONFIG_USER_STACK_TOP - PAGE_SIZE, crate::mm::default_page_attribute()).map_err(|_e| "mem_alloc failed")?;
+    microcall::mem_map(asid, common::CONFIG_USER_STACK_TOP - PAGE_SIZE, 0, va_tmp, default_page_attribute()).map_err(|_e| "mem_map failed")?;
     let va_slice = unsafe { core::slice::from_raw_parts_mut(va_tmp as *mut u8, PAGE_SIZE) };
     let mut index = 0;
     loop {
@@ -85,11 +85,11 @@ pub fn spawn<P: AsRef<str>>(cmd: P) -> Result<(u16, usize), &'static str> {
     for i in 0..index {
       va_slice[PAGE_SIZE - index + i] = va_slice[i];
     }
-    microcall::mem_unmap(0, va_tmp);
+    microcall::mem_unmap(0, va_tmp).map_err(|_e| "mem_unmap failed")?;
 
-    let tid = microcall::thread_alloc(asid, entry_point, common::CONFIG_USER_STACK_TOP - round_up(index, 16), common::CONFIG_USER_STACK_TOP - index).map_err(|e| "thread alloc failed")?;
+    let tid = microcall::thread_alloc(asid, entry_point, common::CONFIG_USER_STACK_TOP - round_up(index, 16), common::CONFIG_USER_STACK_TOP - index).map_err(|_e| "thread alloc failed")?;
     // println!("[LOADER] spawn asid {} tid {}", asid, tid);
-    microcall::thread_set_status(tid, common::thread::THREAD_STATUS_RUNNABLE);
+    microcall::thread_set_status(tid, common::thread::THREAD_STATUS_RUNNABLE).map_err(|_e| "thread_set_status failed")?;
 
     Ok((asid, tid))
   } else {

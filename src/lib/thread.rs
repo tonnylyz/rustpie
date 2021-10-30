@@ -1,6 +1,6 @@
 use alloc::collections::BTreeMap;
 use alloc::sync::Arc;
-use core::ops::DerefMut;
+
 use core::sync::atomic::AtomicUsize;
 use core::sync::atomic::Ordering::Relaxed;
 

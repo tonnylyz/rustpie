@@ -1,7 +1,5 @@
-use alloc::boxed::Box;
 use gimli::Register;
 
-use crate::RefFuncWithRegisters;
 use crate::Registers;
 use crate::registers;
 
@@ -10,11 +8,12 @@ extern "C" {
 }
 
 #[no_mangle]
+#[allow(improper_ctypes_definitions)]
 unsafe extern "C" fn unwind_recorder(
-  func: *const RefFuncWithRegisters,
+  func: *const dyn Fn(Registers) -> (),
   stack: u64,
   saved_regs: *mut CalleeSavedRegs,
-) -> *mut Result<(), &'static str> {
+) {
   let func = &*func;
   let saved_regs = &*saved_regs;
 
@@ -33,9 +32,7 @@ unsafe extern "C" fn unwind_recorder(
   registers[Aarch64::X29] = Some(saved_regs.r[10]);
   registers[Aarch64::SP] = Some(stack);
   registers[Aarch64::X30] = Some(saved_regs.lr);
-
-  let res = func(registers);
-  Box::into_raw(Box::new(res))
+  func(registers);
 }
 
 pub unsafe fn land(regs: &Registers, landing_pad_address: u64) {

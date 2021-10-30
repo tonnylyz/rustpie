@@ -35,13 +35,11 @@ impl fmt::Debug for ExNode {
             .iter()
             .filter(|extent| -> bool { extent.length > 0 })
             .collect();
-        unsafe {
-            f.debug_struct("ExNode")
-                .field("prev", &self.prev)
-                .field("next", &self.next)
-                .field("extents", &extents)
-                .finish()
-        }
+        f.debug_struct("ExNode")
+          .field("prev", &self.prev)
+          .field("next", &self.next)
+          .field("extents", &extents)
+          .finish()
     }
 }
 

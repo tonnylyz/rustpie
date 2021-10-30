@@ -1,7 +1,7 @@
 use crate::loader::{round_up, round_down};
-use crate::mm::{valloc, Entry, EntryLike};
+use crate::mm::{valloc, Entry, PageAttribute, default_page_attribute};
 use common::PAGE_SIZE;
-use microcall::mem_map;
+use microcall::{mem_map, mem_unmap};
 use redox::*;
 
 pub struct ForeignSlice {
@@ -9,6 +9,8 @@ pub struct ForeignSlice {
   pub slice_start: usize,
   pub slice_len: usize,
   pub local_start: usize,
+  page_num: usize,
+  local_buf: usize,
 }
 
 impl ForeignSlice {
@@ -21,7 +23,7 @@ impl ForeignSlice {
     for i in 0..page_num {
       let src_va = round_down(slice_start, PAGE_SIZE) + i * PAGE_SIZE;
       let dst_va = local_buf + i * PAGE_SIZE;
-      mem_map(asid, src_va, 0, dst_va, Entry::default().attribute()).map_err(|e| Error::new(EINVAL))?;
+      mem_map(asid, src_va, 0, dst_va, default_page_attribute()).map_err(|_e| Error::new(EINVAL))?;
     }
 
     Ok(ForeignSlice {
@@ -29,6 +31,8 @@ impl ForeignSlice {
       slice_start,
       slice_len,
       local_start,
+      page_num,
+      local_buf,
     })
   }
 
@@ -41,6 +45,15 @@ impl ForeignSlice {
   pub fn local_slice_mut(&self) -> &[u8] {
     unsafe {
       core::slice::from_raw_parts_mut(self.local_start as *mut u8, self.slice_len)
+    }
+  }
+}
+
+impl Drop for ForeignSlice {
+  fn drop(&mut self) {
+    for i in 0..self.page_num {
+      let va = self.local_buf + i * PAGE_SIZE;
+      let _ = mem_unmap(0, va);
     }
   }
 }

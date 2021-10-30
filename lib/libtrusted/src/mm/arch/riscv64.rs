@@ -1,7 +1,7 @@
 use tock_registers::LocalRegisterCopy;
 
-use super::vm_descriptor::*;
-use crate::mm::EntryLike;
+use common::mm::vm_descriptor::*;
+use crate::mm::PageAttribute;
 
 use common::{PAGE_SIZE, PAGE_TABLE_L1_SHIFT, PAGE_TABLE_L2_SHIFT, PAGE_TABLE_L3_SHIFT};
 use common::CONFIG_READ_ONLY_LEVEL_3_PAGE_TABLE_BTM;
@@ -23,37 +23,17 @@ fn read_level_2_entry(l1_index: usize, l2_index: usize, l3_index: usize) -> usiz
   unsafe { (ppte as *const usize).read_volatile() }
 }
 
-fn read_page_table_entry(va: usize) -> Option<usize> {
-  let l1x = (va >> PAGE_TABLE_L1_SHIFT) & (PAGE_SIZE / core::mem::size_of::<usize>() - 1);
-  let l2x = (va >> PAGE_TABLE_L2_SHIFT) & (PAGE_SIZE / core::mem::size_of::<usize>() - 1);
-  let l3x = (va >> PAGE_TABLE_L3_SHIFT) & (PAGE_SIZE / core::mem::size_of::<usize>() - 1);
-  if read_directory_entry(l1x) & 0b1 != 0 {
-    if read_level_1_entry(l1x, l2x) & 0b1 != 0 {
-      let r = read_level_2_entry(l1x, l2x, l3x);
-      if r & 0b1 != 0 {
-        Some(r)
-      } else {
-        None
-      }
-    } else {
-      None
-    }
-  } else {
-    None
-  }
-}
-
 #[derive(Clone, Copy, Debug)]
 pub struct Entry(usize);
 
 impl Default for Entry {
   fn default() -> Self {
-    Entry::attr(true, true, false, false)
+    Entry::new(true, true, false, false)
   }
 }
 
 impl Entry {
-  pub fn attr(writable: bool, executable: bool, copy_on_write: bool, shared: bool) -> Self {
+  pub fn new(writable: bool, executable: bool, copy_on_write: bool, shared: bool) -> Self {
     Entry((PAGE_DESCRIPTOR::USER::True
       + PAGE_DESCRIPTOR::R::True
       + if writable {
@@ -82,7 +62,7 @@ impl Entry {
 
 const PTE_ATTR_MASK: usize = 0x3ff;
 
-impl EntryLike for Entry {
+impl PageAttribute for Entry {
   fn executable(&self) -> bool {
     self.reg().is_set(PAGE_DESCRIPTOR::X)
   }
@@ -166,8 +146,20 @@ impl EntryLike for Entry {
 }
 
 pub fn query(va: usize) -> Option<Entry> {
-  if let Some(pte) = read_page_table_entry(va) {
-    Some(Entry(pte))
+  let l1x = (va >> PAGE_TABLE_L1_SHIFT) & (PAGE_SIZE / core::mem::size_of::<usize>() - 1);
+  let l2x = (va >> PAGE_TABLE_L2_SHIFT) & (PAGE_SIZE / core::mem::size_of::<usize>() - 1);
+  let l3x = (va >> PAGE_TABLE_L3_SHIFT) & (PAGE_SIZE / core::mem::size_of::<usize>() - 1);
+  if read_directory_entry(l1x) & 0b1 != 0 {
+    if read_level_1_entry(l1x, l2x) & 0b1 != 0 {
+      let r = read_level_2_entry(l1x, l2x, l3x);
+      if r & 0b1 != 0 {
+        Some(Entry(r))
+      } else {
+        None
+      }
+    } else {
+      None
+    }
   } else {
     None
   }

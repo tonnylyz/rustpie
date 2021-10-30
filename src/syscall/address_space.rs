@@ -4,7 +4,6 @@ use crate::lib::thread::Tid;
 
 #[inline(never)]
 #[inject::count_stmts]
-#[inject::panic_inject]
 pub fn get_asid(tid: Tid) -> Result {
   if tid == 0 {
     match crate::lib::cpu::cpu().address_space() {

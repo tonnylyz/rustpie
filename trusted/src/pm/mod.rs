@@ -1,15 +1,15 @@
-use alloc::collections::BTreeMap;
-use alloc::string::String;
+
+
 use alloc::vec::Vec;
 use core::sync::atomic::AtomicUsize;
 use core::sync::atomic::Ordering::Relaxed;
 
-use common::PAGE_SIZE;
+
 use spin::Mutex;
 
 use libtrusted::foreign_slice::ForeignSlice;
-use libtrusted::mm::{Entry, EntryLike};
-use microcall::{get_asid, get_tid, mem_map, mem_unmap};
+
+use microcall::{get_asid, get_tid};
 use microcall::message::Message;
 
 pub const PM_ACTION_SPAWN: usize = 1;

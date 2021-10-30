@@ -37,6 +37,7 @@ name = "common"
 version = "0.1.0"
 dependencies = [
  "cfg-if",
+ "tock-registers",
 ]
 
 [[package]]
@@ -182,6 +183,7 @@ dependencies = [
 [[package]]
 name = "riscv"
 version = "0.1.1"
+source = "git+https://github.com/tonnylyz/riscv#3f44ec912d0da4109659af3208d184c8ab98a775"
 dependencies = [
  "tock-registers",
 ]

@@ -105,7 +105,7 @@ impl crate::lib::traits::ContextFrameTrait for Riscv64ContextFrame {
   fn new(pc: usize, sp: usize, arg: usize, privileged: bool) -> Self {
     let mut r = Riscv64ContextFrame {
       gpr: [0xdeadbeef_deadbeef; 32],
-      sstatus: (SSTATUS::SD::SET + SSTATUS::FS.val(0b11) + if privileged { SSTATUS::SPP::Supervisor } else { SSTATUS::SPP::User } + SSTATUS::SPIE.val(1) + SSTATUS::SIE.val(0)).value,
+      sstatus: (SSTATUS::SD::SET + SSTATUS::FS.val(0b11) + SSTATUS::SUM::SET + if privileged { SSTATUS::SPP::Supervisor } else { SSTATUS::SPP::User } + SSTATUS::SPIE.val(1) + SSTATUS::SIE.val(0)).value,
       sepc: 0xdeadbeef_deadbeef,
     };
     r.set_exception_pc(pc);

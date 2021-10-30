@@ -5,7 +5,7 @@ use crate::mm::page_table::{Entry, EntryAttribute, Error, PageTableEntryAttrTrai
 use crate::mm::{PhysicalFrame, Frame};
 use crate::lib::traits::*;
 
-use super::vm_descriptor::*;
+use common::mm::vm_descriptor::*;
 use spin::Mutex;
 use alloc::vec::Vec;
 use common::syscall::error::ERROR_INVARG;

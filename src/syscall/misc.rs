@@ -1,6 +1,6 @@
 use alloc::boxed::Box;
 use super::{Result, SyscallOutRegisters::*};
-use common::syscall::error::{ERROR_HOLD_ON, ERROR_INVARG};
+use common::syscall::error::ERROR_INVARG;
 
 struct ResourceA;
 struct ResourceB;
@@ -15,7 +15,7 @@ fn make_page_fault() {
   panic!(); // indicates an exception may happen
 }
 #[inline(never)]
-pub fn null() -> Result {
+pub fn null2() -> Result {
   info!("null called");
   let a = Box::new(ResourceA);
   make_page_fault();
@@ -27,7 +27,7 @@ pub fn null() -> Result {
 }
 
 #[inline(never)]
-pub fn null2() -> Result {
+pub fn null() -> Result {
   Ok(Unit)
 }
 
@@ -46,7 +46,7 @@ pub fn getc() -> Result { Ok(Unit) }
 #[inline(never)]
 pub fn getc() -> Result {
   match crate::driver::uart::getc() {
-    None => Err(ERROR_HOLD_ON),
+    None => Err(common::syscall::error::ERROR_HOLD_ON),
     Some(c) => Ok(Single(c as usize))
   }
 }

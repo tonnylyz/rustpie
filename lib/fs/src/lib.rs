@@ -1,8 +1,5 @@
 #![no_std]
 
-#[macro_use]
-extern crate log;
-
 use microcall::message::Message;
 use redox::*;
 use common::server::SERVER_REDOX_FS;
@@ -11,7 +8,6 @@ pub struct File {
   handle: usize,
 }
 
-#[allow(dead_code)]
 #[derive(Copy, Clone, Debug, Eq, PartialEq)]
 pub enum SeekFrom {
   Start(u64),

@@ -111,5 +111,4 @@ pub fn handler(ctx: &ContextFrame) {
   let ctx = ctx.clone();
   let reg = ctx.into();
   unwind_from_exception(reg);
-  error!("unwinding return! thread probably dead");
 }

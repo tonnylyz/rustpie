@@ -9,7 +9,7 @@ extern crate rlibc;
 extern crate exported;
 
 use alloc::vec::Vec;
-use fs::File;
+
 
 #[inline(always)]
 pub fn round_up(addr: usize, n: usize) -> usize {

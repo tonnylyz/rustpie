@@ -30,12 +30,10 @@ impl PhysicalFrame {
     }
   }
 
-  #[allow(dead_code)]
   pub fn as_slice<T>(&self) -> &'static [T] {
     unsafe { core::slice::from_raw_parts(self.kva() as *const T, PAGE_SIZE / core::mem::size_of::<T>()) }
   }
 
-  #[allow(dead_code)]
   pub fn as_mut_slice<T>(&self) -> &'static mut [T] {
     unsafe { core::slice::from_raw_parts_mut(self.kva() as *mut T, PAGE_SIZE / core::mem::size_of::<T>()) }
   }

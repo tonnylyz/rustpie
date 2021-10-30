@@ -16,7 +16,7 @@ extern crate log;
 #[macro_use]
 extern crate libtrusted;
 
-use unwind::catch::{catch_unwind, PanicError};
+use unwind::catch::catch_unwind;
 
 
 mod blk;

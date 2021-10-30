@@ -11,7 +11,6 @@ use core::fmt::{Display, Formatter};
 pub type Error = usize;
 
 #[derive(Debug)]
-#[allow(dead_code)]
 pub enum SyscallOutRegisters {
   Unit,
   Single(usize),
@@ -44,7 +43,6 @@ impl Display for SyscallOutRegisters {
 pub type Result = core::result::Result<SyscallOutRegisters, Error>;
 
 fn lookup_as(asid: u16) -> core::result::Result<AddressSpace, Error> {
-  // TODO: check permission
   let a = if asid == 0 {
     current_thread()?.address_space()
   } else {

@@ -11,6 +11,7 @@ const PLIC_BASE_ADDR: usize = 0xffff_ffff_0000_0000 + 0x0c00_0000;
 pub struct Plic;
 
 register_structs! {
+  #[allow(non_snake_case)]
   PlicBlock {
     (0x000000 => InterruptPriority: [ReadWrite<u32>; 0x400]),
     (0x001000 => InterruptPending: [ReadOnly<u32>; 0x20]),
@@ -81,7 +82,7 @@ impl InterruptController for Plic {
       1 => plic.PriorityThresholdCtx3.set(0),
       2 => plic.PriorityThresholdCtx5.set(0),
       3 => plic.PriorityThresholdCtx7.set(0),
-      _ => todo!(),
+      _ => panic!(),
     }
   }
 
@@ -97,7 +98,7 @@ impl InterruptController for Plic {
       1 => plic.InterruptEnableCtx3[reg_idx].set(plic.InterruptEnableCtx3[reg_idx].get() | bit_mask),
       2 => plic.InterruptEnableCtx5[reg_idx].set(plic.InterruptEnableCtx5[reg_idx].get() | bit_mask),
       3 => plic.InterruptEnableCtx7[reg_idx].set(plic.InterruptEnableCtx7[reg_idx].get() | bit_mask),
-      _ => todo!(),
+      _ => panic!(),
     }
     plic.InterruptPriority[i].set(1);
   }
@@ -113,7 +114,7 @@ impl InterruptController for Plic {
       1 => plic.InterruptEnableCtx3[reg_idx].set(plic.InterruptEnableCtx3[reg_idx].get() & !bit_mask),
       2 => plic.InterruptEnableCtx5[reg_idx].set(plic.InterruptEnableCtx5[reg_idx].get() & !bit_mask),
       3 => plic.InterruptEnableCtx7[reg_idx].set(plic.InterruptEnableCtx7[reg_idx].get() & !bit_mask),
-      _ => todo!(),
+      _ => panic!(),
     }
   }
 
@@ -126,7 +127,7 @@ impl InterruptController for Plic {
         1 => plic.InterruptClaimCompletionCtx3.get(),
         2 => plic.InterruptClaimCompletionCtx5.get(),
         3 => plic.InterruptClaimCompletionCtx7.get(),
-        _ => todo!(),
+        _ => panic!(),
       } as usize;
     if int == 0 {
       None
@@ -143,7 +144,7 @@ impl InterruptController for Plic {
       1 => plic.InterruptClaimCompletionCtx3.set(int as u32),
       2 => plic.InterruptClaimCompletionCtx5.set(int as u32),
       3 => plic.InterruptClaimCompletionCtx7.set(int as u32),
-      _ => todo!(),
+      _ => panic!(),
     };
   }
 }

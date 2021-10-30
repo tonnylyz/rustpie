@@ -1,9 +1,9 @@
 use crate::fs::{Disk, BLOCK_SIZE};
 use common::PAGE_SIZE;
-use rlibc::memcpy;
+
 use redox::*;
 use microcall::message::Message;
-use libtrusted::mm::{Entry, EntryLike};
+use libtrusted::mm::{Entry, PageAttribute, default_page_attribute};
 
 pub struct VirtioClient;
 
@@ -15,7 +15,7 @@ impl VirtioClient {
   fn read_block_unaligned(&self, block: u64, buffer: &mut [u8]) -> Result<usize> {
     assert_eq!(buffer.len(), PAGE_SIZE);
     let va_tmp = libtrusted::mm::virtual_page_alloc(1);
-    microcall::mem_alloc(0, va_tmp, Entry::default().attribute());
+    microcall::mem_alloc(0, va_tmp, default_page_attribute());
     let aligned_buffer = unsafe { core::slice::from_raw_parts_mut(va_tmp as *mut u8, PAGE_SIZE) };
     let read = self.read_block_aligned(block, aligned_buffer)?;
     for i in 0..PAGE_SIZE {
@@ -43,7 +43,7 @@ impl VirtioClient {
   fn write_block_unaligned(&self, block: u64, buffer: &[u8]) -> Result<usize> {
     assert_eq!(buffer.len(), PAGE_SIZE);
     let va_tmp = libtrusted::mm::virtual_page_alloc(1);
-    microcall::mem_alloc(0, va_tmp, Entry::default().attribute());
+    microcall::mem_alloc(0, va_tmp, default_page_attribute());
     let aligned_buffer = unsafe { core::slice::from_raw_parts_mut(va_tmp as *mut u8, PAGE_SIZE) };
     for i in 0..PAGE_SIZE {
       aligned_buffer[i] = buffer[i];

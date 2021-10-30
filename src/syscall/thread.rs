@@ -30,7 +30,6 @@ pub fn thread_destroy(tid: Tid) -> Result {
       None => Err(ERROR_INVARG),
       Some(t) => {
         if t.is_child_of(current_thread.tid()) {
-          // TODO: check if destroy safe for inter-processor
           crate::lib::thread::thread_destroy(t);
           Ok(Unit)
         } else {

@@ -36,18 +36,6 @@ impl<'input, Endian: Endianity> GccExceptTableArea<EndianSlice<'input, Endian>> 
   }
 }
 
-// impl<R: Reader> Section<R> for GccExceptTableArea<R> {
-//     // TODO FIXME: this is wrong (temporarily),
-//     // once we incoporate it into Gimli itself, we can add a GccExceptFrame sectionid.
-//     fn id() -> SectionId { SectionId::EhFrameHdr }
-
-//     fn reader(&self) -> &R { &self.reader }
-
-//     fn section_name() -> &'static str {
-//         ".gcc_except_table"
-//     }
-// }
-
 impl<R: Reader> GccExceptTableArea<R> {
   /// Parses the .gcc_except_table entries from the very top of the LSDA area.
   /// This only parses the two headers that are guaranteed to exist,

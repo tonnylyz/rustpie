@@ -3,7 +3,7 @@ use core::cmp::min;
 use alloc::vec::Vec;
 
 use redox::*;
-use core::mem::size_of;
+
 use fallible_collections::FallibleVec;
 
 /// A file system
