@@ -23,20 +23,6 @@ impl PhysicalFrame {
   pub fn pa(&self) -> usize {
     self.pa
   }
-
-  pub fn zero(&self) {
-    unsafe {
-      core::ptr::write_bytes(self.kva() as *mut u8, 0, PAGE_SIZE);
-    }
-  }
-
-  pub fn as_slice<T>(&self) -> &'static [T] {
-    unsafe { core::slice::from_raw_parts(self.kva() as *const T, PAGE_SIZE / core::mem::size_of::<T>()) }
-  }
-
-  pub fn as_mut_slice<T>(&self) -> &'static mut [T] {
-    unsafe { core::slice::from_raw_parts_mut(self.kva() as *mut T, PAGE_SIZE / core::mem::size_of::<T>()) }
-  }
 }
 
 #[derive(Debug, Clone)]
