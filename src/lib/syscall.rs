@@ -1,3 +1,4 @@
+use alloc::string::String;
 use crate::lib::cpu::cpu;
 use crate::lib::traits::ContextFrameTrait;
 use unwind::catch::catch_unwind;
@@ -18,16 +19,19 @@ static SYSCALL_NAMES: [&str; SYS_MAX] = [
   "address_space_alloc",
   "thread_alloc",
   "thread_set_status",
-  "ipc_receive",
-  "ipc_can_send",
-  "itc_receive",
+  "address_space_destroy",
+  "itc_recv",
   "itc_send",
   "itc_call",
-  "itc_reply",
   "server_register",
   "server_tid",
   "set_exception_handler",
   "getc",
+];
+
+
+static SYSCALL_ARGC: [usize; SYS_MAX] = [
+  0, 1, 1, 0, 0, 1, 2, 3, 5, 2, 0, 4, 2, 1, 0, 5, 5, 1, 1, 1, 0
 ];
 
 pub fn syscall() {
@@ -75,7 +79,12 @@ pub fn syscall() {
       }
       Err(err) => {
         if *err != ERROR_HOLD_ON {
-          info!("#{} {} t{} Err {:x?}", num, SYSCALL_NAMES[num], tid, err);
+          let mut arg_str = String::from("(");
+          for i in 0..SYSCALL_ARGC[num] {
+            arg_str += format!("{:x},", arg(i)).as_str();
+          }
+          arg_str += ")";
+          info!("#{} {} t{} arg{} Err {:x?}", num, SYSCALL_NAMES[num], tid, arg_str, err);
         }
 
       }

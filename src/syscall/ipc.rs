@@ -23,7 +23,7 @@ pub fn itc_send(tid: Tid, a: usize, b: usize, c: usize, d: usize) -> Result {
     target.map_with_context(|ctx| {
       ctx.set_syscall_result(&Result::Ok(Pentad(current.tid() as usize, a, b, c, d)));
     });
-  }, ThreadStatus::Runnable) {
+  }) {
     Ok(Unit)
   } else {
     Err(ERROR_DENIED)
@@ -40,7 +40,7 @@ pub fn itc_call(tid: Tid, a: usize, b: usize, c: usize, d: usize) -> Result {
       ctx.set_syscall_result(&Result::Ok(Pentad(current.tid() as usize, a, b, c, d)));
     });
     thread_sleep(&current, crate::lib::thread::Status::WaitForReply);
-  }, ThreadStatus::Runnable) {
+  }) {
     Ok(Unit)
   } else {
     Err(ERROR_HOLD_ON)

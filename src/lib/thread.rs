@@ -76,28 +76,24 @@ impl Thread {
     *lock == Status::Runnable
   }
 
-  pub fn wait_for_reply<F>(&self, f: F, next_status: Status) -> bool where F: FnOnce() {
+  pub fn wait_for_reply<F>(&self, f: F) -> bool where F: FnOnce() {
     let mut status = self.0.inner_mut.status.lock();
     if *status == Status::WaitForReply {
       f();
-      *status = next_status;
-      if next_status == Status::Runnable {
-        scheduler().add(self.clone());
-      }
+      *status = Status::Runnable;
+      scheduler().add(self.clone());
       true
     } else {
       false
     }
   }
 
-  pub fn wait_for_request<F>(&self, f: F, next_status: Status) -> bool where F: FnOnce() {
+  pub fn wait_for_request<F>(&self, f: F) -> bool where F: FnOnce() {
     let mut status = self.0.inner_mut.status.lock();
     if *status == Status::WaitForRequest {
       f();
-      *status = next_status;
-      if next_status == Status::Runnable {
-        scheduler().add(self.clone());
-      }
+      *status = Status::Runnable;
+      scheduler().add(self.clone());
       true
     } else {
       false

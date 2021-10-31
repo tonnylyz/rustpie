@@ -27,7 +27,6 @@ fn handle() -> HandleResult {
           let sp = ctx.stack_pointer() - round_up(size_of::<ContextFrame>(), 16);
           ctx.set_stack_pointer(sp);
           let sp_va = round_down(sp, PAGE_SIZE);
-          info!("sp_va {:016x} fault address {:016x}", sp_va, crate::arch::Arch::fault_address());
           let pt = a.page_table();
           if let None = pt.lookup_user_page(sp_va) {
             if let Ok(frame) = crate::mm::page_pool::page_alloc() {

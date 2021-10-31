@@ -53,14 +53,14 @@ pub mod syscall {
   pub const SYS_THREAD_ALLOC: usize = 11;
   pub const SYS_THREAD_SET_STATUS: usize = 12;
   pub const SYS_ADDRESS_SPACE_DESTROY: usize = 13;
-  pub const SYS_ITC_RECV: usize = 15;
-  pub const SYS_ITC_SEND: usize = 16;
-  pub const SYS_ITC_CALL: usize = 17;
-  pub const SYS_SERVER_REGISTER: usize = 19;
-  pub const SYS_SERVER_TID: usize = 20;
-  pub const SYS_SET_EXCEPTION_HANDLER: usize = 21;
-  pub const SYS_GETC: usize = 22;
-  pub const SYS_MAX: usize = 23;
+  pub const SYS_ITC_RECV: usize = 14;
+  pub const SYS_ITC_SEND: usize = 15;
+  pub const SYS_ITC_CALL: usize = 16;
+  pub const SYS_SERVER_REGISTER: usize = 17;
+  pub const SYS_SERVER_TID: usize = 18;
+  pub const SYS_SET_EXCEPTION_HANDLER: usize = 19;
+  pub const SYS_GETC: usize = 20;
+  pub const SYS_MAX: usize = 21;
 
   pub mod error {
     pub const ERROR_INVARG: usize = 1;
