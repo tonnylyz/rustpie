@@ -1,4 +1,5 @@
 ARCH ?= aarch64
+MACHINE ?= virt
 PROFILE ?= release
 USER_PROFILE ?= release
 TRUSTED_PROFILE ?= release
@@ -9,6 +10,10 @@ RUSTFLAGS := -C llvm-args=-global-isel=false
 
 # NOTE: generate frame pointer for every function
 export RUSTFLAGS := ${RUSTFLAGS} -C force-frame-pointers=yes
+
+ifeq (${MACHINE}, guest)
+CARGO_FLAGS := ${CARGO_FLAGS} --features guest
+endif
 
 ifeq (${PROFILE}, release)
 CARGO_FLAGS := ${CARGO_FLAGS} --release

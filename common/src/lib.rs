@@ -21,6 +21,8 @@ pub mod mm;
 #[path = "mm/riscv64.rs"]
 pub mod mm;
 
+pub mod driver;
+
 pub const CONFIG_USER_LIMIT: usize = 0x3f_a000_0000;
 pub const CONFIG_USER_STACK_TOP: usize = 0x3f_8000_0000;
 pub const CONFIG_USER_STACK_BTM: usize = 0x3f_0000_0000;

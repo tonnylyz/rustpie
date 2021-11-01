@@ -63,7 +63,8 @@ pub unsafe extern "C" fn mmu_init(pt: &PageDirectory) {
 
   TCR_EL1.write(TCR_EL1::TBI0::Ignored
     + TCR_EL1::TBI1::Ignored
-    + TCR_EL1::IPS.val(0b001) // 64GB
+    + TCR_EL1::AS::ASID16Bits
+    + TCR_EL1::IPS::Bits_44
     + TCR_EL1::TG0::KiB_4
     + TCR_EL1::TG1::KiB_4
     + TCR_EL1::SH0::Inner
@@ -74,6 +75,7 @@ pub unsafe extern "C" fn mmu_init(pt: &PageDirectory) {
     + TCR_EL1::IRGN1::WriteBack_ReadAlloc_WriteAlloc_Cacheable
     + TCR_EL1::EPD0::EnableTTBR0Walks
     + TCR_EL1::EPD1::EnableTTBR1Walks
+    + TCR_EL1::A1::TTBR0
     + TCR_EL1::T0SZ.val(64 - 39)
     + TCR_EL1::T1SZ.val(64 - 39));
 

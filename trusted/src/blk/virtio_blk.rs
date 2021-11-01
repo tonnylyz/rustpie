@@ -174,11 +174,11 @@ pub fn init() {
   let mmio = &VIRTIO_MMIO;
   if mmio.MagicValue.get() != 0x74726976
     || mmio.Version.get() != 2
-    || mmio.DeviceID.get() != 2
-    || mmio.VendorID.get() != 0x554d4551 {
+    || mmio.DeviceID.get() != 2 {
     panic!("could not find virtio disk");
   }
   let mut status: u32 = 0;
+  mmio.Status.set(status);
   status |= VIRTIO_CONFIG_S_ACKNOWLEDGE;
   mmio.Status.set(status);
   status |= VIRTIO_CONFIG_S_DRIVER;
@@ -202,10 +202,10 @@ pub fn init() {
   mmio.DriverFeaturesSel.set(1);
   mmio.DriverFeatures.set((features >> 32) as u32);
 
-  status |= VIRTIO_CONFIG_S_FEATURES_OK;
+  status |= VIRTIO_CONFIG_S_DRIVER_OK;
   mmio.Status.set(status);
 
-  status |= VIRTIO_CONFIG_S_DRIVER_OK;
+  status |= VIRTIO_CONFIG_S_FEATURES_OK;
   mmio.Status.set(status);
 
   setup_queue(0);

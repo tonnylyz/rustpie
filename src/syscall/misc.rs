@@ -38,11 +38,6 @@ pub fn putc(c: char) -> Result {
   Ok(Unit)
 }
 
-#[cfg(target_arch = "aarch64")]
-#[inline(never)]
-pub fn getc() -> Result { Ok(Unit) }
-
-#[cfg(target_arch = "riscv64")]
 #[inline(never)]
 pub fn getc() -> Result {
   match crate::driver::uart::getc() {

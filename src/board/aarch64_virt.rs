@@ -7,7 +7,7 @@ use alloc::vec::Vec;
 use crate::lib::device::Device;
 use crate::lib::traits::ArchTrait;
 
-pub const BOARD_CORE_NUMBER: usize = 4;
+pub const BOARD_CORE_NUMBER: usize = 2;
 pub const BOARD_NORMAL_MEMORY_RANGE: Range<usize> = 0x4000_0000..0x8000_0000;
 pub const BOARD_DEVICE_MEMORY_RANGE: Range<usize> = 0x0000_0000..0x4000_0000;
 
@@ -54,14 +54,5 @@ pub fn devices() -> Vec<Device> {
       vec![
         0x10 + 32
       ]),
-    Device::new(
-      "pl011",
-      vec![
-        0x900_0000..0x900_1000
-      ],
-      vec![
-        0x1 + 32
-      ]
-    ),
   ]
 }
