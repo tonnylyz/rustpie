@@ -1,0 +1,19 @@
+[package]
+name = "bm_null"
+version = "0.1.0"
+authors = ["Minhong Yun <mhyun@rice.edu>"]
+edition = "2018"
+
+[dependencies]
+libc = "0.2"
+hwloc = "0.3.0"
+perfcnt = "0.5.0"
+libm = "0.1.4"
+os_pipe = "0.9.1"
+mmap = "0.1.1"
+page_size = "0.4.2"
+core_affinity = "0.5.10"
+
+[dependencies.hashbrown]
+version = "0.1.8"
+features = ["nightly"]
