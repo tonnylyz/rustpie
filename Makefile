@@ -15,6 +15,10 @@ ifeq (${MACHINE}, guest)
 CARGO_FLAGS := ${CARGO_FLAGS} --features guest
 endif
 
+ifeq (${MACHINE}, k210)
+CARGO_FLAGS := ${CARGO_FLAGS} --features k210
+endif
+
 ifeq (${PROFILE}, release)
 CARGO_FLAGS := ${CARGO_FLAGS} --release
 endif
@@ -25,14 +29,22 @@ endif
 
 #TRUSTED_IMAGE := trusted/target/${ARCH}/${TRUSTED_PROFILE}/trusted
 
+ifeq (${MACHINE}, k210)
+KERNEL := target/${ARCH}k210/${PROFILE}/rustpi
+else
 KERNEL := target/${ARCH}/${PROFILE}/rustpi
+endif
 
 .PHONY: all emu debug dependencies clean disk trusted_image user_image
 
 all: ${KERNEL} ${KERNEL}.bin ${KERNEL}.asm
 
 ${KERNEL}: trusted_image
+ifeq (${MACHINE}, k210)
+	cargo build --target src/target/${ARCH}k210.json -Z build-std=core,alloc,std ${CARGO_FLAGS}
+else
 	cargo build --target src/target/${ARCH}.json -Z build-std=core,alloc,std ${CARGO_FLAGS}
+endif
 
 trusted_image:
 	make ARCH=${ARCH} TRUSTED_PROFILE=${TRUSTED_PROFILE} -C trusted
@@ -42,6 +54,9 @@ user_image:
 
 ${KERNEL}.bin: ${KERNEL}
 	llvm-objcopy $< -O binary $@
+ifeq (${MACHINE}, k210)
+	cat rustsbi-k210.bin ${KERNEL}.bin > ${KERNEL}-flash.bin
+endif
 
 ${KERNEL}.asm: ${KERNEL}
 	llvm-objdump --demangle -d $< > $@

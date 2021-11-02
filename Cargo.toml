@@ -37,6 +37,7 @@ riscv = { git = "https://github.com/tonnylyz/riscv" }
 default = ["user_release"]
 user_release = []
 guest = []
+k210 = []
 
 [profile.release]
 debug = true

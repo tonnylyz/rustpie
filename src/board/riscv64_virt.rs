@@ -8,8 +8,20 @@ use crate::lib::interrupt::InterruptController;
 use alloc::vec::Vec;
 use crate::lib::device::Device;
 
+#[cfg(feature = "k210")]
 pub const BOARD_CORE_NUMBER: usize = 4;
+
+#[cfg(not(feature = "k210"))]
+pub const BOARD_CORE_NUMBER: usize = 1;
+
+#[cfg(not(feature = "k210"))]
 pub const BOARD_NORMAL_MEMORY_RANGE: Range<usize> = 0x8000_0000..0xc000_0000;
+#[cfg(not(feature = "k210"))]
+pub const BOARD_DEVICE_MEMORY_RANGE: Range<usize> = 0x0000_0000..0x8000_0000;
+
+#[cfg(feature = "k210")]
+pub const BOARD_NORMAL_MEMORY_RANGE: Range<usize> = 0x8000_0000..0x8060_0000;
+#[cfg(feature = "k210")]
 pub const BOARD_DEVICE_MEMORY_RANGE: Range<usize> = 0x0000_0000..0x8000_0000;
 
 #[no_mangle]

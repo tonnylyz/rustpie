@@ -7,6 +7,7 @@ use tock_registers::{
   registers::*,
 };
 use tock_registers::interfaces::{Readable, ReadWriteable, Writeable};
+use crate::driver::sbi::Error;
 
 
 register_bitfields! {
@@ -327,12 +328,14 @@ impl Ns16550Mmio {
 
 static NS16550_MMIO: Ns16550Mmio = Ns16550Mmio::new(NS16550_MMIO_BASE);
 
+#[cfg(not(feature = "k210"))]
 pub fn init() {
     let uart = &NS16550_MMIO;
     uart.ISR_FCR
       .write(ISR_FCR::EN_FIFO::Mode16550);
 }
 
+#[cfg(not(feature = "k210"))]
 fn send(c: u8) {
     let uart = &NS16550_MMIO;
     while !uart.LSR.is_set(LSR::THRE) {
@@ -341,6 +344,7 @@ fn send(c: u8) {
     uart.RHR_THR_DLL.set(c);
 }
 
+#[cfg(not(feature = "k210"))]
 pub fn putc(c: u8) {
   if c == b'\n' {
     send(b'\r');
@@ -348,11 +352,29 @@ pub fn putc(c: u8) {
   send(c);
 }
 
+#[cfg(not(feature = "k210"))]
 pub fn getc() -> Option<u8> {
     let uart = &NS16550_MMIO;
     if uart.LSR.is_set(LSR::RDR) {
         Some(uart.RHR_THR_DLL.get() as u8)
     } else {
         None
+    }
+}
+
+#[cfg(feature = "k210")]
+pub fn init() {}
+
+#[cfg(feature = "k210")]
+pub fn putc(c: u8) {
+    let _ = super::sbi::sbi_call(0x01, 0, c as usize, 0, 0);
+}
+
+#[cfg(feature = "k210")]
+pub fn getc() -> Option<u8> {
+    match super::sbi::sbi_call(0x02, 0, 0, 0, 0) {
+        Ok(-1) => None,
+        Ok(x) => Some(x as u8),
+        Err(_) => None,
     }
 }

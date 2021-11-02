@@ -39,6 +39,9 @@ unsafe extern "C" fn exception_entry(ctx: *mut ContextFrame) {
   let core = crate::lib::cpu::cpu();
   core.set_context(ctx);
   let cause = SCAUSE.get();
+  // info!("SCAUSE {:016x}", cause);
+  // info!("SEPC {:016x}", core.context().exception_pc());
+  // info!("FAR  {:016x}", crate::arch::Arch::fault_address());
   let irq = (cause >> 63) != 0;
   let code = (cause & 0xf) as usize;
   if from_kernel && !irq {
