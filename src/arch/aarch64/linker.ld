@@ -20,12 +20,13 @@ SECTIONS
     . = ALIGN(4096);
     BSS_START = .;
     .bss : {
-        *(.bss.ipc)
         *(.bss*)
     }
     . = ALIGN(4096);
     BSS_END = .;
-
+    .stack (NOLOAD) : {
+        *(.stack)
+    }
     KERNEL_END = .;
 
     ELF_IMAGE = 0xFFFFFF8080000000;
