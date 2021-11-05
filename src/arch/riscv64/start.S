@@ -30,7 +30,18 @@ _start:
     csrrw x0, sscratch, sp // sscratch <- pointer to hart_id
 
     mv    s1, a0 // save hart_id
+
+    bne   s1, zero, 1f
+    lui   a0, %hi(BSS_START)
+    addi  a0, a0, %lo(BSS_START)
+    lui   a1, %hi(BSS_END)
+    addi  a1, a1, %lo(BSS_END)
+    sub   a2, a1, a0
+    mv    a1, zero
+    jal   memset
+1:
     // call stack_of_core(hart_id)
+    mv    a0, s1
     lui   t0, %hi(stack_of_core)
     addi  t0, t0, %lo(stack_of_core)
     addiw t0, t0, 0
