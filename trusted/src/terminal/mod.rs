@@ -3,19 +3,6 @@ use spin::{Mutex, Once};
 use alloc::collections::VecDeque;
 use microcall::get_tid;
 
-// #[cfg(target_arch = "aarch64")]
-// mod pl011;
-//
-// #[cfg(target_arch = "aarch64")]
-// pub fn input_server() {
-//   pl011::enable_irq();
-//   loop {
-//     microcall::event_wait(common::event::EVENT_INTERRUPT, 0x1 + 32);
-//     pl011::irq();
-//   }
-// }
-
-// #[cfg(target_arch = "riscv64")]
 pub fn input_server() {
   loop {
     if let Ok(c) = microcall::getc() {
@@ -30,7 +17,7 @@ static BUFFER: Once<Mutex<VecDeque<u8>>> = Once::new();
 
 fn buffer() -> &'static Mutex<VecDeque<u8>> {
   match BUFFER.get() {
-    None => { BUFFER.call_once(|| Mutex::new(VecDeque::new())); buffer() }
+    None => { BUFFER.call_once(|| Mutex::new(VecDeque::new())) }
     Some(x) => {x}
   }
 }
