@@ -4,7 +4,7 @@ use common::PAGE_SIZE;
 use crate::mm::{Entry, PageAttribute, default_page_attribute};
 use microcall::mem_alloc;
 
-const THREAD_STACK_MAX: usize = 2 * 1024 * 1024; // 2 MB 0x200000
+const THREAD_STACK_MAX: usize = 48 * PAGE_SIZE;
 
 const THREAD_STACK_VALLOC_RANGE: Range<usize> = 0x1000_0000..0x2000_0000;
 
