@@ -58,6 +58,7 @@ pub fn load(src: &'static [u8], page_table: &PageTable) -> Result<usize, Error> 
       }
       for i in file_page_num..mem_page_num {
         let frame = crate::mm::page_pool::page_alloc().map_err(|_| ERROR_OOM)?;
+        frame.zero();
         page_table.insert_page(va + i * PAGE_SIZE, Frame::from(frame), attr)?;
       }
     }

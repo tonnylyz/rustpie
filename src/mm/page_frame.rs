@@ -23,6 +23,12 @@ impl PhysicalFrame {
   pub fn pa(&self) -> usize {
     self.pa
   }
+
+  pub fn zero(&self) {
+    unsafe {
+      core::ptr::write_bytes(self.kva() as *mut u8, 0, PAGE_SIZE);
+    }
+  }
 }
 
 #[derive(Debug, Clone)]

@@ -69,6 +69,7 @@ pub fn address_space_alloc() -> Result<AddressSpace, Error> {
     return Err(ERROR_OOR);
   }
   let frame = crate::mm::page_pool::page_alloc().map_err(|_| ERROR_OOM)?;
+  frame.zero();
   let page_table = PageTable::new(frame);
   page_table.recursive_map(common::CONFIG_RECURSIVE_PAGE_TABLE_BTM);
   let a = AddressSpace(Arc::try_new(Inner {

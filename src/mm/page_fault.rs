@@ -30,6 +30,7 @@ pub fn handle() {
           match pt.lookup_page(va) {
             None => {
               if let Ok(frame) = crate::mm::page_pool::page_alloc() {
+                frame.zero();
                 match pt.insert_page(va, crate::mm::Frame::from(frame),
                                crate::mm::page_table::EntryAttribute::user_default()) {
                   Ok(_) => {

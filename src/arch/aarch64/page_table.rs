@@ -148,6 +148,7 @@ impl PageTableTrait for Aarch64PageTable {
     let mut l1e = directory.entry(va.l1x());
     if !l1e.valid() {
       let frame = crate::mm::page_pool::page_alloc()?;
+      frame.zero();
       l1e = Aarch64PageTableEntry::make_table(frame.pa());
       let mut pages = self.pages.lock();
       pages.push(frame);
@@ -156,6 +157,7 @@ impl PageTableTrait for Aarch64PageTable {
     let mut l2e = l1e.entry(va.l2x());
     if !l2e.valid() {
       let frame = crate::mm::page_pool::page_alloc()?;
+      frame.zero();
       l2e = Aarch64PageTableEntry::make_table(frame.pa());
       let mut pages = self.pages.lock();
       pages.push(frame);

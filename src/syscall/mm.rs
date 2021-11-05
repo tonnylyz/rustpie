@@ -12,9 +12,7 @@ pub fn mem_alloc(asid: u16, va: usize, attr: usize) -> Result {
   let va = round_down(va, PAGE_SIZE);
   let a = super::lookup_as(asid)?;
   let frame = crate::mm::page_pool::page_alloc().map_err(|_| ERROR_OOM)?;
-  unsafe {
-    core::ptr::write_bytes(frame.kva() as *mut u8, 0, PAGE_SIZE);
-  };
+  frame.zero();
   let attr = Entry::from(ArchPageTableEntry::from_pte(attr)).attribute().filter();
   let uf = crate::mm::Frame::from(frame);
   a.page_table().insert_page(va, uf, attr).map_err(|_| ERROR_INTERNAL)?;
