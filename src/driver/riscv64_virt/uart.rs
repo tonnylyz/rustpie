@@ -310,38 +310,38 @@ register_structs! {
 }
 
 struct Ns16550Mmio {
-    base_addr: usize,
+  base_addr: usize,
 }
 
 impl core::ops::Deref for Ns16550Mmio {
-    type Target = Ns16550MmioBlock;
+  type Target = Ns16550MmioBlock;
 
-    fn deref(&self) -> &Self::Target {
-        unsafe { &*self.ptr() }
-    }
+  fn deref(&self) -> &Self::Target {
+    unsafe { &*self.ptr() }
+  }
 }
 
 impl Ns16550Mmio {
-    const fn new(base_addr: usize) -> Self { Ns16550Mmio { base_addr } }
-    fn ptr(&self) -> *const Ns16550MmioBlock { self.base_addr as *const _ }
+  const fn new(base_addr: usize) -> Self { Ns16550Mmio { base_addr } }
+  fn ptr(&self) -> *const Ns16550MmioBlock { self.base_addr as *const _ }
 }
 
 static NS16550_MMIO: Ns16550Mmio = Ns16550Mmio::new(NS16550_MMIO_BASE);
 
 #[cfg(not(feature = "k210"))]
 pub fn init() {
-    let uart = &NS16550_MMIO;
-    uart.ISR_FCR
-      .write(ISR_FCR::EN_FIFO::Mode16550);
+  let uart = &NS16550_MMIO;
+  uart.ISR_FCR
+    .write(ISR_FCR::EN_FIFO::Mode16550);
 }
 
 #[cfg(not(feature = "k210"))]
 fn send(c: u8) {
-    let uart = &NS16550_MMIO;
-    while !uart.LSR.is_set(LSR::THRE) {
-        // Wait until it is possible to write data.
-    }
-    uart.RHR_THR_DLL.set(c);
+  let uart = &NS16550_MMIO;
+  while !uart.LSR.is_set(LSR::THRE) {
+    // Wait until it is possible to write data.
+  }
+  uart.RHR_THR_DLL.set(c);
 }
 
 #[cfg(not(feature = "k210"))]
@@ -354,12 +354,12 @@ pub fn putc(c: u8) {
 
 #[cfg(not(feature = "k210"))]
 pub fn getc() -> Option<u8> {
-    let uart = &NS16550_MMIO;
-    if uart.LSR.is_set(LSR::RDR) {
-        Some(uart.RHR_THR_DLL.get() as u8)
-    } else {
-        None
-    }
+  let uart = &NS16550_MMIO;
+  if uart.LSR.is_set(LSR::RDR) {
+    Some(uart.RHR_THR_DLL.get() as u8)
+  } else {
+    None
+  }
 }
 
 #[cfg(feature = "k210")]
@@ -367,14 +367,16 @@ pub fn init() {}
 
 #[cfg(feature = "k210")]
 pub fn putc(c: u8) {
-    let _ = super::sbi::sbi_call(0x01, 0, c as usize, 0, 0);
+  // let _ = super::sbi::sbi_call(0x01, 0, c as usize, 0, 0);
+  let txfifo = (0xffff_ffff_0000_0000usize + 0x38000000) as *mut u32;
+  unsafe {
+    while txfifo.read_volatile() & 0x80000000 != 0 {}
+    txfifo.write(c as u32);
+  }
 }
 
 #[cfg(feature = "k210")]
 pub fn getc() -> Option<u8> {
-    match super::sbi::sbi_call(0x02, 0, 0, 0, 0) {
-        Ok(-1) => None,
-        Ok(x) => Some(x as u8),
-        Err(_) => None,
-    }
+  None
 }
+
