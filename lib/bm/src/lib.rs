@@ -9,13 +9,18 @@
 #![no_std]
 
 #[macro_use] extern crate alloc;
+#[macro_use] extern crate log;
 extern crate getopts;
+extern crate hashbrown;
+
+mod stat;
 
 use core::str;
 use alloc::vec::Vec;
 use alloc::string::{String, ToString};
 use alloc::sync::Arc;
 use getopts::Options;
+use stat::calculate_stats;
 
 const SEC_TO_NANO: u64 = 1_000_000_000;
 const SEC_TO_MICRO: u64 = 1_000_000;
@@ -24,6 +29,7 @@ const KB: u64 = 1024;
 
 const ITERATIONS: usize = 10_000;
 const TRIES: usize = 10;
+const THRESHOLD_ERROR_RATIO: u64 = 2;
 
 const READ_BUF_SIZE: usize = 64*1024;
 const WRITE_BUF_SIZE: usize = 1024*1024;
@@ -159,13 +165,28 @@ pub fn main(args: Vec<String>) -> isize {
   }
 }
 
+#[derive(Copy, Clone)]
+struct Hpet;
+impl Hpet {
+  fn get_counter(&self) -> u64 {
+    todo!()
+  }
+}
+
+fn hpet_timing_overhead() -> Result<u64, ()> {
+  todo!()
+}
+
+fn get_hpet() -> Option<Hpet> {
+  todo!()
+}
 
 /// Measures the time for null syscall. 
 /// Calls `do_null_inner` multiple times and averages the value. 
 fn do_null() -> Result<(), &'static str> {
   let mut tries: u64 = 0;
-  let mut max: u64 = core::u64::MIN;
-  let mut min: u64 = core::u64::MAX;
+  let mut max: u64 = u64::MIN;
+  let mut min: u64 = u64::MAX;
   let mut vec = Vec::with_capacity(TRIES);
 
   let overhead_ct = hpet_timing_overhead()?;
@@ -200,7 +221,7 @@ fn do_null() -> Result<(), &'static str> {
 fn do_null_inner(overhead_ct: u64, th: usize, nr: usize) -> Result<u64, &'static str> {
   let start_hpet: u64;
   let end_hpet: u64;
-  let mut mypid = core::usize::MAX;
+  let mut mypid = usize::MAX;
   let hpet = get_hpet().ok_or("Could not retrieve hpet counter")?;
 
   // Since this test takes very little time we multiply the default iterations by 1000
@@ -208,7 +229,7 @@ fn do_null_inner(overhead_ct: u64, th: usize, nr: usize) -> Result<u64, &'static
 
   start_hpet = hpet.get_counter();
   for _ in 0..tmp_iterations {
-    mypid = task::get_my_current_task_id().unwrap();
+    todo!() // microcall::null();
   }
   end_hpet = hpet.get_counter();
 
@@ -230,27 +251,27 @@ fn do_null_inner(overhead_ct: u64, th: usize, nr: usize) -> Result<u64, &'static
 /// Measures the time to spawn an application. 
 /// Calls `do_spawn_inner` multiple times and averages the value. 
 fn do_spawn() -> Result<(), &'static str>{
-  let child_core = match pick_free_core() {
-    Ok(child_core) => {
-      info!("core_{} is idle, so my children will play on it.", child_core);
-      child_core
-    }
-    _ => {
-      warn!("Cannot conduct spawn test because cores are busy");
-      return Err("Cannot conduct spawn test because cores are busy");
-    }
-  };
+  // let child_core = match pick_free_core() {
+  //   Ok(child_core) => {
+  //     info!("core_{} is idle, so my children will play on it.", child_core);
+  //     child_core
+  //   }
+  //   _ => {
+  //     warn!("Cannot conduct spawn test because cores are busy");
+  //     return Err("Cannot conduct spawn test because cores are busy");
+  //   }
+  // };
 
   let mut tries: u64 = 0;
-  let mut max: u64 = core::u64::MIN;
-  let mut min: u64 = core::u64::MAX;
+  let mut max: u64 = u64::MIN;
+  let mut min: u64 = u64::MAX;
   let mut vec = Vec::with_capacity(TRIES);
 
   let overhead_ct = hpet_timing_overhead()?;
   print_header(TRIES, ITERATIONS);
 
   for i in 0..TRIES {
-    let lat = do_spawn_inner(overhead_ct, i+1, TRIES, child_core)?;
+    let lat = do_spawn_inner(overhead_ct, i+1, TRIES, 0)?;
 
     tries += lat;
     vec.push(lat);
@@ -283,31 +304,11 @@ fn do_spawn_inner(overhead_ct: u64, th: usize, nr: usize, _child_core: u8) -> Re
   let mut delta_hpet = 0;
   let hpet = get_hpet().ok_or("Could not retrieve hpet counter")?;
 
-  // Get path to application "hello" that we're going to spawn
-  let namespace = task::get_my_current_task()
-    .map(|t| t.get_namespace().clone())
-    .ok_or("could not find the application namespace")?;
-  let namespace_dir = task::get_my_current_task()
-    .map(|t| t.get_namespace().dir().clone())
-    .ok_or("could not find the application namespace")?;
-  let app_path = namespace_dir.get_file_starting_with("hello-")
-    .map(|f| Path::new(f.lock().get_absolute_path()))
-    .ok_or("Could not find the application 'hello'")?;
-  let crate_name = crate_name_from_path(&app_path).to_string();
-
-  // here we are taking the time at every iteration.
-  // otherwise the crate is not fully unloaded from the namespace before the next iteration starts
-  // so it cannot be loaded again and we are returned an error.
   let iterations = 100;
   for _ in 0..iterations{
-    while namespace.get_crate(&crate_name).is_some() {  }
-
     start_hpet = hpet.get_counter();
-    let child = spawn::new_application_task_builder(app_path.clone(), None)?
-      .spawn()?;
-
-    child.join()?;
-    child.take_exit_value().ok_or("Couldn't retrieve exit value")?;
+    todo!();
+    // spawn("hello");
     end_hpet = hpet.get_counter();
     delta_hpet += end_hpet - start_hpet - overhead_ct;
   }
@@ -324,26 +325,26 @@ fn do_spawn_inner(overhead_ct: u64, th: usize, nr: usize, _child_core: u8) -> Re
 /// Measures the time to switch between two kernel threads. 
 /// Calls `do_ctx_inner` multiple times to perform the actual operation
 fn do_ctx() -> Result<(), &'static str> {
-  let child_core = match pick_free_core() {
-    Ok(child_core) => {
-      info!("core_{} is idle, so my children will play on it.", child_core);
-      child_core
-    }
-    _ => {
-      warn!("Cannot conduct ctx test because cores are busy");
-      return Err("Cannot conduct ctx test because cores are busy");
-    }
-  };
+  // let child_core = match pick_free_core() {
+  //   Ok(child_core) => {
+  //     info!("core_{} is idle, so my children will play on it.", child_core);
+  //     child_core
+  //   }
+  //   _ => {
+  //     warn!("Cannot conduct ctx test because cores are busy");
+  //     return Err("Cannot conduct ctx test because cores are busy");
+  //   }
+  // };
 
   let mut tries: u64 = 0;
-  let mut max: u64 = core::u64::MIN;
-  let mut min: u64 = core::u64::MAX;
+  let mut max: u64 = u64::MIN;
+  let mut min: u64 = u64::MAX;
   let mut vec = Vec::with_capacity(TRIES);
 
   print_header(TRIES, ITERATIONS*1000*2);
 
   for i in 0..TRIES {
-    let lat = do_ctx_inner(i+1, TRIES, child_core)?;
+    let lat = do_ctx_inner(i+1, TRIES, 0)?;
 
     tries += lat;
     vec.push(lat);
@@ -436,8 +437,8 @@ fn do_ctx_inner(th: usize, nr: usize, child_core: u8) -> Result<u64, &'static st
 /// Calls `do_memory_map_inner` multiple times to perform the actual operation
 fn do_memory_map() -> Result<(), &'static str> {
   let mut tries: u64 = 0;
-  let mut max: u64 = core::u64::MIN;
-  let mut min: u64 = core::u64::MAX;
+  let mut max: u64 = u64::MIN;
+  let mut min: u64 = u64::MAX;
   let mut vec = Vec::with_capacity(TRIES);
 
   let overhead_ct = hpet_timing_overhead()?;
@@ -507,8 +508,8 @@ fn do_ipc_rendezvous(pinned: bool, cycles: bool) -> Result<(), &'static str> {
   };
 
   let mut tries: u64 = 0;
-  let mut max: u64 = core::u64::MIN;
-  let mut min: u64 = core::u64::MAX;
+  let mut max: u64 = u64::MIN;
+  let mut min: u64 = u64::MAX;
   let mut vec = Vec::with_capacity(TRIES);
 
   print_header(TRIES, ITERATIONS);
@@ -708,8 +709,8 @@ fn do_ipc_async(pinned: bool, blocking: bool, cycles: bool) -> Result<(), &'stat
   };
 
   let mut tries: u64 = 0;
-  let mut max: u64 = core::u64::MIN;
-  let mut min: u64 = core::u64::MAX;
+  let mut max: u64 = u64::MIN;
+  let mut min: u64 = u64::MAX;
   let mut vec = Vec::with_capacity(TRIES);
 
   print_header(TRIES, ITERATIONS);
@@ -949,8 +950,8 @@ fn do_ipc_simple(pinned: bool, cycles: bool) -> Result<(), &'static str> {
   };
 
   let mut tries: u64 = 0;
-  let mut max: u64 = core::u64::MIN;
-  let mut min: u64 = core::u64::MAX;
+  let mut max: u64 = u64::MIN;
+  let mut min: u64 = u64::MAX;
   let mut vec = Vec::with_capacity(TRIES);
 
   print_header(TRIES, ITERATIONS);
@@ -1170,8 +1171,8 @@ fn do_fs_read_with_size(overhead_ct: u64, fsize_kb: usize, with_open: bool) -> R
   let mut tries: u64 = 0;
   let mut tries_mb: u64 = 0;
   let mut tries_kb: u64 = 0;
-  let mut max: u64 = core::u64::MIN;
-  let mut min: u64 = core::u64::MAX;
+  let mut max: u64 = u64::MIN;
+  let mut min: u64 = u64::MAX;
   let fsize_b = fsize_kb * KB as usize;
   let mut vec = Vec::new();
 
