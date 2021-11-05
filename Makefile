@@ -47,7 +47,7 @@ else
 endif
 
 trusted_image:
-	make ARCH=${ARCH} TRUSTED_PROFILE=${TRUSTED_PROFILE} -C trusted
+	make ARCH=${ARCH} TRUSTED_PROFILE=${TRUSTED_PROFILE} MACHINE=${MACHINE} -C trusted
 
 user_image:
 	make ARCH=${ARCH} USER_PROFILE=${USER_PROFILE} -C user
@@ -77,7 +77,7 @@ emu: ${KERNEL}.bin ${KERNEL}.asm disk
 	${QEMU_CMD} ${QEMU_COMMON_OPTIONS} ${QEMU_DISK_OPTIONS} -kernel $<
 
 debug: ${KERNEL}.bin ${KERNEL}.asm disk
-	${QEMU_CMD} ${QEMU_COMMON_OPTIONS} ${QEMU_DISK_OPTIONS} -kernel $< -s
+	${QEMU_CMD} ${QEMU_COMMON_OPTIONS} ${QEMU_DISK_OPTIONS} -kernel $< -s -S
 
 clean:
 	-cargo clean

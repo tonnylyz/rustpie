@@ -20,6 +20,8 @@ use unwind::catch::catch_unwind;
 
 
 mod blk;
+
+#[cfg(not(feature = "k210"))]
 mod fs;
 mod root;
 mod terminal;

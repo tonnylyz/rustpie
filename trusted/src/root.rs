@@ -36,10 +36,12 @@ pub fn main() {
     server_wrapper(crate::test::server);
   });
 
+  #[cfg(not(feature = "k210"))]
   thread::spawn(|| {
     server_wrapper(crate::blk::virtio_blk::server);
   });
 
+  #[cfg(not(feature = "k210"))]
   thread::spawn(|| {
     server_wrapper(crate::fs::server);
   });
@@ -64,6 +66,7 @@ pub fn main() {
     server_wrapper(crate::pm::event_server);
   });
 
+  #[cfg(not(feature = "k210"))]
   thread::spawn(|| {
     match libtrusted::loader::spawn("shell") {
       Ok(_) => {}
