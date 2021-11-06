@@ -35,8 +35,15 @@ cfg_if::cfg_if! {
   } else if #[cfg(target_arch = "riscv64")] {
     #[path = "arch/riscv64/mod.rs"]
     mod arch;
+
+    #[cfg(feature = "k210")]
+    #[path = "board/riscv64_k210.rs"]
+    mod board;
+
+    #[cfg(not(feature = "k210"))]
     #[path = "board/riscv64_virt.rs"]
     mod board;
+
     #[path = "driver/riscv64_virt/mod.rs"]
     mod driver;
     assert_eq_size!([u8; 0x110], ContextFrame);

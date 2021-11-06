@@ -8,23 +8,11 @@ use crate::lib::interrupt::InterruptController;
 use alloc::vec::Vec;
 use crate::lib::device::Device;
 
-#[cfg(feature = "k210")]
-pub const BOARD_CORE_NUMBER: usize = 1;
-
-#[cfg(not(feature = "k210"))]
 pub const BOARD_CORE_NUMBER: usize = 4;
 
-#[cfg(not(feature = "k210"))]
 pub const BOARD_NORMAL_MEMORY_RANGE: Range<usize> = 0x8000_0000..0xc000_0000;
-#[cfg(not(feature = "k210"))]
 pub const BOARD_DEVICE_MEMORY_RANGE: Range<usize> = 0x0000_0000..0x8000_0000;
 
-#[cfg(feature = "k210")]
-pub const BOARD_NORMAL_MEMORY_RANGE: Range<usize> = 0x8000_0000..0x8060_0000;
-#[cfg(feature = "k210")]
-pub const BOARD_DEVICE_MEMORY_RANGE: Range<usize> = 0x0000_0000..0x8000_0000;
-
-#[no_mangle]
 pub fn init() {
   crate::driver::uart::init();
 }
@@ -35,25 +23,15 @@ pub fn init_per_core() {
   crate::driver::INTERRUPT_CONTROLLER.init();
 }
 
-#[cfg(not(feature = "k210"))]
 pub fn launch_other_cores() {
   HART_SPIN.store(true, Ordering::Relaxed);
 }
 
 
-#[cfg(feature = "k210")]
-pub fn launch_other_cores() {
-  extern "C" {
-    fn KERNEL_ENTRY();
-  }
-  // let _ = crate::driver::hsm::hart_start(1, (KERNEL_ENTRY as usize).kva2pa(), 0);
-}
-
 static HART_SPIN: AtomicBool = AtomicBool::new(false);
 static HART_BOOT: Mutex<Option<usize>> = Mutex::new(None);
 
 #[no_mangle]
-#[cfg(not(feature = "k210"))]
 pub unsafe extern "C" fn hart_spin(core_id: usize) {
   extern "C" {
     fn KERNEL_ENTRY();
@@ -78,12 +56,6 @@ pub unsafe extern "C" fn hart_spin(core_id: usize) {
   crate::main(core_id);
 }
 
-#[no_mangle]
-#[cfg(feature = "k210")]
-pub unsafe extern "C" fn hart_spin(core_id: usize) {
-  crate::main(core_id);
-}
-
 pub fn devices() -> Vec<Device> {
   vec![
     Device::new(
@@ -94,14 +66,5 @@ pub fn devices() -> Vec<Device> {
       vec![
         1
       ]),
-    // Device::new(
-    //   "ns16550",
-    //   vec![
-    //     0x1000_0000..0x1000_1000
-    //   ],
-    //   vec![
-    //     10
-    //   ]
-    // ),
   ]
 }

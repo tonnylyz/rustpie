@@ -367,7 +367,6 @@ pub fn init() {}
 
 #[cfg(feature = "k210")]
 pub fn putc(c: u8) {
-  // let _ = super::sbi::sbi_call(0x01, 0, c as usize, 0, 0);
   let txfifo = (0xffff_ffff_0000_0000usize + 0x38000000) as *mut u32;
   unsafe {
     while txfifo.read_volatile() & 0x80000000 != 0 {}
@@ -377,6 +376,14 @@ pub fn putc(c: u8) {
 
 #[cfg(feature = "k210")]
 pub fn getc() -> Option<u8> {
-  None
+  let rxfifo = (0xffff_ffff_0000_0000usize + 0x38000004) as *mut u32;
+  unsafe {
+    let r = rxfifo.read_volatile();
+    if r & 0x80000000 != 0 {
+      None
+    } else {
+      Some(r as u8)
+    }
+  }
 }
 

@@ -41,8 +41,13 @@ pub fn main() {
     server_wrapper(crate::blk::virtio_blk::server);
   });
 
-  #[cfg(not(feature = "k210"))]
+  #[cfg(feature = "k210")]
   thread::spawn(|| {
+    server_wrapper(crate::blk::k210_sdcard::server);
+  });
+
+  #[cfg(not(feature = "k210"))]
+    thread::spawn(|| {
     server_wrapper(crate::fs::server);
   });
 

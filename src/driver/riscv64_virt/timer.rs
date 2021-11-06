@@ -14,7 +14,11 @@ pub fn next() {
 // 		#address-cells = <0x01>;
 // 		#size-cells = <0x00>;
 // 		timebase-frequency = <0x989680>;
+#[cfg(not(feature = "k210"))]
 const TIMER_FREQUENCY: usize = 0x989680;
+
+#[cfg(feature = "k210")]
+const TIMER_FREQUENCY: usize = 7800000;
 
 pub fn frequency() -> usize {
   TIMER_FREQUENCY
