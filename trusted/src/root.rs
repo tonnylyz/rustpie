@@ -74,7 +74,9 @@ pub fn main() {
   #[cfg(not(feature = "k210"))]
   thread::spawn(|| {
     match libtrusted::loader::spawn("shell") {
-      Ok(_) => {}
+      Ok((asid, tid)) => {
+        microcall::thread_set_status(tid, common::thread::THREAD_STATUS_RUNNABLE);
+      }
       Err(s) => { error!("{}", s); }
     }
     microcall::thread_destroy(0);

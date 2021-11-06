@@ -69,7 +69,7 @@ pub fn main(args: Vec<String>) -> isize {
   let matches = match opts.parse(&args) {
     Ok(m) => m,
     Err(_f) => {
-      println!("{}", _f);
+      error!("{}", _f);
       print_usage(opts);
       return -1;
     }
@@ -87,21 +87,21 @@ pub fn main(args: Vec<String>) -> isize {
 
   // store flags for ipc
   let pinned = if matches.opt_present("p") {
-    print!("PINNED ");
+    // print!("PINNED ");
     true
   } else {
     false
   };
 
   let blocking = if matches.opt_present("b") {
-    print!("BLOCKING ");
+    // print!("BLOCKING ");
     true
   } else {
     false
   };
 
   let cycles = if matches.opt_present("c") {
-    print!("(cycles) ");
+    // print!("(cycles) ");
     true
   } else {
     false
@@ -124,10 +124,10 @@ pub fn main(args: Vec<String>) -> isize {
       Err("Need to enable bm_ipc config option to run the IPC benchmark")
     } else {
       if matches.opt_present("r") {
-        println!("RENDEZVOUS IPC");
+        // println!("RENDEZVOUS IPC");
         do_ipc_rendezvous(pinned, cycles)
       } else if matches.opt_present("a") {
-        println!("ASYNC IPC");
+        // println!("ASYNC IPC");
         do_ipc_async(pinned, blocking, cycles)
       } else {
         Err("Specify channel type to use")
@@ -137,7 +137,7 @@ pub fn main(args: Vec<String>) -> isize {
     if cfg!(not(bm_ipc)) {
       Err("Need to enable bm_ipc config option to run the IPC benchmark")
     } else {
-      println!("SIMPLE IPC");
+      // println!("SIMPLE IPC");
       do_ipc_simple(pinned, cycles)
     }
   } else if matches.opt_present("fs_read_with_open") {
@@ -159,7 +159,7 @@ pub fn main(args: Vec<String>) -> isize {
   match res {
     Ok(()) => return 0,
     Err(e) => {
-      println!("Error in completing benchmark: {:?}", e);
+      error!("Error in completing benchmark: {:?}", e);
       return -1;
     }
   }
@@ -173,7 +173,7 @@ impl Hpet {
   }
 }
 
-fn hpet_timing_overhead() -> Result<u64, ()> {
+fn hpet_timing_overhead() -> Result<u64, &'static str> {
   todo!()
 }
 
@@ -229,7 +229,7 @@ fn do_null_inner(overhead_ct: u64, th: usize, nr: usize) -> Result<u64, &'static
 
   start_hpet = hpet.get_counter();
   for _ in 0..tmp_iterations {
-    todo!() // microcall::null();
+    microcall::null();
   }
   end_hpet = hpet.get_counter();
 
@@ -501,11 +501,11 @@ fn do_memory_map_inner(overhead_ct: u64, th: usize, nr: usize) -> Result<u64, &'
 /// Measures the round trip time to send a 1-byte message on a rendezvous channel. 
 /// Calls `do_ipc_rendezvous_inner` multiple times to perform the actual operation
 fn do_ipc_rendezvous(pinned: bool, cycles: bool) -> Result<(), &'static str> {
-  let child_core = if pinned {
-    Some(CPU_ID!())
-  } else {
-    None
-  };
+  // let child_core = if pinned {
+  //   Some(CPU_ID!())
+  // } else {
+  //   None
+  // };
 
   let mut tries: u64 = 0;
   let mut max: u64 = u64::MIN;
@@ -516,9 +516,9 @@ fn do_ipc_rendezvous(pinned: bool, cycles: bool) -> Result<(), &'static str> {
 
   for i in 0..TRIES {
     let lat = if cycles {
-      do_ipc_rendezvous_inner_cycles(i+1, TRIES, child_core)?
+      do_ipc_rendezvous_inner_cycles(i+1, TRIES, None)?
     } else {
-      do_ipc_rendezvous_inner(i+1, TRIES, child_core)?
+      do_ipc_rendezvous_inner(i+1, TRIES, None)?
     };
     tries += lat;
     vec.push(lat);
@@ -1688,7 +1688,7 @@ fn print_header(tries: usize, iterations: usize) {
   info!("Time unit : {}", T_UNIT);
   info!("Iterations: {}", iterations);
   info!("Tries     : {}", tries);
-  info!("Core      : {}", CPU_ID!());
+  // info!("Core      : {}", CPU_ID!());
   info!("========================================");
 }
 

@@ -33,6 +33,10 @@ path = "src/rm.rs"
 name = "test"
 path = "src/test.rs"
 
+[[bin]]
+name = "hello"
+path = "src/hello.rs"
+
 [dependencies]
 exported = { path = "../lib/exported" }
 fs = { path = "../lib/fs" }

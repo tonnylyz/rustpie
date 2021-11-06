@@ -89,7 +89,6 @@ pub fn spawn<P: AsRef<str>>(cmd: P) -> Result<(u16, usize), &'static str> {
 
     let tid = microcall::thread_alloc(asid, entry_point, common::CONFIG_USER_STACK_TOP - round_up(index, 16), common::CONFIG_USER_STACK_TOP - index).map_err(|_e| "thread alloc failed")?;
     // println!("[LOADER] spawn asid {} tid {}", asid, tid);
-    microcall::thread_set_status(tid, common::thread::THREAD_STATUS_RUNNABLE).map_err(|_e| "thread_set_status failed")?;
 
     Ok((asid, tid))
   } else {

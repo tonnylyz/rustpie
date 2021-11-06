@@ -1,6 +1,7 @@
+use alloc::vec::Vec;
 use common::event::{EVENT_INTERRUPT, EVENT_THREAD_EXIT};
-use common::syscall::error::ERROR_INVARG;
-use spin::Once;
+use common::syscall::error::{ERROR_HOLD_ON, ERROR_INVARG};
+use spin::{Mutex, Once};
 
 use crate::lib::interrupt::INT_SEM;
 use crate::lib::semaphore::{Semaphore, SemaphoreWaitResult};
@@ -23,8 +24,11 @@ pub fn event_wait(event_type: usize, event_num: usize) -> Result {
         }
       }
       Event::ThreadExit => {
-        thread_exit_sem().wait(t.clone());
-        super::thread::thread_yield()
+        let mut q = TID_EXIT.lock();
+        match q.pop() {
+          None => Err(ERROR_HOLD_ON),
+          Some(t) => Ok(Single(t as usize)),
+        }
       }
     }
   } else {
@@ -48,26 +52,11 @@ impl Event {
   }
 }
 
-static THREAD_EXIT_SEM: Once<Semaphore> = Once::new();
-
-fn thread_exit_sem() -> &'static Semaphore {
-  if let Some(s) = THREAD_EXIT_SEM.get() {
-    s
-  } else {
-    THREAD_EXIT_SEM.call_once(|| Semaphore::new())
-  }
-}
+static TID_EXIT: Mutex<Vec<Tid>> = Mutex::new(Vec::new());
 
 // called when a thread exits
 pub fn thread_exit_signal(tid_exited: Tid) {
-  match thread_exit_sem().try_signal() {
-    None => {}
-    Some(waiter) => {
-      waiter.map_with_context(|ctx| {
-        ctx.set_syscall_result(&SyscallResult::Ok(SyscallOutRegisters::Single(tid_exited as usize)));
-      });
-      thread_wake(&waiter);
-    }
-  }
+  let mut q = TID_EXIT.lock();
+  q.push(tid_exited);
 }
 

@@ -25,7 +25,7 @@ enum ProcessStatus {
   Exited,
 }
 
-static PID_ALLOCATOR: AtomicUsize = AtomicUsize::new(0x8000_0000);
+static PID_ALLOCATOR: AtomicUsize = AtomicUsize::new(200);
 
 struct Process {
   pid: usize,
@@ -110,6 +110,7 @@ fn process_request(asid: u16, msg: &Message) -> Result<(usize, usize, usize), us
       if let Ok(cmd) = cmd {
         if let Ok((child_asid, tid)) = libtrusted::loader::spawn(cmd) {
           let pid = PROCESS_MANAGER.register(child_asid, tid, Some(asid as usize));
+          microcall::thread_set_status(tid, common::thread::THREAD_STATUS_RUNNABLE);
           Ok((pid, 0, 0))
         } else {
           Err(PM_RESULT_NOMEM)

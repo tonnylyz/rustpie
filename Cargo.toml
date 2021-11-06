@@ -33,7 +33,7 @@ cortex-a = { git = "https://github.com/tonnylyz/cortex-a" }
 [target.'cfg(target_arch = "riscv64")'.dependencies]
 riscv = { git = "https://github.com/tonnylyz/riscv" }
 #k210-pac = { path = "../k210-pac", default-features = false, features = [], optional = true  }
-k210-hal = { path = "../k210-hal" }
+#k210-hal = { path = "../k210-hal" }
 
 [features]
 default = ["user_release"]

@@ -10,5 +10,9 @@ bm_in_us = []
 getopts = "0.2.21"
 hashbrown = "0.11.2"
 
+microcall = { path = "../microcall" }
+exported = { path = "../exported" }
+
+
 [dependencies.log]
 version = "0.4.8"
