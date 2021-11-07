@@ -1,4 +1,5 @@
-//! A collection of micro-benchmarks for Theseus. 
+#![feature(asm)]
+//! A collection of micro-benchmarks for Theseus.
 //! They include null syscall, context switching, process creation, memory mapping, IPC and file system benchmarks.
 //!
 //! To run the memory mapping benchmark, Theseus should be compiled with the "bm_map" configuration option.
@@ -10,8 +11,8 @@
 
 #[macro_use] extern crate alloc;
 #[macro_use] extern crate log;
-extern crate getopts;
 extern crate hashbrown;
+extern crate microcall;
 
 mod stat;
 
@@ -19,7 +20,8 @@ use core::str;
 use alloc::vec::Vec;
 use alloc::string::{String, ToString};
 use alloc::sync::Arc;
-use getopts::Options;
+use microcall::get_tid;
+
 use stat::calculate_stats;
 
 const SEC_TO_NANO: u64 = 1_000_000_000;
@@ -41,77 +43,53 @@ const T_UNIT: &str = "micro sec";
 #[cfg(not(bm_in_us))]
 const T_UNIT: &str = "nano sec";
 
-pub fn main(args: Vec<String>) -> isize {
-  let prog = get_prog_name();
-
-  let mut opts = Options::new();
-  opts.optflag("h", "help", "print this help menu");
-
-  opts.optflag("", "null", "null syscall");
-  opts.optflag("", "ctx", "inter-thread context switching overhead");
-  opts.optflag("", "spawn", "process creation");
-  opts.optflag("", "memory_map", "create and destroy a memory mapping");
-  opts.optflag("", "ipc", "1-byte IPC round trip time. Need to specify channel type ('a' or 'r')");
-  opts.optflag("", "simple_ipc", "1-byte IPC round trip time with the simple ipc implementation");
-  opts.optflag("", "fs_read_with_open", "file read including open");
-  opts.optflag("", "fs_read_only", "file read");
-  opts.optflag("", "fs_create", "file create");
-  opts.optflag("", "fs_delete", "file delete");
-  opts.optflag("", "fs", "test code for checking FS' ability");
-
-  opts.optflag("a", "async", "Run IPC bm for the async channel");
-  opts.optflag("r", "rendezvous", "Run IPC bm for the rendezvous channel");
-  opts.optflag("p", "pinned", "Sender and Receiver should be pinned to the same core in the IPC bm");
-  opts.optflag("b", "blocking", "Sender and Receiver should use blocking versions in the async IPC bm");
-  opts.optflag("c", "cycles", "Measure the IPC times in reference cycles (need to have a PMU for this option)");
-
-
-  let matches = match opts.parse(&args) {
-    Ok(m) => m,
-    Err(_f) => {
-      error!("{}", _f);
-      print_usage(opts);
-      return -1;
-    }
-  };
-
-  if matches.opt_present("h") {
-    print_usage(opts);
-    return 0;
-  }
-
-  // if !check_myrq() {
-  //   info!("{} cannot run on a busy core (#{}). Pin me on an idle core.", prog, CPU_ID!());
-  //   return 0;
-  // }
-
-  // store flags for ipc
-  let pinned = if matches.opt_present("p") {
-    // print!("PINNED ");
-    true
-  } else {
-    false
-  };
-
-  let blocking = if matches.opt_present("b") {
-    // print!("BLOCKING ");
-    true
-  } else {
-    false
-  };
-
-  let cycles = if matches.opt_present("c") {
-    // print!("(cycles) ");
-    true
-  } else {
-    false
-  };
-
-  let res = if matches.opt_present("null") {
+pub fn main(args: Vec<&str>) -> isize {
+  let res = if args.contains(&"null") {
     do_null()
-  } else if matches.opt_present("spawn") {
+  } else /*if args.contains(&"spawn")*/ {
     do_spawn()
-  } else if matches.opt_present("ctx") {
+  }/* else if matches.opt_present("ctx") {
+    do_ctx()
+  } else if matches.opt_present("memory_map") {
+    if cfg!(bm_map) {
+      do_memory_map()
+    } else {
+      Err("Need to enable bm_map config option to run the memory_map benchmark")
+    }
+  } else if matches.opt_present("ipc") {
+    if cfg!(not(bm_ipc)) {
+      Err("Need to enable bm_ipc config option to run the IPC benchmark")
+    } else {
+      if matches.opt_present("r") {
+        // println!("RENDEZVOUS IPC");
+        do_ipc_rendezvous(pinned, cycles)
+      } else if matches.opt_present("a") {
+        // println!("ASYNC IPC");
+        do_ipc_async(pinned, blocking, cycles)
+      } else {
+        Err("Specify channel type to use")
+      }
+    }
+  } else if matches.opt_present("simple_ipc") {
+    if cfg!(not(bm_ipc)) {
+      Err("Need to enable bm_ipc config option to run the IPC benchmark")
+    } else {
+      // println!("SIMPLE IPC");
+      do_ipc_simple(pinned, cycles)
+    }
+  } else if matches.opt_present("fs_read_with_open") {
+    do_fs_read(true /*with_open*/)
+  } else if matches.opt_present("fs_read_only") {
+    do_fs_read(false /*with_open*/)
+  } else if matches.opt_present("fs_create") {
+    do_fs_create_del()
+  } else if matches.opt_present("fs_delete") {
+    do_fs_delete()
+  } else if matches.opt_present("fs") {
+    do_fs_cap_check()
+  } else {
+    warn!("Unknown command: {}", args[0]);
+    print_usage(opts);/* else if matches.opt_present("ctx") {
     do_ctx()
   } else if matches.opt_present("memory_map") {
     if cfg!(bm_map) {
@@ -154,7 +132,9 @@ pub fn main(args: Vec<String>) -> isize {
     warn!("Unknown command: {}", args[0]);
     print_usage(opts);
     Err("Unknown command")
-  };
+  }*/
+    Err("Unknown command")
+  }*/;
 
   match res {
     Ok(()) => return 0,
@@ -169,16 +149,21 @@ pub fn main(args: Vec<String>) -> isize {
 struct Hpet;
 impl Hpet {
   fn get_counter(&self) -> u64 {
-    todo!()
+    // let r;
+    // unsafe {
+    //   asm!("mrs {}, pmccntr_el0", out(reg) r);
+    // }
+    // r
+    0
   }
 }
 
 fn hpet_timing_overhead() -> Result<u64, &'static str> {
-  todo!()
+  Ok(0)
 }
 
 fn get_hpet() -> Option<Hpet> {
-  todo!()
+  Some(Hpet)
 }
 
 /// Measures the time for null syscall. 
@@ -221,7 +206,7 @@ fn do_null() -> Result<(), &'static str> {
 fn do_null_inner(overhead_ct: u64, th: usize, nr: usize) -> Result<u64, &'static str> {
   let start_hpet: u64;
   let end_hpet: u64;
-  let mut mypid = usize::MAX;
+  let mut mypid = get_tid();
   let hpet = get_hpet().ok_or("Could not retrieve hpet counter")?;
 
   // Since this test takes very little time we multiply the default iterations by 1000
@@ -307,8 +292,8 @@ fn do_spawn_inner(overhead_ct: u64, th: usize, nr: usize, _child_core: u8) -> Re
   let iterations = 100;
   for _ in 0..iterations{
     start_hpet = hpet.get_counter();
-    todo!();
-    // spawn("hello");
+    // exported::pm::exec("hello");
+    libtrusted::loader::spawn("hello");
     end_hpet = hpet.get_counter();
     delta_hpet += end_hpet - start_hpet - overhead_ct;
   }
@@ -320,7 +305,7 @@ fn do_spawn_inner(overhead_ct: u64, th: usize, nr: usize, _child_core: u8) -> Re
 
   Ok(delta_time_avg)
 }
-
+/*
 
 /// Measures the time to switch between two kernel threads. 
 /// Calls `do_ctx_inner` multiple times to perform the actual operation
@@ -702,11 +687,11 @@ fn rendezvous_task_receiver((sender, receiver): (rendezvous::Sender<u8>, rendezv
 /// Measures the round trip time to send a 1-byte message on an async channel. 
 /// Calls `do_ipc_async_inner` multiple times to perform the actual operation
 fn do_ipc_async(pinned: bool, blocking: bool, cycles: bool) -> Result<(), &'static str> {
-  let child_core = if pinned {
-    Some(CPU_ID!())
-  } else {
-    None
-  };
+  // let child_core = if pinned {
+  //   Some(CPU_ID!())
+  // } else {
+  //   None
+  // };
 
   let mut tries: u64 = 0;
   let mut max: u64 = u64::MIN;
@@ -943,11 +928,11 @@ fn async_task_receiver_nonblocking((sender, receiver): (async_channel::Sender<u8
 /// Measures the round trip time to send a 1-byte message on a simple channel. 
 /// Calls `do_ipc_simple_inner` multiple times to perform the actual operation
 fn do_ipc_simple(pinned: bool, cycles: bool) -> Result<(), &'static str> {
-  let child_core = if pinned {
-    Some(CPU_ID!())
-  } else {
-    None
-  };
+  // let child_core = if pinned {
+  //   Some(CPU_ID!())
+  // } else {
+  //   None
+  // };
 
   let mut tries: u64 = 0;
   let mut max: u64 = u64::MIN;
@@ -1508,49 +1493,6 @@ fn do_fs_delete_inner(fsize_b: usize, overhead_ct: u64) -> Result<(), &'static s
 }
 
 
-
-/// Helper function to get the name of current task
-fn get_prog_name() -> String {
-  let taskref = match task::get_my_current_task() {
-    Some(t) => t,
-    None => {
-      info!("failed to get current task");
-      return "Unknown".to_string();
-    }
-  };
-
-  let locked_task = taskref.lock();
-  locked_task.name.clone()
-}
-
-/// Helper function to get the PID of current task
-fn getpid() -> usize {
-  let taskref = match task::get_my_current_task() {
-    Some(t) => t,
-    None => {
-      info!("failed to get current task");
-      return 0;
-    }
-  };
-
-  let locked_task = taskref.lock();
-  locked_task.id
-}
-
-
-/// Helper function to convert ticks to time
-fn hpet_2_time(msg_header: &str, hpet: u64) -> u64 {
-  let t = if cfg!(bm_in_us) {hpet_2_us(hpet)} else {hpet_2_ns(hpet)};
-  if msg_header != "" {
-    let mut msg = format!("{} {} in ", msg_header, t);
-    msg += if cfg!(bm_in_us) {"us"} else {"ns"};
-    info!("{}", msg);
-  }
-
-  t
-}
-
-
 /// Helper function to get current working directory
 fn get_cwd() -> Option<DirRef> {
   if let Some(taskref) = task::get_my_current_task() {
@@ -1682,15 +1624,7 @@ fn print_usage(opts: Options) {
 
 const USAGE: &'static str = "Usage: OPTION ARG";
 
-/// Print header of each test
-fn print_header(tries: usize, iterations: usize) {
-  info!("========================================");
-  info!("Time unit : {}", T_UNIT);
-  info!("Iterations: {}", iterations);
-  info!("Tries     : {}", tries);
-  // info!("Core      : {}", CPU_ID!());
-  info!("========================================");
-}
+
 
 
 
@@ -1706,4 +1640,29 @@ fn yield_task(_a: u32) -> u32 {
 /// Task generated to measure overhead of context switching
 fn overhead_task(_a: u32) -> u32 {
   _a
+}
+
+
+*/*/
+
+/// Print header of each test
+fn print_header(tries: usize, iterations: usize) {
+  info!("========================================");
+  info!("Time unit : {}", T_UNIT);
+  info!("Iterations: {}", iterations);
+  info!("Tries     : {}", tries);
+  // info!("Core      : {}", CPU_ID!());
+  info!("========================================");
+}
+
+
+/// Helper function to convert ticks to time
+fn hpet_2_time(msg_header: &str, hpet: u64) -> u64 {
+  if msg_header != "" {
+    let mut msg = format!("{} {} in ", msg_header, hpet);
+    msg += "us";
+    info!("{}", msg);
+  }
+
+  hpet
 }

@@ -19,6 +19,8 @@ common = { path = "../common" }
 redox = { path = "../lib/redox" }
 fs = { path = "../lib/fs" }
 unwind = { path = "../lib/unwind" }
+bm = { path = "../lib/bm" }
+k210-hal = { git = "https://github.com/tonnylyz/k210-hal", optional = true }
 
 [dependencies.tock-registers]
 version = "0.7.0"
@@ -28,4 +30,4 @@ features = ["register_types"]
 
 [features]
 default = []
-k210 = []
+k210 = ["k210-hal"]
