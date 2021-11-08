@@ -59,6 +59,7 @@ pub use ctrlr0::FRAME_FORMAT_A as frame_format;
 pub use spi_ctrlr0::AITM_A as aitm;
 /** Borrow tmod from pac */
 pub use ctrlr0::TMOD_A as tmod;
+use libtrusted::mm::virt_to_phys;
 
 pub trait SPI {
   fn configure(
@@ -206,7 +207,8 @@ impl<IF: SPI01> SPI for SPIImpl<IF> {
       self.spi.dmacr.write(|w| w.bits(0x3));    /*enable dma receive */
 
       sysctl::dma_select(channel_num, IF::DMA_RX);
-      dmac.set_single_mode(channel_num, self.spi.dr.as_ptr() as u64, rx.as_ptr() as u64,
+      info!("recv_data_dma src {:016x} dst {:016x}",  self.spi.dr.as_ptr() as u64 & 0xffff_ffff, virt_to_phys(rx.as_ptr() as usize) as u64);
+      dmac.set_single_mode(channel_num, self.spi.dr.as_ptr() as u64 & 0xffff_ffff,  virt_to_phys(rx.as_ptr() as usize) as u64,
                            address_increment::NOCHANGE, address_increment::INCREMENT,
                            burst_length::LENGTH_1, transfer_width::WIDTH_32, rx.len() as u32);
       self.spi.dr[0].write(|w| w.bits(0xffffffff));
@@ -252,7 +254,8 @@ impl<IF: SPI01> SPI for SPIImpl<IF> {
       self.spi.ssienr.write(|w| w.bits(0x01));
 
       sysctl::dma_select(channel_num, IF::DMA_TX);
-      dmac.set_single_mode(channel_num, tx.as_ptr() as u64, self.spi.dr.as_ptr() as u64,
+      info!("send_data_dma src {:016x} dst {:016x}",  virt_to_phys(tx.as_ptr() as usize) as u64, self.spi.dr.as_ptr() as u64 & 0xffff_ffff);
+      dmac.set_single_mode(channel_num, virt_to_phys(tx.as_ptr() as usize) as u64, self.spi.dr.as_ptr() as u64 & 0xffff_ffff,
                            address_increment::INCREMENT, address_increment::NOCHANGE,
                            burst_length::LENGTH_4, transfer_width::WIDTH_32, tx.len() as u32);
       self.spi.ser.write(|w| w.bits(1 << chip_select));

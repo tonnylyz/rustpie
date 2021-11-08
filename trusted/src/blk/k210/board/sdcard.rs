@@ -593,14 +593,15 @@ impl SDCard {
       return Err(());
     }
     let mut error = false;
-    let mut dma_chunk = [0u32; SEC_LEN];
+    let dma_frame: usize = 0x8_0000_0000;
+    let dma_chunk = unsafe { core::slice::from_raw_parts_mut(dma_frame as *mut u32, SEC_LEN) };
     for chunk in data_buf.chunks_mut(SEC_LEN) {
       if self.get_response() != SD_START_DATA_SINGLE_BLOCK_READ {
         error = true;
         break;
       }
       /* Read the SD block data : read NumByteToRead data */
-      self.read_data_dma(&mut dma_chunk);
+      self.read_data_dma(dma_chunk);
       /* Place the data received as u32 units from DMA into the u8 target buffer */
       for (a, b) in chunk.iter_mut().zip(dma_chunk.iter()) {
         *a = (b & 0xff) as u8;
@@ -654,7 +655,8 @@ impl SDCard {
       self.end_cmd();
       return Err(());
     }
-    let mut dma_chunk = [0u32; SEC_LEN];
+    let dma_frame: usize = 0x8_0000_0000;
+    let dma_chunk = unsafe { core::slice::from_raw_parts_mut(dma_frame as *mut u32, SEC_LEN) };
     for chunk in data_buf.chunks(SEC_LEN) {
       /* Send the data token to signify the start of the data */
       self.write_data(&frame);
@@ -662,7 +664,7 @@ impl SDCard {
       for (a, &b) in dma_chunk.iter_mut().zip(chunk.iter()) {
         *a = b.into();
       }
-      self.write_data_dma(&mut dma_chunk);
+      self.write_data_dma(dma_chunk);
       /* Put dummy CRC bytes */
       self.write_data(&[0xff, 0xff]);
       /* Read data response */

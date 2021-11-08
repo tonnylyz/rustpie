@@ -50,7 +50,7 @@ pub fn server() {
   let sdcard = SDCARD.get().unwrap();
   let buf = valloc(1);
   unsafe { sdcard.read_sector(core::slice::from_raw_parts_mut(buf as *mut u8, 4096), 8); }
-  info!("read ok");
+  info!("read ok to {:016x}", virt_to_phys(buf as usize));
   let content = unsafe { core::slice::from_raw_parts(buf, 4096) };
   for i in 0..4096 {
     print!("{:02x} ", content[i]);

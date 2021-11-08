@@ -74,7 +74,7 @@ mod macros {
     pub bytes: Bytes,
   }
 
-macro_rules! include_bytes_align_as {
+  macro_rules! include_bytes_align_as {
   ($align_ty:ty, $path:literal) => {
     {  // const block expression to encapsulate the static
       use $crate::macros::AlignedAs;
@@ -137,13 +137,21 @@ pub unsafe fn main(core_id: arch::CoreId) -> ! {
     page_table.insert_page(common::CONFIG_USER_STACK_TOP - arch::PAGE_SIZE,
                            mm::Frame::from(stack_frame),
                            mm::page_table::EntryAttribute::user_default()).unwrap();
+
+
+    let dma_frame = mm::page_pool::page_alloc().expect("failed to allocate trusted dma frame");
+    let dma_frame_no_cache = dma_frame.pa() - 0x40000000;
+    page_table.insert_page(0x8_0000_0000,
+                           mm::Frame::Device(dma_frame_no_cache),
+                           mm::page_table::EntryAttribute::user_device()).unwrap();
+
     info!("user stack ok");
     let t = crate::lib::thread::new_user(
       entry,
       common::CONFIG_USER_STACK_TOP,
       0,
       a.clone(),
-      None
+      None,
     );
     lib::thread::thread_wake(&t);
 
@@ -152,7 +160,7 @@ pub unsafe fn main(core_id: arch::CoreId) -> ! {
         a.page_table().insert_page(
           0x8_0000_0000 + uf.pa(),
           uf.clone(),
-          mm::page_table::EntryAttribute::user_device()
+          mm::page_table::EntryAttribute::user_device(),
         ).unwrap();
       }
       for i in device.interrupts.iter() {

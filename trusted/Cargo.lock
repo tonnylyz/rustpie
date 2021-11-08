@@ -157,7 +157,7 @@ dependencies = [
 [[package]]
 name = "k210-pac"
 version = "0.2.0"
-source = "git+https://github.com/tonnylyz/k210-pac#370db4066feca368f409babae1b088efc8f6211e"
+source = "git+https://github.com/tonnylyz/k210-pac#6c51865daaf2c15b4c12d9683bd95e6b53cd196d"
 dependencies = [
  "bare-metal",
  "vcell",
