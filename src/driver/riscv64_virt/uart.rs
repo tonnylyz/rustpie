@@ -382,7 +382,11 @@ pub fn getc() -> Option<u8> {
     if r & 0x80000000 != 0 {
       None
     } else {
-      Some(r as u8)
+      if r == 0xa {
+        Some(0xd)
+      } else {
+        Some(r as u8)
+      }
     }
   }
 }

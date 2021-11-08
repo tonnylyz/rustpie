@@ -9,9 +9,11 @@ use super::super::soc::gpio;
 use super::super::soc::gpiohs;
 use super::super::soc::spi::{aitm, frame_format, tmod, work_mode, SPI};
 
-pub struct SDCard {
+pub struct SDCard<'a, SPI> {
+  spi: SPI,
   spi_cs: u32,
   cs_gpionum: u8,
+  dmac: &'a DMAC,
   channel: dma_channel,
 }
 
@@ -146,18 +148,15 @@ pub struct SD_CardInfo {
   pub CardBlockSize: u64, /* Card Block Size */
 }
 
-impl SDCard {
-  pub fn new(spi_cs: u32, cs_gpionum: u8, channel: dma_channel) -> Self {
+impl<'a, X: SPI> SDCard<'a, X> {
+  pub fn new(spi: X, spi_cs: u32, cs_gpionum: u8, dmac: &'a DMAC, channel: dma_channel) -> Self {
     Self {
+      spi,
       spi_cs,
       cs_gpionum,
+      dmac,
       channel,
     }
-  }
-
-  fn spi(&self) -> SPIImpl<SPI0> {
-    let p = k210_hal::pac::Peripherals::take().unwrap();
-    p.SPI0.constrain()
   }
 
   fn CS_HIGH(&self) {
@@ -169,16 +168,16 @@ impl SDCard {
   }
 
   fn HIGH_SPEED_ENABLE(&self) {
-    self.spi().set_clk_rate(10000000);
+    self.spi.set_clk_rate(10000000);
   }
 
   fn lowlevel_init(&self) {
     gpiohs::set_direction(self.cs_gpionum, gpio::direction::OUTPUT);
-    self.spi().set_clk_rate(200000);
+    self.spi.set_clk_rate(200000);
   }
 
   fn write_data(&self, data: &[u8]) {
-    self.spi().configure(
+    self.spi.configure(
       work_mode::MODE0,
       frame_format::STANDARD,
       8, /* data bits */
@@ -189,11 +188,11 @@ impl SDCard {
       aitm::STANDARD,
       tmod::TRANS,
     );
-    self.spi().send_data(self.spi_cs, data);
+    self.spi.send_data(self.spi_cs, data);
   }
 
   fn write_data_dma(&self, data: &[u32]) {
-    self.spi().configure(
+    self.spi.configure(
       work_mode::MODE0,
       frame_format::STANDARD,
       8, /* data bits */
@@ -204,14 +203,12 @@ impl SDCard {
       aitm::STANDARD,
       tmod::TRANS,
     );
-    let p = k210_hal::pac::Peripherals::take().unwrap();
-    let dmac = p.DMAC.new_without_init();
-    self.spi()
-      .send_data_dma(&dmac, self.channel, self.spi_cs, data);
+    self.spi
+      .send_data_dma(self.dmac, self.channel, self.spi_cs, data);
   }
 
   fn read_data(&self, data: &mut [u8]) {
-    self.spi().configure(
+    self.spi.configure(
       work_mode::MODE0,
       frame_format::STANDARD,
       8, /* data bits */
@@ -222,11 +219,11 @@ impl SDCard {
       aitm::STANDARD,
       tmod::RECV,
     );
-    self.spi().recv_data(self.spi_cs, data);
+    self.spi.recv_data(self.spi_cs, data);
   }
 
   fn read_data_dma(&self, data: &mut [u32]) {
-    self.spi().configure(
+    self.spi.configure(
       work_mode::MODE0,
       frame_format::STANDARD,
       8, /* data bits */
@@ -237,10 +234,8 @@ impl SDCard {
       aitm::STANDARD,
       tmod::RECV,
     );
-    let p = k210_hal::pac::Peripherals::take().unwrap();
-    let dmac = p.DMAC.new_without_init();
-    self.spi()
-      .recv_data_dma(&dmac, self.channel, self.spi_cs, data);
+    self.spi
+      .recv_data_dma(self.dmac, self.channel, self.spi_cs, data);
   }
 
   /*

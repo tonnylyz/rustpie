@@ -1,6 +1,7 @@
 
 /** I/O pins for FPIOA */
 #[derive(Copy, Clone)]
+#[allow(non_camel_case_types)]
 pub enum io {
   /** JTAG TCK */
   JTAG_TCK = 0,

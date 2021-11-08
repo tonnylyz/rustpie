@@ -2,6 +2,7 @@
 use k210_hal::pac;
 
 #[derive(Copy, Clone)]
+#[allow(non_camel_case_types)]
 pub enum function {
   JTAG_TCLK = 0,        /* JTAG Test Clock */
   JTAG_TDI = 1,         /* JTAG Test Data In */

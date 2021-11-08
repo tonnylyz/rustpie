@@ -9,12 +9,10 @@ use super::sysctl;
 pub trait DMACExt: Sized {
   /// Constrains DVP peripheral
   fn configure(self) -> DMAC;
-  fn new_without_init(self) -> DMAC;
 }
 
 impl DMACExt for pac::DMAC {
   fn configure(self) -> DMAC { DMAC::new(self) }
-  fn new_without_init(self) -> DMAC { DMAC::new_without_init(self) }
 }
 
 /** DMAC peripheral abstraction */
@@ -62,10 +60,6 @@ impl DMAC {
     let rv = Self { dmac };
     rv.init();
     rv
-  }
-
-  fn new_without_init(dmac: pac::DMAC) -> Self {
-    Self { dmac }
   }
 
   /** Get DMAC ID */
