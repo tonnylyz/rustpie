@@ -54,9 +54,9 @@ user_image:
 
 ${KERNEL}.bin: ${KERNEL}
 	llvm-objcopy $< -O binary $@
-ifeq (${MACHINE}, k210)
+
+${KERNEL}-flash.bin: ${KERNEL}.bin
 	cat rustsbi-k210.bin ${KERNEL}.bin > ${KERNEL}-flash.bin
-endif
 
 ${KERNEL}.asm: ${KERNEL}
 	llvm-objdump --demangle -d $< > $@
@@ -74,10 +74,13 @@ QEMU_DISK_OPTIONS := -drive file=disk.img,if=none,format=raw,id=x0 \
 QEMU_COMMON_OPTIONS := -serial stdio -display none -smp 4 -m 2048
 
 emu: ${KERNEL}.bin ${KERNEL}.asm disk
-	${QEMU_CMD} ${QEMU_COMMON_OPTIONS} ${QEMU_DISK_OPTIONS} -kernel $<
+	${QEMU_CMD} ${QEMU_COMMON_OPTIONS} ${QEMU_DISK_OPTIONS} -kernel $< -s
 
 debug: ${KERNEL}.bin ${KERNEL}.asm disk
 	${QEMU_CMD} ${QEMU_COMMON_OPTIONS} ${QEMU_DISK_OPTIONS} -kernel $< -s -S
+
+flash: ${KERNEL}-flash.bin
+	sudo kflash -tp /dev/ttyUSB0 -b 3000000 -B dan ${KERNEL}-flash.bin
 
 clean:
 	-cargo clean
@@ -98,6 +101,23 @@ disk: user_image
 	cp user/target/${ARCH}/${USER_PROFILE}/hello disk/
 	sync
 	umount disk
+
+sdcard: user_image
+	rm -rf sdcard
+	mkdir sdcard
+	sudo redoxfs-mkfs /dev/sda
+	sudo redoxfs /dev/sda sdcard
+	sudo cp user/target/${ARCH}/${USER_PROFILE}/shell sdcard/
+	sudo cp user/target/${ARCH}/${USER_PROFILE}/cat sdcard/
+	sudo cp user/target/${ARCH}/${USER_PROFILE}/ls sdcard/
+	sudo cp user/target/${ARCH}/${USER_PROFILE}/mkdir sdcard/
+	sudo cp user/target/${ARCH}/${USER_PROFILE}/touch sdcard/
+	sudo cp user/target/${ARCH}/${USER_PROFILE}/rm sdcard/
+	sudo cp user/target/${ARCH}/${USER_PROFILE}/test sdcard/
+	sudo cp user/target/${ARCH}/${USER_PROFILE}/hello sdcard/
+	sync
+	sudo umount sdcard
+
 
 dependencies:
 	rustup component add rust-src

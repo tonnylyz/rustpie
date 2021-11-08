@@ -5,6 +5,7 @@ use alloc::collections::BTreeMap;
 use alloc::boxed::Box;
 use alloc::string::String;
 use alloc::vec::Vec;
+use libtrusted::mm::{virtual_alloc, virtual_free};
 use crate::alloc::string::ToString;
 
 pub trait Resource<D: Disk> {
@@ -199,7 +200,7 @@ impl Fmap {
         // Memory provided to fmap must be page aligned and sized
         let align = 4096;
         // let address = memalign(align, ((map.size + align - 1) / align) * align);
-        let address = libtrusted::mm::valloc((map.size + align - 1) / align);
+        let address = virtual_alloc((map.size + align - 1) / align, true).unwrap() as *mut u8;
         if address.is_null() {
             return Err(Error::new(ENOMEM));
         }
@@ -245,11 +246,10 @@ impl Fmap {
 
 impl Drop for Fmap {
     fn drop(&mut self) {
-        // extern "C" {
-        //     fn free(ptr: *mut u8);
-        // }
-        //
-        // free(self.data.as_mut_ptr());
+        let align = 4096;
+        let map_size = self.data.len();
+        let num = (map_size + align - 1) / align;
+        virtual_free(self.data.as_mut_ptr() as usize, num);
     }
 }
 

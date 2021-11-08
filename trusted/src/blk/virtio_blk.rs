@@ -436,7 +436,7 @@ fn wait_for_irq() {
 pub fn server() {
   init();
   info!("server started t{}",  get_tid());
-  microcall::server_register(common::server::SERVER_VIRTIO_BLK).unwrap();
+  microcall::server_register(common::server::SERVER_BLK).unwrap();
 
   loop {
     let (client_tid, msg) = microcall::message::Message::receive().unwrap();

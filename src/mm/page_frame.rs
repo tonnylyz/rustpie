@@ -60,7 +60,7 @@ impl Frame {
 
 impl Drop for PhysicalFrame {
   fn drop(&mut self) {
-    trace!("drop frame {:016x}", self.pa);
+    // info!("drop frame {:016x}", self.pa);
     super::page_pool::page_free(self.pa).expect("physical page drop failed");
   }
 }

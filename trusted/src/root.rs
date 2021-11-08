@@ -37,17 +37,16 @@ pub fn main() {
   });
 
   #[cfg(not(feature = "k210"))]
-  thread::spawn(|| {
+    thread::spawn(|| {
     server_wrapper(crate::blk::virtio_blk::server);
   });
 
   #[cfg(feature = "k210")]
-  thread::spawn(|| {
+    thread::spawn(|| {
     server_wrapper(crate::blk::k210_sdcard::server);
   });
 
-  #[cfg(not(feature = "k210"))]
-    thread::spawn(|| {
+  thread::spawn(|| {
     server_wrapper(crate::fs::server);
   });
 
@@ -71,7 +70,6 @@ pub fn main() {
     server_wrapper(crate::pm::event_server);
   });
 
-  #[cfg(not(feature = "k210"))]
   thread::spawn(|| {
     match libtrusted::loader::spawn("shell") {
       Ok((asid, tid)) => {

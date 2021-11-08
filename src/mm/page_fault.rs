@@ -1,4 +1,4 @@
-use common::{CONFIG_USER_STACK_BTM, CONFIG_USER_STACK_TOP};
+use common::{CONFIG_USER_STACK_BTM, CONFIG_USER_STACK_TOP, CONFIG_VIRTUAL_HEAP_BTM, CONFIG_VIRTUAL_HEAP_TOP};
 
 use crate::arch::PAGE_SIZE;
 use crate::lib::cpu::cpu;
@@ -22,7 +22,6 @@ pub fn handle() {
 
         let addr = crate::arch::Arch::fault_address();
         let va = round_down(addr, PAGE_SIZE);
-        trace!("thread t{} core {} page fault {:x}", t.tid(), crate::arch::Arch::core_id(), va);
 
         // NOTE: allocate stack region automatically
         if addr > CONFIG_USER_STACK_BTM && addr < CONFIG_USER_STACK_TOP {
@@ -49,6 +48,9 @@ pub fn handle() {
             }
           }
         }
+        let pt = a.page_table();
+        info!("thread t{} core {} page fault va {:x} pte {:X?} fall through", t.tid(), crate::arch::Arch::core_id(), va, pt.lookup_page(va));
+
         // default to user exception handler
         crate::lib::exception::handle_user();
       }

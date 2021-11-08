@@ -31,24 +31,7 @@ pub fn virt_to_phys(va: usize) -> usize {
 
 static VALLOC_BASE: Mutex<usize> = Mutex::new(0x4_0000_0000);
 
-pub fn valloc(num_of_page: usize) -> *mut u8 {
-  let mut base = VALLOC_BASE.lock();
-
-  let current = *base;
-  *base += num_of_page * PAGE_SIZE;
-  for va in (current..(current + num_of_page * PAGE_SIZE)).step_by(PAGE_SIZE) {
-    mem_alloc(0, va, default_page_attribute());
-  }
-  current as *mut u8
-}
-
-pub fn virtual_page_alloc(num_of_page: usize) -> usize {
-  let mut base = VALLOC_BASE.lock();
-
-  let current = *base;
-  *base += num_of_page * PAGE_SIZE;
-  current
-}
+pub use heap::{virtual_alloc, virtual_free};
 
 pub trait PageAttribute {
   fn executable(&self) -> bool;

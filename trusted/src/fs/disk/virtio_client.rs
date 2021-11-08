@@ -3,7 +3,7 @@ use common::PAGE_SIZE;
 
 use redox::*;
 use microcall::message::Message;
-use libtrusted::mm::{Entry, PageAttribute, default_page_attribute};
+use libtrusted::mm::{Entry, PageAttribute, default_page_attribute, virtual_alloc, virtual_free};
 
 pub struct VirtioClient;
 
@@ -14,14 +14,13 @@ impl VirtioClient {
 
   fn read_block_unaligned(&self, block: u64, buffer: &mut [u8]) -> Result<usize> {
     assert_eq!(buffer.len(), PAGE_SIZE);
-    let va_tmp = libtrusted::mm::virtual_page_alloc(1);
-    microcall::mem_alloc(0, va_tmp, default_page_attribute());
+    let va_tmp = virtual_alloc(1, true).unwrap();
     let aligned_buffer = unsafe { core::slice::from_raw_parts_mut(va_tmp as *mut u8, PAGE_SIZE) };
     let read = self.read_block_aligned(block, aligned_buffer)?;
     for i in 0..PAGE_SIZE {
       buffer[i] = aligned_buffer[i];
     }
-    microcall::mem_unmap(0, va_tmp);
+    virtual_free(va_tmp, 1);
     Ok(read)
   }
 
@@ -32,7 +31,7 @@ impl VirtioClient {
       b: 8,
       c: buffer.as_mut_ptr() as usize,
       d: 0
-    }.call(common::server::SERVER_VIRTIO_BLK).map_err(|_| Error::new(EIO))?;
+    }.call(common::server::SERVER_BLK).map_err(|_| Error::new(EIO))?;
     if msg.a == 0 {
       Ok(buffer.len())
     } else {
@@ -42,14 +41,13 @@ impl VirtioClient {
 
   fn write_block_unaligned(&self, block: u64, buffer: &[u8]) -> Result<usize> {
     assert_eq!(buffer.len(), PAGE_SIZE);
-    let va_tmp = libtrusted::mm::virtual_page_alloc(1);
-    microcall::mem_alloc(0, va_tmp, default_page_attribute());
+    let va_tmp = virtual_alloc(1, true).unwrap();
     let aligned_buffer = unsafe { core::slice::from_raw_parts_mut(va_tmp as *mut u8, PAGE_SIZE) };
     for i in 0..PAGE_SIZE {
       aligned_buffer[i] = buffer[i];
     }
     let read = self.write_block_aligned(block, aligned_buffer)?;
-    microcall::mem_unmap(0, va_tmp);
+    virtual_free(va_tmp, 1);
     Ok(read)
   }
 
@@ -60,7 +58,7 @@ impl VirtioClient {
       b: 8,
       c: buffer.as_ptr() as usize,
       d: 1
-    }.call(common::server::SERVER_VIRTIO_BLK).map_err(|_| Error::new(EIO))?;
+    }.call(common::server::SERVER_BLK).map_err(|_| Error::new(EIO))?;
     if msg.a == 0 {
       Ok(buffer.len())
     } else {
@@ -106,7 +104,7 @@ impl Disk for VirtioClient {
       c: 0,
       d: 2
     };
-    let msg = msg.call(common::server::SERVER_VIRTIO_BLK).map_err(|_| Error::new(EIO))?;
+    let msg = msg.call(common::server::SERVER_BLK).map_err(|_| Error::new(EIO))?;
     if msg.a == 0 {
       Err(Error::new(EIO))
     } else {

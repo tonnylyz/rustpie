@@ -28,6 +28,8 @@ pub const CONFIG_USER_STACK_TOP: usize = 0x3f_8000_0000;
 pub const CONFIG_USER_STACK_BTM: usize = 0x3f_0000_0000;
 pub const CONFIG_EXCEPTION_STACK_TOP: usize = 0x3f_8000_1000;
 pub const CONFIG_HEAP_BTM: usize = 0x10_0000_0000;
+pub const CONFIG_VIRTUAL_HEAP_BTM: usize = 0x20_0000_0000;
+pub const CONFIG_VIRTUAL_HEAP_TOP: usize = 0x20_1000_0000;
 
 pub const CONFIG_ELF_IMAGE: usize = 0x8000_0000;
 
@@ -77,7 +79,7 @@ pub mod syscall {
 }
 
 pub mod server {
-  pub const SERVER_VIRTIO_BLK: usize = 0;
+  pub const SERVER_BLK: usize = 0;
   pub const SERVER_REDOX_FS: usize = 1;
   pub const SERVER_TERMINAL: usize = 2;
   pub const SERVER_MM: usize = 3;

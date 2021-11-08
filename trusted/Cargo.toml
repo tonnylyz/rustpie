@@ -31,3 +31,7 @@ features = ["register_types"]
 [features]
 default = []
 k210 = ["k210-hal"]
+
+#
+#[profile.release]
+#debug = true

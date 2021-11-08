@@ -79,20 +79,18 @@ unsafe extern "C" fn exception_entry(ctx: *mut ContextFrame) {
       _ => panic!("Interrupt::Unknown"),
     }
   } else {
-    if code != EXCEPTION_ENVIRONMENT_CALL_FROM_USER_MODE {
-      info!("SCAUSE {:016x}", cause);
-      info!("SEPC {:016x}", core.context().exception_pc());
-      info!("FAR  {:016x}", crate::arch::Arch::fault_address());
-    }
     match code {
       EXCEPTION_INSTRUCTION_ADDRESS_MISALIGNED
       | EXCEPTION_INSTRUCTION_ACCESS_FAULT
       | EXCEPTION_ILLEGAL_INSTRUCTION
       | EXCEPTION_BREAKPOINT
       | EXCEPTION_LOAD_ADDRESS_MISALIGNED
-      | EXCEPTION_LOAD_ACCESS_FAULT
-      | EXCEPTION_STORE_ADDRESS_MISALIGNED
-      | EXCEPTION_STORE_ACCESS_FAULT => crate::lib::exception::handle_user(),
+      | EXCEPTION_STORE_ADDRESS_MISALIGNED => {
+        info!("SCAUSE {:016x}", cause);
+        info!("SEPC {:016x}", core.context().exception_pc());
+        info!("FAR  {:016x}", crate::arch::Arch::fault_address());
+        crate::lib::exception::handle_user()
+      },
       EXCEPTION_ENVIRONMENT_CALL_FROM_USER_MODE => {
         // Note: we need to set epc to next instruction before doing system call
         //       pay attention to yield and process_alloc
@@ -101,8 +99,12 @@ unsafe extern "C" fn exception_entry(ctx: *mut ContextFrame) {
         crate::lib::syscall::syscall();
       }
       EXCEPTION_INSTRUCTION_PAGE_FAULT
+      | EXCEPTION_LOAD_ACCESS_FAULT
+      | EXCEPTION_STORE_ACCESS_FAULT
       | EXCEPTION_LOAD_PAGE_FAULT
-      | EXCEPTION_STORE_PAGE_FAULT => crate::mm::page_fault::handle(),
+      | EXCEPTION_STORE_PAGE_FAULT => {
+        crate::mm::page_fault::handle()
+      },
       _ => panic!("Exception::Unknown")
     }
   }

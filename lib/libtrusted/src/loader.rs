@@ -1,6 +1,6 @@
 use fs::{File, SeekFrom};
 use common::PAGE_SIZE;
-use crate::mm::{PageAttribute, Entry, default_page_attribute};
+use crate::mm::{PageAttribute, Entry, default_page_attribute, virtual_alloc, virtual_free};
 
 
 
@@ -17,20 +17,29 @@ pub fn spawn<P: AsRef<str>>(cmd: P) -> Result<(u16, usize), &'static str> {
   let mut iter = cmd.as_ref().trim().split_ascii_whitespace();
   if let Some(bin) = iter.next() {
     let asid = microcall::address_space_alloc().map_err(|_e| "address_space_alloc failed")?;
-    let mut f = File::open(bin).map_err(|e| e.text())?;
-    let file_size = f.seek(SeekFrom::End(0)).map_err(|e| e.text())? as usize;
+    let mut f = File::open(bin).map_err(|e| {
+      error!("spawn open file failed");
+      e.text()
+    })?;
+    let file_size = f.seek(SeekFrom::End(0)).map_err(|e| {
+      error!("spawn seek end file failed");
+      e.text()
+    })? as usize;
     let page_num = round_up(file_size, PAGE_SIZE) / PAGE_SIZE;
-    let buf = crate::mm::valloc(page_num);
+    // info!("spawn elf size {} pages", page_num);
+    f.seek(SeekFrom::Start(0)).map_err(|e| {
+      error!("spawn seek start file failed");
+      e.text()
+    })? as usize;
+    let buf = virtual_alloc(page_num, true).unwrap() as *mut u8;
     let buf = unsafe { core::slice::from_raw_parts_mut(buf, file_size) };
-    f.seek(SeekFrom::Start(0)).map_err(|e| e.text())? as usize;
-    let _read = f.read(buf).map_err(|e| e.text())?;
-    // println!("read {} byte", read);
-    // for i in 0..read {
-    //   print!("{:02x} ", buf[i]);
-    // }
+    let _read = f.read(buf).map_err(|e| {
+      error!("spawn read file failed");
+      e.text()
+    })?;
     let elf = xmas_elf::ElfFile::new(buf)?;
     let entry_point = elf.header.pt2.entry_point() as usize;
-    let va_tmp = crate::mm::virtual_page_alloc(1);
+    let va_tmp = virtual_alloc(1, false).unwrap();
     for ph in elf.program_iter() {
       if let Ok(xmas_elf::program::Type::Load) = ph.get_type() {
 
@@ -64,6 +73,7 @@ pub fn spawn<P: AsRef<str>>(cmd: P) -> Result<(u16, usize), &'static str> {
         va += PAGE_SIZE;
       }
     }
+    virtual_free(buf.as_ptr() as usize, page_num);
     microcall::mem_alloc(asid, common::CONFIG_USER_STACK_TOP - PAGE_SIZE, crate::mm::default_page_attribute()).map_err(|_e| "mem_alloc failed")?;
     microcall::mem_map(asid, common::CONFIG_USER_STACK_TOP - PAGE_SIZE, 0, va_tmp, default_page_attribute()).map_err(|_e| "mem_map failed")?;
     let va_slice = unsafe { core::slice::from_raw_parts_mut(va_tmp as *mut u8, PAGE_SIZE) };
@@ -85,7 +95,7 @@ pub fn spawn<P: AsRef<str>>(cmd: P) -> Result<(u16, usize), &'static str> {
     for i in 0..index {
       va_slice[PAGE_SIZE - index + i] = va_slice[i];
     }
-    microcall::mem_unmap(0, va_tmp).map_err(|_e| "mem_unmap failed")?;
+    virtual_free(va_tmp, 1);
 
     let tid = microcall::thread_alloc(asid, entry_point, common::CONFIG_USER_STACK_TOP - round_up(index, 16), common::CONFIG_USER_STACK_TOP - index).map_err(|_e| "thread alloc failed")?;
     // println!("[LOADER] spawn asid {} tid {}", asid, tid);

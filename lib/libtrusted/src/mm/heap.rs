@@ -1,9 +1,11 @@
-use buddy_system_allocator::LockedHeapWithRescue;
+use buddy_system_allocator::{LockedHeap, LockedHeapWithRescue};
 use microcall::mem_alloc;
 use common::PAGE_SIZE;
 use crate::mm::{Entry, PageAttribute, default_page_attribute};
 use core::sync::atomic::{AtomicUsize, Ordering};
 use core::alloc::Layout;
+use core::ptr::NonNull;
+use spin::Mutex;
 
 #[global_allocator]
 static HEAP_ALLOCATOR: LockedHeapWithRescue<32> = LockedHeapWithRescue::new(enlarge);
@@ -27,7 +29,31 @@ pub fn init() {
   }
   HEAP_TOP.store(common::CONFIG_HEAP_BTM + HEAP_INIT_SIZE * PAGE_SIZE, Ordering::Relaxed);
   unsafe {
-    HEAP_ALLOCATOR.lock().init(common::CONFIG_HEAP_BTM, HEAP_INIT_SIZE * PAGE_SIZE)
+    HEAP_ALLOCATOR.lock().init(common::CONFIG_HEAP_BTM, HEAP_INIT_SIZE * PAGE_SIZE);
+  }
+}
+
+static VIRTUAL_HEAP_BASE: Mutex<usize> = Mutex::new(common::CONFIG_VIRTUAL_HEAP_BTM);
+
+pub fn virtual_alloc(num_of_page: usize, alloc_physical: bool) -> Option<usize> {
+  let mut base = VIRTUAL_HEAP_BASE.lock();
+  let addr = *base;
+  *base += num_of_page * PAGE_SIZE;
+  drop(base);
+  if alloc_physical {
+    for i in 0..num_of_page {
+      let r = microcall::mem_alloc(0, addr + i * PAGE_SIZE, default_page_attribute());
+      if r.is_err() {
+        error!("virtual_alloc mem_alloc failed");
+      }
+    }
+  }
+  Some(addr)
+}
+
+pub fn virtual_free(va: usize, num_of_page: usize) {
+  for i in 0..num_of_page {
+    let _ = microcall::mem_unmap(0, va + i * PAGE_SIZE);
   }
 }
 

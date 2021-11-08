@@ -29,7 +29,8 @@ const SEC_TO_MICRO: u64 = 1_000_000;
 const MB: u64 = 1024 * 1024;
 const KB: u64 = 1024;
 
-const ITERATIONS: usize = 10_000;
+// const ITERATIONS: usize = 10_000;
+const ITERATIONS: usize = 10;
 const TRIES: usize = 10;
 const THRESHOLD_ERROR_RATIO: u64 = 2;
 
@@ -37,10 +38,6 @@ const READ_BUF_SIZE: usize = 64*1024;
 const WRITE_BUF_SIZE: usize = 1024*1024;
 const WRITE_BUF: [u8; WRITE_BUF_SIZE] = [65; WRITE_BUF_SIZE];
 
-#[cfg(bm_in_us)]
-const T_UNIT: &str = "micro sec";
-
-#[cfg(not(bm_in_us))]
 const T_UNIT: &str = "nano sec";
 
 pub fn main(args: Vec<&str>) -> isize {
@@ -163,7 +160,14 @@ fn hpet_timing_overhead() -> Result<u64, &'static str> {
 }
 
 fn get_hpet() -> Option<Hpet> {
-  Some(Hpet)
+  // let mut pmcr_el0 : u32;
+  // unsafe {
+  //   asm!("mrs {}, PMCR_EL0", out(reg) pmcr_el0);
+  //   pmcr_el0 |= 1 << 2;
+  //   asm!("msr PMCR_EL0, {}", in(reg) pmcr_el0);
+  // }
+  // Some(Hpet)
+  None
 }
 
 /// Measures the time for null syscall. 

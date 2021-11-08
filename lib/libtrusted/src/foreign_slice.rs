@@ -1,5 +1,5 @@
 use crate::loader::{round_up, round_down};
-use crate::mm::{valloc, Entry, PageAttribute, default_page_attribute};
+use crate::mm::{Entry, PageAttribute, default_page_attribute, virtual_alloc, virtual_free};
 use common::PAGE_SIZE;
 use microcall::{mem_map, mem_unmap};
 use redox::*;
@@ -17,7 +17,7 @@ impl ForeignSlice {
   pub fn new(asid: u16, slice_start: usize, slice_len: usize) -> Result<Self> {
     let page_num = (round_up(slice_start + slice_len, PAGE_SIZE)
       - round_down(slice_start, PAGE_SIZE)) / PAGE_SIZE;
-    let local_buf = valloc(page_num) as usize;
+    let local_buf = virtual_alloc(page_num, false).unwrap() as usize;
     let local_start = slice_start - round_down(slice_start, PAGE_SIZE) + local_buf;
 
     for i in 0..page_num {
@@ -51,9 +51,6 @@ impl ForeignSlice {
 
 impl Drop for ForeignSlice {
   fn drop(&mut self) {
-    for i in 0..self.page_num {
-      let va = self.local_buf + i * PAGE_SIZE;
-      let _ = mem_unmap(0, va);
-    }
+    virtual_free(self.local_buf, self.page_num);
   }
 }

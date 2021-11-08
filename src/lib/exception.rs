@@ -22,6 +22,7 @@ fn handle() -> HandleResult {
         // trusted exception
         if let Some(handler) = a.exception_handler() {
           let ctx = cpu().context_mut();
+          info!("trusted exception elr {:016x} far {:016x} sp {:016x}", ctx.exception_pc(), crate::arch::Arch::fault_address(), ctx.stack_pointer());
           let ctx_copied = *ctx;
           ctx.set_exception_pc(handler);
           let sp = ctx.stack_pointer() - round_up(size_of::<ContextFrame>(), 16);
