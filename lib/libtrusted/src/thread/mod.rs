@@ -1,6 +1,4 @@
 mod thread_sys;
-mod thread_parker;
-mod thread_stack;
 
 use alloc::boxed::Box;
 use alloc::string::String;
@@ -11,7 +9,6 @@ use core::num::NonZeroU64;
 use core::time::Duration;
 
 use common::PAGE_SIZE;
-use thread_parker::Parker;
 use thread_sys as imp;
 
 ////////////////////////////////////////////////////////////////////////////////
@@ -19,25 +16,13 @@ use thread_sys as imp;
 ////////////////////////////////////////////////////////////////////////////////
 
 #[derive(Debug)]
-pub struct Builder {
-  // A name for the thread-to-be, for identification in panic messages
-  name: Option<String>,
-  // The size of the stack for the spawned thread in bytes
-  stack_size: Option<usize>,
-}
+pub struct Builder;
 
 impl Builder {
   pub fn new() -> Builder {
-    Builder { name: None, stack_size: None }
+    Builder
   }
-  pub fn name(mut self, name: String) -> Builder {
-    self.name = Some(name);
-    self
-  }
-  pub fn stack_size(mut self, size: usize) -> Builder {
-    self.stack_size = Some(size);
-    self
-  }
+
   pub fn spawn<F, T>(self, f: F) -> core::result::Result<JoinHandle<T>, ()>
     where
       F: FnOnce() -> T,
@@ -52,29 +37,12 @@ impl Builder {
       F: Send + 'a,
       T: Send + 'a,
   {
-    let Builder { name, stack_size } = self;
-
-    let stack_size = stack_size.unwrap_or_else(/*thread::min_stack*/|| PAGE_SIZE);
-
-    let my_thread = Thread::new(name);
-    // let their_thread = my_thread.clone();
+    let my_thread = Thread::new();
 
     let my_packet: Arc<UnsafeCell<Option<Result<T>>>> = Arc::new(UnsafeCell::new(None));
     let their_packet = my_packet.clone();
 
-    // let output_capture = crate::io::set_output_capture(None);
-    // crate::io::set_output_capture(output_capture.clone());
-
     let main = move || {
-      // crate::io::set_output_capture(output_capture);
-
-      // SAFETY: the stack guard passed is the one for the current thread.
-      // This means the current thread's stack and the new thread's stack
-      // are properly set and protected from each other.
-      // thread_info::set(unsafe { imp::guard::current() }, their_thread);
-      // let try_result = panic::catch_unwind(panic::AssertUnwindSafe(|| {
-      // crate::sys_common::backtrace::__rust_begin_short_backtrace(f)
-      // }));
       let try_result = Ok(f());
 
       // SAFETY: `their_packet` as been built just above and moved by the
@@ -99,7 +67,6 @@ impl Builder {
       // exist after the thread has terminated, which is signaled by `Thread::join`
       // returning.
       native: Some(imp::Thread::new(
-        stack_size,
         core::mem::transmute::<Box<dyn FnOnce() + 'a>, Box<dyn FnOnce() + 'static>>(Box::new(main)))?),
       thread: my_thread,
       packet: Packet(my_packet),
@@ -118,45 +85,6 @@ pub fn spawn<F, T>(f: F) -> JoinHandle<T>
     T: Send + 'static,
 {
   Builder::new().spawn(f).expect("failed to spawn thread")
-}
-
-pub fn current() -> Thread {
-  unimplemented!()
-}
-
-pub fn yield_now() {
-  imp::Thread::yield_now()
-}
-
-/// Determines whether the current thread is unwinding because of panic.
-pub fn panicking() -> bool {
-  unimplemented!()
-}
-
-pub fn sleep_ms(ms: u32) {
-  sleep(Duration::from_millis(ms as u64))
-}
-
-pub fn sleep(dur: Duration) {
-  imp::Thread::sleep(dur)
-}
-
-pub fn park() {
-  // SAFETY: park_timeout is called on the parker owned by this thread.
-  unsafe {
-    current().inner.parker.park();
-  }
-}
-
-pub fn park_timeout_ms(ms: u32) {
-  park_timeout(Duration::from_millis(ms as u64))
-}
-
-pub fn park_timeout(dur: Duration) {
-  // SAFETY: park_timeout is called on the parker owned by this thread.
-  unsafe {
-    current().inner.parker.park_timeout(dur);
-  }
 }
 
 ////////////////////////////////////////////////////////////////////////////////
@@ -183,15 +111,12 @@ impl ThreadId {
   }
 }
 
-
 ////////////////////////////////////////////////////////////////////////////////
 // Thread
 ////////////////////////////////////////////////////////////////////////////////
 
 struct Inner {
-  //name: Option<String>,
   id: ThreadId,
-  parker: Parker,
 }
 
 #[derive(Clone)]
@@ -200,23 +125,15 @@ pub struct Thread {
 }
 
 impl Thread {
-  pub fn new(_name: Option<String>) -> Thread {
+  pub fn new() -> Thread {
     Thread {
       inner: Arc::new(Inner {
-        //name,
         id: ThreadId::new(),
-        parker: Parker::new(),
       })
     }
   }
-  pub fn unpark(&self) {
-    self.inner.parker.unpark();
-  }
   pub fn id(&self) -> ThreadId {
     self.inner.id
-  }
-  pub fn name(&self) -> Option<&str> {
-    None
   }
 }
 

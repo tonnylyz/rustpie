@@ -2,6 +2,7 @@ use alloc::boxed::Box;
 use core::time::Duration;
 use common::PAGE_SIZE;
 use microcall::{thread_alloc, thread_yield, thread_set_status};
+use crate::mm::virtual_alloc;
 
 pub struct Thread {
   id: usize,
@@ -12,15 +13,15 @@ unsafe impl Sync for Thread {}
 
 pub type IoResult<T> = core::result::Result<T, ()>; // alias of io::Result
 
+const THREAD_STACK_PAGE_NUM: usize = 48;
+
 impl Thread {
-  pub unsafe fn new(stack: usize, p: Box<dyn FnOnce()>) -> IoResult<Thread> {
+  pub unsafe fn new(p: Box<dyn FnOnce()>) -> IoResult<Thread> {
     let p = Box::into_raw(box p);
-    let stack_size = core::cmp::max(stack, min_stack_size());
 
-    assert_eq!(stack_size % PAGE_SIZE, 0);
-
-    let stack = super::thread_stack::Stack::new();
-    let native = thread_alloc(0, thread_start as usize, stack.top(), p as *mut _ as usize);
+    let stack = virtual_alloc(THREAD_STACK_PAGE_NUM, true).unwrap();
+    let stack_top = stack + THREAD_STACK_PAGE_NUM * PAGE_SIZE;
+    let native = thread_alloc(0, thread_start as usize, stack_top, p as *mut _ as usize);
 
     extern "C" fn thread_start(main: usize) -> usize {
       unsafe {
@@ -46,15 +47,9 @@ impl Thread {
     thread_yield()
   }
 
-  pub fn set_name(_name: &'static str) { /* do nothing */ }
-
-  pub fn sleep(_dur: Duration) {
-    unimplemented!()
-  }
-
   pub fn join(self) {
     // pthread_join
-    unimplemented!()
+    todo!()
   }
 
   pub fn id(&self) -> usize {
@@ -71,21 +66,6 @@ impl Thread {
 impl Drop for Thread {
   fn drop(&mut self) {
     // pthread_detach
+    todo!()
   }
-}
-
-pub mod guard {
-  use core::ops::Range;
-  pub type Guard = Range<usize>;
-
-  pub unsafe fn current() -> Option<Guard> {
-    None
-  }
-  pub unsafe fn init() -> Option<Guard> {
-    None
-  }
-}
-
-fn min_stack_size() -> usize {
-  PAGE_SIZE
 }
