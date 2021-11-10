@@ -3,7 +3,6 @@ use libtrusted::thread;
 use libtrusted::wrapper::server_wrapper;
 
 
-
 #[cfg(target_arch = "aarch64")]
 pub fn current_cycle() -> usize {
   let r;
@@ -32,55 +31,52 @@ pub fn main() {
   // microcall::get_asid(0);
   // info!("[[RECOVERY]]");
   // loop{}
-  thread::spawn(|| {
+  let mut join_handlers = vec![];
+
+  join_handlers.push(thread::spawn(|| {
     server_wrapper(crate::test::server);
-  });
+  }));
 
   #[cfg(not(feature = "k210"))]
-    thread::spawn(|| {
+    join_handlers.push(thread::spawn(|| {
     server_wrapper(crate::blk::virtio_blk::server);
-  });
+  }));
 
   #[cfg(feature = "k210")]
-    thread::spawn(|| {
+    join_handlers.push(thread::spawn(|| {
     server_wrapper(crate::blk::k210_sdcard::server);
-  });
+  }));
 
-  thread::spawn(|| {
+  join_handlers.push(thread::spawn(|| {
     server_wrapper(crate::fs::server);
-  });
+  }));
 
-  thread::spawn(|| {
+  join_handlers.push(thread::spawn(|| {
     server_wrapper(crate::terminal::input_server);
-  });
+  }));
 
-  thread::spawn(|| {
+  join_handlers.push(thread::spawn(|| {
     server_wrapper(crate::terminal::server);
-  });
+  }));
 
-  thread::spawn(|| {
+  join_handlers.push(thread::spawn(|| {
     server_wrapper(crate::mm::server);
-  });
+  }));
 
-  thread::spawn(|| {
+  join_handlers.push(thread::spawn(|| {
     server_wrapper(crate::pm::server);
-  });
+  }));
 
-  thread::spawn(|| {
-    server_wrapper(crate::pm::event_server);
-  });
-
-  thread::spawn(|| {
+  join_handlers.push(thread::spawn(|| {
     match libtrusted::loader::spawn("shell") {
       Ok((asid, tid)) => {
         microcall::thread_set_status(tid, common::thread::THREAD_STATUS_RUNNABLE);
       }
       Err(s) => { error!("{}", s); }
     }
-    microcall::thread_destroy(0);
-  });
+  }));
 
-  loop {
-    microcall::thread_yield();
+  for handler in join_handlers {
+    handler.join();
   }
 }

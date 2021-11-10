@@ -62,6 +62,10 @@ impl Thread {
     self.0.inner.uuid
   }
 
+  pub fn parent(&self) -> Option<Tid> {
+    self.0.inner.parent
+  }
+
   pub fn is_child_of(&self, tid: Tid) -> bool {
     match &self.0.inner.parent {
       None => { false }
@@ -178,7 +182,9 @@ pub fn thread_destroy(t: Thread) {
       crate::lib::cpu::cpu().set_running_thread(None);
     }
   }
-  thread_exit_signal(t.tid());
+  if let Some(parent) = t.parent() {
+    thread_exit_signal(t.tid(), parent);
+  }
   let mut map = THREAD_MAP.lock();
   map.remove(&t.tid());
 }

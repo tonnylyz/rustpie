@@ -99,6 +99,7 @@ disk: user_image
 	cp user/target/${ARCH}/${USER_PROFILE}/rm disk/
 	cp user/target/${ARCH}/${USER_PROFILE}/test disk/
 	cp user/target/${ARCH}/${USER_PROFILE}/hello disk/
+	cp user/target/${ARCH}/${USER_PROFILE}/ps disk/
 	sync
 	umount disk
 
@@ -115,6 +116,7 @@ sdcard: user_image
 	sudo cp user/target/${ARCH}/${USER_PROFILE}/rm sdcard/
 	sudo cp user/target/${ARCH}/${USER_PROFILE}/test sdcard/
 	sudo cp user/target/${ARCH}/${USER_PROFILE}/hello sdcard/
+	sudo cp user/target/${ARCH}/${USER_PROFILE}/ps sdcard/
 	sync
 	sudo umount sdcard
 

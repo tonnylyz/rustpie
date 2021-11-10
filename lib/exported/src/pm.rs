@@ -27,3 +27,9 @@ pub fn wait(pid: usize) {
     }
   }
 }
+
+pub fn ps() {
+  Message::new(
+    3, 0, 0, 0
+  ).call(common::server::SERVER_PM);
+}

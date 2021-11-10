@@ -2,10 +2,12 @@ use alloc::boxed::Box;
 use core::time::Duration;
 use common::PAGE_SIZE;
 use microcall::{thread_alloc, thread_yield, thread_set_status};
-use crate::mm::virtual_alloc;
+use crate::mm::{virtual_alloc, virtual_free};
 
 pub struct Thread {
   id: usize,
+  stack_btm: usize,
+  stack_size_in_page: usize,
 }
 
 unsafe impl Send for Thread {}
@@ -34,7 +36,11 @@ impl Thread {
     match native {
       Ok(native) => {
         thread_set_status(native, common::thread::THREAD_STATUS_RUNNABLE);
-        Ok(Thread { id: native })
+        Ok(Thread {
+          id: native,
+          stack_btm: stack,
+          stack_size_in_page: THREAD_STACK_PAGE_NUM,
+        })
       },
       Err(_) => {
         drop(Box::from_raw(p));
@@ -43,13 +49,15 @@ impl Thread {
     }
   }
 
-  pub fn yield_now() {
-    thread_yield()
-  }
-
   pub fn join(self) {
-    // pthread_join
-    todo!()
+    loop {
+      if let Ok(_) = microcall::event_wait(common::event::EVENT_THREAD_EXIT, self.id) {
+        virtual_free(self.stack_btm, self.stack_size_in_page);
+        break;
+      } else {
+        microcall::thread_yield();
+      }
+    }
   }
 
   pub fn id(&self) -> usize {
@@ -66,6 +74,5 @@ impl Thread {
 impl Drop for Thread {
   fn drop(&mut self) {
     // pthread_detach
-    todo!()
   }
 }

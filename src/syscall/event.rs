@@ -1,5 +1,6 @@
+use alloc::collections::BTreeMap;
 use alloc::vec::Vec;
-use common::event::{EVENT_INTERRUPT, EVENT_THREAD_EXIT};
+use common::event::*;
 use common::syscall::error::{ERROR_HOLD_ON, ERROR_INVARG};
 use spin::{Mutex, Once};
 
@@ -23,11 +24,16 @@ pub fn event_wait(event_type: usize, event_num: usize) -> Result {
           SemaphoreWaitResult::Enqueued => super::thread::thread_yield(),
         }
       }
-      Event::ThreadExit => {
-        let mut q = TID_EXIT.lock();
-        match q.pop() {
-          None => Err(ERROR_HOLD_ON),
-          Some(t) => Ok(Single(t as usize)),
+      Event::ThreadExit(tid) => {
+        let map = PARENT_WAIT_CHILD_MAP.lock();
+        if let Some(vec) = map.get(&t.tid()) {
+          if vec.contains(&tid) {
+            Ok(Unit)
+          } else {
+            Err(ERROR_HOLD_ON)
+          }
+        } else {
+          Err(ERROR_HOLD_ON)
         }
       }
     }
@@ -39,24 +45,28 @@ pub fn event_wait(event_type: usize, event_num: usize) -> Result {
 #[derive(Debug, Clone, Copy, PartialEq)]
 enum Event {
   Interrupt(usize),
-  ThreadExit,
+  ThreadExit(usize),
 }
 
 impl Event {
   pub fn from(event_type: usize, event_num: usize) -> Option<Self> {
     match event_type {
       EVENT_INTERRUPT => Some(Event::Interrupt(event_num)),
-      EVENT_THREAD_EXIT => Some(Event::ThreadExit),
+      EVENT_THREAD_EXIT => Some(Event::ThreadExit(event_num)),
       _ => None,
     }
   }
 }
 
-static TID_EXIT: Mutex<Vec<Tid>> = Mutex::new(Vec::new());
+static PARENT_WAIT_CHILD_MAP: Mutex<BTreeMap<Tid, Vec<Tid>>> = Mutex::new(BTreeMap::new());
 
 // called when a thread exits
-pub fn thread_exit_signal(tid_exited: Tid) {
-  let mut q = TID_EXIT.lock();
-  q.push(tid_exited);
+pub fn thread_exit_signal(child_tid: Tid, parent_tid: Tid) {
+  let mut map = PARENT_WAIT_CHILD_MAP.lock();
+  if let Some(vec) = map.get_mut(&parent_tid) {
+    vec.push(child_tid);
+  } else {
+    map.insert(parent_tid, vec![child_tid]);
+  }
 }
 
