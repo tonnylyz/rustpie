@@ -9,7 +9,7 @@ extern crate rlibc;
 extern crate exported;
 
 #[no_mangle]
-fn _start() -> ! {
+fn _start(_arg: *const u8) {
   exported::pm::ps();
   exported::exit()
 }

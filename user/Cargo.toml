@@ -30,6 +30,14 @@ name = "rm"
 path = "src/rm.rs"
 
 [[bin]]
+name = "rd"
+path = "src/rd.rs"
+
+[[bin]]
+name = "stat"
+path = "src/stat.rs"
+
+[[bin]]
 name = "test"
 path = "src/test.rs"
 
@@ -41,6 +49,9 @@ path = "src/hello.rs"
 name = "ps"
 path = "src/ps.rs"
 
+[[bin]]
+name = "write"
+path = "src/write.rs"
 
 [dependencies]
 exported = { path = "../lib/exported" }

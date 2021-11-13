@@ -8,16 +8,22 @@ extern crate rlibc;
 #[macro_use]
 extern crate exported;
 
+use fs::File;
+
 #[no_mangle]
 fn _start(arg: *const u8) {
   let arg = exported::parse(arg);
   if arg.len() == 0 {
-    println!("usage: rm FILE...");
+    println!("usage: stat FILE...");
     exported::exit();
   }
   let path = arg[0];
-  match fs::remove_file(path) {
-    Ok(_) => {}
+  let file = File::open(path).expect("open file failed");
+
+  match file.stat() {
+    Ok(stat) => {
+      println!("{:#?}", stat);
+    }
     Err(e) => {
       println!("{}", e);
     }

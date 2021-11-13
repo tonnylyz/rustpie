@@ -74,5 +74,6 @@ impl Thread {
 impl Drop for Thread {
   fn drop(&mut self) {
     // pthread_detach
+    info!("thread drop, stack may leak");
   }
 }

@@ -8,35 +8,9 @@ extern crate rlibc;
 #[macro_use]
 extern crate exported;
 
-use alloc::vec::Vec;
-
-#[inline(always)]
-pub fn round_up(addr: usize, n: usize) -> usize {
-  (addr + n - 1) & !(n - 1)
-}
-
 #[no_mangle]
-fn _start(arg: *const u8) -> ! {
-  exported::heap::init();
-  let mut arguments = Vec::new();
-  unsafe {
-    let cmd = core::slice::from_raw_parts(arg, round_up(arg as usize, 4096) - arg as usize - 1);
-    let cmd = core::str::from_utf8(cmd).unwrap();
-    let mut iter = cmd.split_ascii_whitespace();
-    loop {
-      if let Some(arg) = iter.next() {
-        arguments.push(arg);
-      } else {
-        break;
-      }
-    }
-  }
-
-  main(arguments);
-  exported::exit();
-}
-
-fn main(arg: Vec<&str>) {
+fn _start(arg: *const u8) {
+  let arg = exported::parse(arg);
   let path = if arg.len() == 0 {
     "/"
   } else {
@@ -46,5 +20,13 @@ fn main(arg: Vec<&str>) {
   let mut buf = [0u8; 128];
   root.read(&mut buf).unwrap();
   let dir = core::str::from_utf8(&buf).unwrap();
-  println!("{}", dir);
+  for c in dir.chars() {
+    if c == '\n' {
+      print!("\t");
+    } else {
+      print!("{}", c);
+    }
+  }
+  println!();
+  exported::exit();
 }

@@ -303,14 +303,14 @@ impl<D: Disk> Scheme for FileScheme<D> {
                                 Node::MODE_FILE
                             };
 
-                            // let ctime = SystemTime::now().duration_since(UNIX_EPOCH).unwrap();
+                            let ctime = crate::rtc::timestamp();
+                            let ctime = core::time::Duration::from_secs(ctime);
                             let mut node = fs.create_node(
                                 mode_type | (flags as u16 & Node::MODE_PERM),
                                 &last_part,
                                 parent.0,
-                                0, 0
-                                // ctime.as_secs(),
-                                // ctime.subsec_nanos(),
+                                ctime.as_secs(),
+                                ctime.subsec_nanos(),
                             )?;
                             node.1.uid = uid;
                             node.1.gid = gid;

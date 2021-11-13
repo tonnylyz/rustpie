@@ -20,6 +20,7 @@ redox = { path = "../lib/redox" }
 fs = { path = "../lib/fs" }
 unwind = { path = "../lib/unwind" }
 bm = { path = "../lib/bm" }
+
 k210-hal = { git = "https://github.com/tonnylyz/k210-hal", optional = true }
 
 [dependencies.tock-registers]

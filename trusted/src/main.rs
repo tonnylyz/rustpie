@@ -27,6 +27,7 @@ mod mm;
 mod pm;
 mod logger;
 mod test;
+mod rtc;
 
 #[no_mangle]
 fn _start(_arg: usize) -> ! {

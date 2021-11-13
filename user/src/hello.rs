@@ -6,6 +6,7 @@
 extern crate rlibc;
 
 #[no_mangle]
-fn _start(_arg: *const u8) -> ! {
+fn _start(arg: *const u8) {
+  // let arg = exported::parse(arg);
   exported::exit();
 }

@@ -84,7 +84,8 @@ pub mod server {
   pub const SERVER_TERMINAL: usize = 2;
   pub const SERVER_MM: usize = 3;
   pub const SERVER_PM: usize = 4;
-  pub const SERVER_TEST: usize = 5;
+  pub const SERVER_RTC: usize = 5;
+  pub const SERVER_TEST: usize = 6;
 }
 
 pub mod thread {
@@ -95,4 +96,28 @@ pub mod thread {
 pub mod event {
   pub const EVENT_INTERRUPT: usize = 1;
   pub const EVENT_THREAD_EXIT: usize = 2;
+}
+
+pub mod time {
+  use core::fmt::{Display, Formatter};
+
+  /// same as `struct rtc_time` in linux kernel
+#[derive(Default)]
+  pub struct RtcTime {
+    pub sec: i32,
+    pub min: i32,
+    pub hour: i32,
+    pub mday: i32,
+    pub mon: i32,
+    pub year: i32,
+    pub wday: i32,
+    pub yday: i32,
+    pub isdst: i32,
+  }
+
+  impl Display for RtcTime {
+    fn fmt(&self, f: &mut Formatter<'_>) -> core::fmt::Result {
+      write!(f, "{:04}-{:02}-{:02} {:02}:{:02}:{:02}", self.year + 1900, self.mon + 1, self.mday, self.hour, self.min, self.sec)
+    }
+  }
 }

@@ -113,7 +113,6 @@ impl Node {
         self.mode & Node::MODE_TYPE == Node::MODE_DIR
     }
 
-    #[allow(dead_code)]
     pub fn is_file(&self) -> bool {
         self.mode & Node::MODE_TYPE == Node::MODE_FILE
     }
@@ -147,7 +146,6 @@ impl Node {
         perm & op == op
     }
 
-    #[allow(dead_code)]
     pub fn size(&self) -> u64 {
         self.extents
             .iter()
@@ -162,18 +160,20 @@ impl fmt::Debug for Node {
             .iter()
             .filter(|extent| -> bool { extent.length > 0 })
             .collect();
-        f.debug_struct("Node")
-          .field("mode", &self.mode)
-          .field("uid", &self.uid)
-          .field("gid", &self.gid)
-          .field("ctime", &self.ctime)
-          .field("ctime_nsec", &self.ctime_nsec)
-          .field("mtime", &self.mtime)
-          .field("mtime_nsec", &self.mtime_nsec)
-          .field("name", &self.name())
-          .field("next", &self.next)
-          .field("extents", &extents)
-          .finish()
+        unsafe {
+            f.debug_struct("Node")
+                .field("mode", &self.mode)
+                .field("uid", &self.uid)
+                .field("gid", &self.gid)
+                .field("ctime", &self.ctime)
+                .field("ctime_nsec", &self.ctime_nsec)
+                .field("mtime", &self.mtime)
+                .field("mtime_nsec", &self.mtime_nsec)
+                .field("name", &self.name())
+                .field("next", &self.next)
+                .field("extents", &extents)
+                .finish()
+        }
     }
 }
 

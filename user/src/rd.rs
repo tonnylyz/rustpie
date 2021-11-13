@@ -12,11 +12,11 @@ extern crate exported;
 fn _start(arg: *const u8) {
   let arg = exported::parse(arg);
   if arg.len() == 0 {
-    println!("usage: rm FILE...");
+    println!("usage: rd DIR...");
     exported::exit();
   }
   let path = arg[0];
-  match fs::remove_file(path) {
+  match fs::remove_directory(path) {
     Ok(_) => {}
     Err(e) => {
       println!("{}", e);

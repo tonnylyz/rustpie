@@ -26,17 +26,41 @@ pub fn server() {
           scheme.handle(&mut packet);
         } else {
           let fs = match packet.a {
-            SYS_OPEN | SYS_UNLINK => {
+            SYS_OPEN
+            | SYS_CHMOD
+            | SYS_RMDIR
+            | SYS_UNLINK
+            => {
               let s = ForeignSlice::new(asid, packet.b, packet.c).unwrap();
               packet.b = s.local_start;
               Some(s)
             }
-            SYS_READ | SYS_WRITE => {
+            SYS_DUP
+            | SYS_READ
+            | SYS_WRITE
+            | SYS_FMAP_OLD
+            | SYS_FMAP
+            | SYS_FPATH
+            | SYS_FRENAME
+            | SYS_FSTAT
+            | SYS_FSTATVFS
+            | SYS_FUTIMENS
+            => {
               let s = ForeignSlice::new(asid, packet.c, packet.d).unwrap();
               packet.c = s.local_start;
               Some(s)
             }
-            SYS_CLOSE => None,
+            SYS_LSEEK
+            | SYS_FCHMOD
+            | SYS_FCHOWN
+            | SYS_FCNTL
+            | SYS_FEVENT
+            | SYS_FUNMAP_OLD
+            | SYS_FUNMAP
+            | SYS_FSYNC
+            | SYS_FTRUNCATE
+            | SYS_CLOSE
+            => None,
             _ => panic!("NOT translated packet"),
           };
           scheme.handle(&mut packet);

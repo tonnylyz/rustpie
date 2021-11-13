@@ -16,7 +16,6 @@ pub struct DiskCache<T> {
 }
 
 impl<T: Disk> DiskCache<T> {
-    #[allow(dead_code)]
     pub fn new(inner: T) -> Self {
         DiskCache {
             inner: inner,

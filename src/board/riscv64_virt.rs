@@ -66,5 +66,11 @@ pub fn devices() -> Vec<Device> {
       vec![
         1
       ]),
+    Device::new(
+      "rtc",
+      vec![
+        0x101000..0x102000
+      ],
+      vec![]),
   ]
 }

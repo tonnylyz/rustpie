@@ -39,7 +39,6 @@ impl<D: Disk> FileSystem<D> {
     }
 
     /// Create a file system on a disk
-    #[allow(dead_code)]
     pub fn create(disk: D, ctime: u64, ctime_nsec: u32) -> Result<Self> {
         Self::create_reserved(disk, &[], ctime, ctime_nsec)
     }
@@ -47,7 +46,6 @@ impl<D: Disk> FileSystem<D> {
     /// Create a file system on a disk, with reserved data at the beginning
     /// Reserved data will be zero padded up to the nearest block
     /// We need to pass ctime and ctime_nsec in order to initialize the unix timestamps
-    #[allow(dead_code)]
     pub fn create_reserved(
         mut disk: D,
         reserved: &[u8],
@@ -134,7 +132,6 @@ impl<D: Disk> FileSystem<D> {
         Ok((block, node))
     }
 
-    #[allow(dead_code)]
     pub fn ex_node(&mut self, block: u64) -> Result<(u64, ExNode)> {
         let mut node = ExNode::default();
         self.read_at(block, &mut node)?;
@@ -464,7 +461,8 @@ impl<D: Disk> FileSystem<D> {
     }
 
     pub fn read_node(&mut self, block: u64, offset: u64, buf: &mut [u8]) -> Result<usize> {
-        //let atime = SystemTime::now().duration_since(UNIX_EPOCH).unwrap();
+        let atime = crate::rtc::timestamp();
+        let atime = core::time::Duration::from_secs(atime);
         let block_offset = offset / BLOCK_SIZE;
         let mut byte_offset = (offset % BLOCK_SIZE) as usize;
 
@@ -528,17 +526,17 @@ impl<D: Disk> FileSystem<D> {
         }
 
         if i > 0 {
-            // let atime_nsec = atime.subsec_nanos();
-            // let atime = atime.as_secs();
-            // let mut node = self.node(block)?;
-            // if atime > node.1.atime || (atime == node.1.atime && atime_nsec > node.1.atime_nsec) {
-            //     let is_old = atime - node.1.atime > 3600; // Last read was more than a day ago
-            //     node.1.atime = atime;
-            //     node.1.atime_nsec = atime_nsec;
-            //     if is_old {
-            //         self.write_at(node.0, &node.1)?;
-            //     }
-            // }
+            let atime_nsec = atime.subsec_nanos();
+            let atime = atime.as_secs();
+            let mut node = self.node(block)?;
+            if atime > node.1.atime || (atime == node.1.atime && atime_nsec > node.1.atime_nsec) {
+                let is_old = atime - node.1.atime > 3600; // Last read was more than a day ago
+                node.1.atime = atime;
+                node.1.atime_nsec = atime_nsec;
+                if is_old {
+                    self.write_at(node.0, &node.1)?;
+                }
+            }
         }
 
         Ok(i)

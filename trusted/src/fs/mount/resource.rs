@@ -199,7 +199,6 @@ impl Fmap {
 
         // Memory provided to fmap must be page aligned and sized
         let align = 4096;
-        // let address = memalign(align, ((map.size + align - 1) / align) * align);
         let address = virtual_alloc((map.size + align - 1) / align, true).unwrap() as *mut u8;
         if address.is_null() {
             return Err(Error::new(ENOMEM));
@@ -210,7 +209,7 @@ impl Fmap {
         let count = match fs.read_node(block, map.offset as u64, buf) {
             Ok(ok) => ok,
             Err(err) => {
-                // free(address);
+                virtual_free(address as usize, (map.size + align - 1) / align);
                 return Err(err);
             }
         };
@@ -230,14 +229,14 @@ impl Fmap {
 
     pub fn sync<D: Disk>(&mut self, fs: &mut FileSystem<D>) -> Result<()> {
         if self.flags & PROT_WRITE == PROT_WRITE {
-            // let mtime = SystemTime::now().duration_since(UNIX_EPOCH).unwrap();
+            let mtime = crate::rtc::timestamp();
+            let mtime = core::time::Duration::from_secs(mtime);
             fs.write_node(
                 self.block,
                 self.offset as u64,
                 &self.data,
-                0, 0
-                // mtime.as_secs(),
-                // mtime.subsec_nanos(),
+                mtime.as_secs(),
+                mtime.subsec_nanos(),
             )?;
         }
         Ok(())
@@ -310,14 +309,14 @@ impl<D: Disk> Resource<D> for FileResource {
             if self.flags & O_APPEND == O_APPEND {
                 self.seek = fs.node_len(self.block)? as isize;
             }
-            // let mtime = SystemTime::now().duration_since(UNIX_EPOCH).unwrap();
+            let mtime = crate::rtc::timestamp();
+            let mtime = core::time::Duration::from_secs(mtime);
             let count = fs.write_node(
                 self.block,
                 self.seek as u64,
                 buf,
-                0, 0
-                // mtime.as_secs(),
-                // mtime.subsec_nanos(),
+                mtime.as_secs(),
+                mtime.subsec_nanos(),
             )?;
             self.seek += count as isize;
             Ok(count)

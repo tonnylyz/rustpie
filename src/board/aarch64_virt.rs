@@ -54,5 +54,11 @@ pub fn devices() -> Vec<Device> {
       vec![
         0x10 + 32
       ]),
+    Device::new(
+      "pl031",
+      vec![
+        0x9010000..0x9011000
+      ],
+      vec![]),
   ]
 }

@@ -5,6 +5,8 @@
 
 extern crate alloc;
 
+use spin::Once;
+
 #[macro_export]
 macro_rules! print {
     ($($arg:tt)*) => ($crate::stdio::print_arg(format_args!($($arg)*)));
@@ -25,6 +27,31 @@ pub mod stdio;
 
 pub fn sched_yield() {
   microcall::thread_yield();
+}
+
+use alloc::vec::Vec;
+
+#[inline(always)]
+fn round_up(addr: usize, n: usize) -> usize {
+  (addr + n - 1) & !(n - 1)
+}
+
+pub fn parse(arg: *const u8) -> Vec<&'static str> {
+  heap::init();
+  let mut arguments = Vec::new();
+  unsafe {
+    let cmd = core::slice::from_raw_parts(arg, round_up(arg as usize, 4096) - arg as usize - 1);
+    let cmd = core::str::from_utf8(cmd).unwrap();
+    let mut iter = cmd.split_ascii_whitespace();
+    loop {
+      if let Some(arg) = iter.next() {
+        arguments.push(arg);
+      } else {
+        break;
+      }
+    }
+  }
+  arguments
 }
 
 pub fn exit() -> ! {

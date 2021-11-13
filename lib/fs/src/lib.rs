@@ -4,9 +4,13 @@ use microcall::message::Message;
 use redox::*;
 use common::server::SERVER_REDOX_FS;
 
+pub use redox::Stat;
+
 pub struct File {
   handle: usize,
 }
+
+pub struct Permissions(u16);
 
 #[derive(Copy, Clone, Debug, Eq, PartialEq)]
 pub enum SeekFrom {
@@ -32,7 +36,7 @@ impl File {
       a: SYS_OPEN,
       b: path.as_ref().as_ptr() as usize,
       c: path.as_ref().len(),
-      d: O_CREAT,
+      d: O_CREAT | O_RDWR,
     };
     let msg = msg.call(SERVER_REDOX_FS).map_err(|_| Error::new(EIO))?;
     Error::demux(msg.a).map(|handle| File{ handle })
@@ -78,6 +82,41 @@ impl File {
     let msg = msg.call(SERVER_REDOX_FS).map_err(|_| Error::new(EIO))?;
     Error::demux(msg.a).map(|u| u as u64)
   }
+
+  pub fn set_len(&self, size: u64) -> Result<()> {
+    let msg = Message {
+      a: SYS_FTRUNCATE,
+      b: self.handle,
+      c: size as usize,
+      d: 0,
+    };
+    let msg = msg.call(SERVER_REDOX_FS).map_err(|_| Error::new(EIO))?;
+    Error::demux(msg.a).map(|_| ())
+  }
+
+  pub fn stat(&self) -> Result<Stat> {
+    let mut stat = Stat::default();
+    let msg = Message {
+      a: SYS_FSTAT,
+      b: self.handle,
+      c: (&stat).as_ptr() as usize,
+      d: (&stat).len(),
+    };
+    let msg = msg.call(SERVER_REDOX_FS).map_err(|_| Error::new(EIO))?;
+    Error::demux(msg.a).map(|_| stat)
+  }
+
+  pub fn set_permissions(&self, perm: Permissions) -> Result<()> {
+    let msg = Message {
+      a: SYS_CHMOD,
+      b: self.handle,
+      c: perm.0 as usize,
+      d: 0,
+    };
+    let msg = msg.call(SERVER_REDOX_FS).map_err(|_| Error::new(EIO))?;
+    Error::demux(msg.a).map(|_| ())
+  }
+
 }
 
 impl Drop for File {
@@ -108,6 +147,17 @@ pub fn create_dir<P: AsRef<str>>(path: P) -> Result<()> {
 pub fn remove_file<P: AsRef<str>>(path: P) -> Result<()> {
   let msg = Message {
     a: SYS_UNLINK,
+    b: path.as_ref().as_ptr() as usize,
+    c: path.as_ref().len(),
+    d: 0,
+  };
+  msg.call(SERVER_REDOX_FS).map_err(|_| Error::new(EIO))?;
+  Error::demux(msg.a).map(|_| ())
+}
+
+pub fn remove_directory<P: AsRef<str>>(path: P) -> Result<()> {
+  let msg = Message {
+    a: SYS_RMDIR,
     b: path.as_ref().as_ptr() as usize,
     c: path.as_ref().len(),
     d: 0,

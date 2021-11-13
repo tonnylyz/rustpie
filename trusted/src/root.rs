@@ -48,6 +48,10 @@ pub fn main() {
   }));
 
   join_handlers.push(thread::spawn(|| {
+    server_wrapper(crate::rtc::server);
+  }));
+
+  join_handlers.push(thread::spawn(|| {
     server_wrapper(crate::fs::server);
   }));
 

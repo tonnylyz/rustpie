@@ -11,13 +11,17 @@ extern crate exported;
 #[no_mangle]
 fn _start(arg: *const u8) {
   let arg = exported::parse(arg);
-  if arg.len() == 0 {
-    println!("usage: rm FILE...");
+  if arg.len() != 2 {
+    println!("usage: write FILE TEXT...");
     exported::exit();
   }
   let path = arg[0];
-  match fs::remove_file(path) {
-    Ok(_) => {}
+  let mut file = fs::File::create(path);
+  match file {
+    Ok(mut file) => {
+      file.write(arg[1].as_bytes()).expect("write file failed");
+      file.write(&[b'\n']);
+    }
     Err(e) => {
       println!("{}", e);
     }
