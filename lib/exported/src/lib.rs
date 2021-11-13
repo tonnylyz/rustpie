@@ -5,8 +5,6 @@
 
 extern crate alloc;
 
-use spin::Once;
-
 #[macro_export]
 macro_rules! print {
     ($($arg:tt)*) => ($crate::stdio::print_arg(format_args!($($arg)*)));

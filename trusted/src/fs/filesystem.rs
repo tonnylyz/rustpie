@@ -39,6 +39,7 @@ impl<D: Disk> FileSystem<D> {
     }
 
     /// Create a file system on a disk
+    #[allow(dead_code)]
     pub fn create(disk: D, ctime: u64, ctime_nsec: u32) -> Result<Self> {
         Self::create_reserved(disk, &[], ctime, ctime_nsec)
     }
@@ -46,6 +47,7 @@ impl<D: Disk> FileSystem<D> {
     /// Create a file system on a disk, with reserved data at the beginning
     /// Reserved data will be zero padded up to the nearest block
     /// We need to pass ctime and ctime_nsec in order to initialize the unix timestamps
+    #[allow(dead_code)]
     pub fn create_reserved(
         mut disk: D,
         reserved: &[u8],
@@ -131,7 +133,7 @@ impl<D: Disk> FileSystem<D> {
         self.read_at(block, &mut node)?;
         Ok((block, node))
     }
-
+    #[allow(dead_code)]
     pub fn ex_node(&mut self, block: u64) -> Result<(u64, ExNode)> {
         let mut node = ExNode::default();
         self.read_at(block, &mut node)?;

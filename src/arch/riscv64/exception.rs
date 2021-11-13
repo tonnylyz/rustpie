@@ -2,21 +2,14 @@ use riscv::regs::*;
 use tock_registers::interfaces::{Readable, Writeable};
 
 use crate::lib::traits::*;
-use crate::panic::exception_trace;
 use crate::lib::interrupt::InterruptController;
 use crate::arch::ContextFrame;
 
 global_asm!(include_str!("exception.S"));
 
-const INTERRUPT_USER_SOFTWARE: usize = 0;
 const INTERRUPT_SUPERVISOR_SOFTWARE: usize = 1;
-const INTERRUPT_MACHINE_SOFTWARE: usize = 3;
-const INTERRUPT_USER_TIMER: usize = 4;
 const INTERRUPT_SUPERVISOR_TIMER: usize = 5;
-const INTERRUPT_MACHINE_TIMER: usize = 7;
-const INTERRUPT_USER_EXTERNAL: usize = 8;
 const INTERRUPT_SUPERVISOR_EXTERNAL: usize = 9;
-const INTERRUPT_MACHINE_EXTERNAL: usize = 11;
 
 const EXCEPTION_INSTRUCTION_ADDRESS_MISALIGNED: usize = 0;
 const EXCEPTION_INSTRUCTION_ACCESS_FAULT: usize = 1;
@@ -27,8 +20,8 @@ const EXCEPTION_LOAD_ACCESS_FAULT: usize = 5;
 const EXCEPTION_STORE_ADDRESS_MISALIGNED: usize = 6;
 const EXCEPTION_STORE_ACCESS_FAULT: usize = 7;
 const EXCEPTION_ENVIRONMENT_CALL_FROM_USER_MODE: usize = 8;
-const EXCEPTION_ENVIRONMENT_CALL_FROM_SUPERVISOR_MODE: usize = 9;
-const EXCEPTION_ENVIRONMENT_CALL_FROM_MACHINE_MODE: usize = 11;
+// const EXCEPTION_ENVIRONMENT_CALL_FROM_SUPERVISOR_MODE: usize = 9;
+// const EXCEPTION_ENVIRONMENT_CALL_FROM_MACHINE_MODE: usize = 11;
 const EXCEPTION_INSTRUCTION_PAGE_FAULT: usize = 12;
 const EXCEPTION_LOAD_PAGE_FAULT: usize = 13;
 const EXCEPTION_STORE_PAGE_FAULT: usize = 15;
@@ -62,11 +55,8 @@ unsafe extern "C" fn exception_entry(ctx: *mut ContextFrame) {
   }
   if irq {
     match code {
-      INTERRUPT_USER_SOFTWARE => panic!("Interrupt::UserSoft"),
       INTERRUPT_SUPERVISOR_SOFTWARE => panic!("Interrupt::SupervisorSoft"),
-      INTERRUPT_USER_TIMER => panic!("Interrupt::UserTimer"),
       INTERRUPT_SUPERVISOR_TIMER => crate::lib::timer::interrupt(),
-      INTERRUPT_USER_EXTERNAL => panic!("Interrupt::UserExternal"),
       INTERRUPT_SUPERVISOR_EXTERNAL => {
         let plic = &crate::driver::INTERRUPT_CONTROLLER;
         if let Some(int) = plic.fetch() {

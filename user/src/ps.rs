@@ -5,7 +5,6 @@
 
 extern crate alloc;
 extern crate rlibc;
-#[macro_use]
 extern crate exported;
 
 #[no_mangle]

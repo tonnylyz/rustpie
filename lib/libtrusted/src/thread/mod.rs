@@ -1,14 +1,11 @@
 mod thread_sys;
 
 use alloc::boxed::Box;
-use alloc::string::String;
 use alloc::sync::Arc;
 use core::any::Any;
 use core::cell::UnsafeCell;
 use core::num::NonZeroU64;
-use core::time::Duration;
 
-use common::PAGE_SIZE;
 use thread_sys as imp;
 
 ////////////////////////////////////////////////////////////////////////////////

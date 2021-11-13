@@ -112,7 +112,7 @@ impl Node {
     pub fn is_dir(&self) -> bool {
         self.mode & Node::MODE_TYPE == Node::MODE_DIR
     }
-
+    #[allow(dead_code)]
     pub fn is_file(&self) -> bool {
         self.mode & Node::MODE_TYPE == Node::MODE_FILE
     }
@@ -145,7 +145,7 @@ impl Node {
         }
         perm & op == op
     }
-
+    #[allow(dead_code)]
     pub fn size(&self) -> u64 {
         self.extents
             .iter()
@@ -160,7 +160,9 @@ impl fmt::Debug for Node {
             .iter()
             .filter(|extent| -> bool { extent.length > 0 })
             .collect();
+        #[allow(unused_unsafe)]
         unsafe {
+            #[allow(unaligned_references)]
             f.debug_struct("Node")
                 .field("mode", &self.mode)
                 .field("uid", &self.uid)

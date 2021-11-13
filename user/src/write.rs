@@ -16,11 +16,11 @@ fn _start(arg: *const u8) {
     exported::exit();
   }
   let path = arg[0];
-  let mut file = fs::File::create(path);
+  let file = fs::File::create(path);
   match file {
     Ok(mut file) => {
       file.write(arg[1].as_bytes()).expect("write file failed");
-      file.write(&[b'\n']);
+      file.write(&[b'\n']).expect("write file failed");
     }
     Err(e) => {
       println!("{}", e);

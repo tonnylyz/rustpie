@@ -2,13 +2,12 @@ use alloc::collections::BTreeMap;
 use alloc::vec::Vec;
 use common::event::*;
 use common::syscall::error::{ERROR_HOLD_ON, ERROR_INVARG};
-use spin::{Mutex, Once};
+use spin::Mutex;
 
 use crate::lib::interrupt::INT_SEM;
-use crate::lib::semaphore::{Semaphore, SemaphoreWaitResult};
-use crate::lib::thread::{thread_wake, Tid};
-use crate::lib::traits::ContextFrameTrait;
-use crate::syscall::{Result as SyscallResult, SyscallOutRegisters};
+use crate::lib::semaphore::SemaphoreWaitResult;
+use crate::lib::thread::Tid;
+
 
 use super::{Result, SyscallOutRegisters::*};
 

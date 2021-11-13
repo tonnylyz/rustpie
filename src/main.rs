@@ -28,7 +28,7 @@ cfg_if::cfg_if! {
     mod arch;
     #[path = "board/aarch64_virt.rs"]
     mod board;
-    #[path = "driver/aarch64_virt/mod.rs"]
+    #[path = "driver/aarch64/mod.rs"]
     mod driver;
     // Note: size of ContextFrame needs to be synced with `arch/*/exception.S`
     assert_eq_size!([u8; 0x110], ContextFrame);
@@ -44,7 +44,7 @@ cfg_if::cfg_if! {
     #[path = "board/riscv64_virt.rs"]
     mod board;
 
-    #[path = "driver/riscv64_virt/mod.rs"]
+    #[path = "driver/riscv64/mod.rs"]
     mod driver;
     assert_eq_size!([u8; 0x110], ContextFrame);
   } else {

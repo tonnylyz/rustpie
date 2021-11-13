@@ -3,7 +3,7 @@ use common::PAGE_SIZE;
 
 use redox::*;
 use microcall::message::Message;
-use libtrusted::mm::{Entry, PageAttribute, default_page_attribute, virtual_alloc, virtual_free};
+use libtrusted::mm::{virtual_alloc, virtual_free};
 
 pub struct VirtioClient;
 

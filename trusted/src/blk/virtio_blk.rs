@@ -427,10 +427,10 @@ fn irq() {
 
 fn wait_for_irq() {
   #[cfg(target_arch = "aarch64")]
-    microcall::event_wait(common::event::EVENT_INTERRUPT, 0x10 + 32);
+    let _ = microcall::event_wait(common::event::EVENT_INTERRUPT, 0x10 + 32);
 
   #[cfg(target_arch = "riscv64")]
-    microcall::event_wait(common::event::EVENT_INTERRUPT, 0x01);
+    let _ = microcall::event_wait(common::event::EVENT_INTERRUPT, 0x01);
 }
 
 pub fn server() {

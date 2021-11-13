@@ -99,7 +99,7 @@ impl File {
     let msg = Message {
       a: SYS_FSTAT,
       b: self.handle,
-      c: (&stat).as_ptr() as usize,
+      c: (&mut stat).as_mut_ptr() as usize,
       d: (&stat).len(),
     };
     let msg = msg.call(SERVER_REDOX_FS).map_err(|_| Error::new(EIO))?;

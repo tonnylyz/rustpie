@@ -91,18 +91,7 @@ disk: user_image
 	rm -rf disk
 	mkdir disk
 	redoxfs disk.img disk
-	cp user/target/${ARCH}/${USER_PROFILE}/shell disk/
-	cp user/target/${ARCH}/${USER_PROFILE}/cat disk/
-	cp user/target/${ARCH}/${USER_PROFILE}/ls disk/
-	cp user/target/${ARCH}/${USER_PROFILE}/mkdir disk/
-	cp user/target/${ARCH}/${USER_PROFILE}/touch disk/
-	cp user/target/${ARCH}/${USER_PROFILE}/rm disk/
-	cp user/target/${ARCH}/${USER_PROFILE}/rd disk/
-	cp user/target/${ARCH}/${USER_PROFILE}/stat disk/
-	cp user/target/${ARCH}/${USER_PROFILE}/test disk/
-	cp user/target/${ARCH}/${USER_PROFILE}/hello disk/
-	cp user/target/${ARCH}/${USER_PROFILE}/ps disk/
-	cp user/target/${ARCH}/${USER_PROFILE}/write disk/
+	cp user/target/${ARCH}/${USER_PROFILE}/{shell,cat,ls,mkdir,touch,rm,rd,stat,test,hello,ps,write} disk/
 	sync
 	umount disk
 
@@ -111,18 +100,7 @@ sdcard: user_image
 	mkdir sdcard
 	sudo redoxfs-mkfs /dev/sda
 	sudo redoxfs /dev/sda sdcard
-	sudo cp user/target/${ARCH}/${USER_PROFILE}/shell sdcard/
-	sudo cp user/target/${ARCH}/${USER_PROFILE}/cat sdcard/
-	sudo cp user/target/${ARCH}/${USER_PROFILE}/ls sdcard/
-	sudo cp user/target/${ARCH}/${USER_PROFILE}/mkdir sdcard/
-	sudo cp user/target/${ARCH}/${USER_PROFILE}/touch sdcard/
-	sudo cp user/target/${ARCH}/${USER_PROFILE}/rm sdcard/
-	sudo cp user/target/${ARCH}/${USER_PROFILE}/rd sdcard/
-	sudo cp user/target/${ARCH}/${USER_PROFILE}/stat sdcard/
-	sudo cp user/target/${ARCH}/${USER_PROFILE}/test sdcard/
-	sudo cp user/target/${ARCH}/${USER_PROFILE}/hello sdcard/
-	sudo cp user/target/${ARCH}/${USER_PROFILE}/ps sdcard/
-	sudo cp user/target/${ARCH}/${USER_PROFILE}/write sdcard/
+	cp user/target/${ARCH}/${USER_PROFILE}/{shell,cat,ls,mkdir,touch,rm,rd,stat,test,hello,ps,write} sdcard/
 	sync
 	sudo umount sdcard
 

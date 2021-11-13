@@ -31,9 +31,9 @@ mod rtc;
 
 #[no_mangle]
 fn _start(_arg: usize) -> ! {
-  microcall::set_exception_handler(libtrusted::exception::handler as usize);
+  microcall::set_exception_handler(libtrusted::exception::handler as usize).expect("set exception handler failed");
   libtrusted::mm::heap_init();
-  logger::init();
+  logger::init().expect("logger init failed");
   info!("trusted root start");
   let r = catch_unwind(|| {
     root::main();
@@ -42,6 +42,6 @@ fn _start(_arg: usize) -> ! {
     Ok(_) => {}
     Err(_) => error!("root died")
   }
-  microcall::thread_destroy(0);
+  let _ = microcall::thread_destroy(0);
   loop {};
 }

@@ -6,7 +6,6 @@ use crate::lib::traits::ContextFrameTrait;
 use crate::lib::traits::ArchTrait;
 use crate::util::{round_down, round_up};
 use core::mem::size_of;
-use crate::mm::Frame;
 use crate::mm::page_table::{PageTableEntryAttrTrait, PageTableTrait};
 
 enum HandleResult {

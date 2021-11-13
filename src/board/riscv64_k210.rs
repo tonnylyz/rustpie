@@ -1,5 +1,4 @@
 use alloc::vec::Vec;
-use core::fmt::Write;
 use core::ops::Range;
 use crate::lib::device::Device;
 use crate::lib::interrupt::InterruptController;
@@ -8,9 +7,11 @@ use crate::lib::traits::ArchTrait;
 pub const BOARD_CORE_NUMBER: usize = 1;
 
 pub const BOARD_NORMAL_MEMORY_RANGE: Range<usize> = 0x8000_0000..0x8060_0000;
+#[allow(dead_code)]
 pub const BOARD_DEVICE_MEMORY_RANGE: Range<usize> = 0x0000_0000..0x8000_0000;
 
 pub fn init() {
+  crate::driver::uart::init();
 }
 
 pub fn init_per_core() {
@@ -21,9 +22,9 @@ pub fn init_per_core() {
 
 
 pub fn launch_other_cores() {
-  extern "C" {
-    fn KERNEL_ENTRY();
-  }
+  // extern "C" {
+  //   fn KERNEL_ENTRY();
+  // }
   // let _ = crate::driver::hsm::hart_start(1, (KERNEL_ENTRY as usize).kva2pa(), 0);
 }
 

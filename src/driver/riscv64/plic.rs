@@ -2,7 +2,7 @@ use crate::lib::interrupt::InterruptController;
 use crate::lib::traits::ArchTrait;
 use tock_registers::registers::*;
 use tock_registers::{register_structs, interfaces::{Readable, Writeable}};
-use crate::board::BOARD_CORE_NUMBER;
+
 
 // platform level interrupt controller
 // https://github.com/riscv/riscv-plic-spec/blob/master/riscv-plic.adoc

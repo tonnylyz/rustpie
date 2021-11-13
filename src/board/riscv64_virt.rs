@@ -11,6 +11,7 @@ use crate::lib::device::Device;
 pub const BOARD_CORE_NUMBER: usize = 4;
 
 pub const BOARD_NORMAL_MEMORY_RANGE: Range<usize> = 0x8000_0000..0xc000_0000;
+#[allow(dead_code)]
 pub const BOARD_DEVICE_MEMORY_RANGE: Range<usize> = 0x0000_0000..0x8000_0000;
 
 pub fn init() {

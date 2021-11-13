@@ -18,15 +18,17 @@ mod stat;
 
 use core::str;
 use alloc::vec::Vec;
-use alloc::string::{String, ToString};
-use alloc::sync::Arc;
 use microcall::get_tid;
 
 use stat::calculate_stats;
 
+#[allow(dead_code)]
 const SEC_TO_NANO: u64 = 1_000_000_000;
+#[allow(dead_code)]
 const SEC_TO_MICRO: u64 = 1_000_000;
+#[allow(dead_code)]
 const MB: u64 = 1024 * 1024;
+#[allow(dead_code)]
 const KB: u64 = 1024;
 
 // const ITERATIONS: usize = 10_000;
@@ -34,8 +36,11 @@ const ITERATIONS: usize = 10;
 const TRIES: usize = 10;
 const THRESHOLD_ERROR_RATIO: u64 = 2;
 
+#[allow(dead_code)]
 const READ_BUF_SIZE: usize = 64*1024;
+#[allow(dead_code)]
 const WRITE_BUF_SIZE: usize = 1024*1024;
+#[allow(dead_code)]
 const WRITE_BUF: [u8; WRITE_BUF_SIZE] = [65; WRITE_BUF_SIZE];
 
 const T_UNIT: &str = "nano sec";
@@ -210,7 +215,7 @@ fn do_null() -> Result<(), &'static str> {
 fn do_null_inner(overhead_ct: u64, th: usize, nr: usize) -> Result<u64, &'static str> {
   let start_hpet: u64;
   let end_hpet: u64;
-  let mut mypid = get_tid();
+  let mypid = get_tid();
   let hpet = get_hpet().ok_or("Could not retrieve hpet counter")?;
 
   // Since this test takes very little time we multiply the default iterations by 1000
@@ -297,7 +302,7 @@ fn do_spawn_inner(overhead_ct: u64, th: usize, nr: usize, _child_core: u8) -> Re
   for _ in 0..iterations{
     start_hpet = hpet.get_counter();
     // exported::pm::exec("hello");
-    libtrusted::loader::spawn("hello");
+    let _ = libtrusted::loader::spawn("hello");
     end_hpet = hpet.get_counter();
     delta_hpet += end_hpet - start_hpet - overhead_ct;
   }

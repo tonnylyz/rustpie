@@ -24,7 +24,7 @@ fn process(_msg: Message, _tid: usize) {
   Box::leak(b);
 }
 pub fn server() {
-  microcall::server_register(common::server::SERVER_TEST);
+  microcall::server_register(common::server::SERVER_TEST).expect("server register failed");
   loop {
     let (client_tid, msg) = Message::receive().unwrap();
     request_wrapper(process, msg, client_tid).unwrap();

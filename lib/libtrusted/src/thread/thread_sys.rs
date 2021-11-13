@@ -1,7 +1,6 @@
 use alloc::boxed::Box;
-use core::time::Duration;
 use common::PAGE_SIZE;
-use microcall::{thread_alloc, thread_yield, thread_set_status};
+use microcall::{thread_alloc, thread_set_status};
 use crate::mm::{virtual_alloc, virtual_free};
 
 pub struct Thread {
@@ -29,13 +28,13 @@ impl Thread {
       unsafe {
         Box::from_raw(main as *mut Box<dyn FnOnce()>)();
       }
-      microcall::thread_destroy(0);
+      let _ = microcall::thread_destroy(0);
       0
     }
 
     match native {
       Ok(native) => {
-        thread_set_status(native, common::thread::THREAD_STATUS_RUNNABLE);
+        let _ = thread_set_status(native, common::thread::THREAD_STATUS_RUNNABLE);
         Ok(Thread {
           id: native,
           stack_btm: stack,
@@ -62,12 +61,6 @@ impl Thread {
 
   pub fn id(&self) -> usize {
     self.id
-  }
-
-  pub fn into_id(self) -> usize {
-    let id = self.id;
-    core::mem::forget(self);
-    id
   }
 }
 

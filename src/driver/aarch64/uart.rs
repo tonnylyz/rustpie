@@ -1,7 +1,6 @@
-use tock_registers::registers::*;
 use tock_registers::interfaces::{Readable, Writeable};
 use common::driver::pl011::Pl011Mmio;
-use crate::Address;
+
 
 pub fn init() {}
 

@@ -12,10 +12,6 @@ pub use page_table::Entry;
 pub use page_table::traverse;
 pub use page_table::query;
 
-use spin::Mutex;
-use common::*;
-use microcall::mem_alloc;
-
 pub fn default_page_attribute() -> usize {
   Entry::new(true, true, false, false).attribute()
 }
@@ -29,7 +25,7 @@ pub fn virt_to_phys(va: usize) -> usize {
   }
 }
 
-static VALLOC_BASE: Mutex<usize> = Mutex::new(0x4_0000_0000);
+
 
 pub use heap::{virtual_alloc, virtual_free};
 

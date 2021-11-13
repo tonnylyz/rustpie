@@ -80,6 +80,7 @@ fn trace(cb: &mut dyn FnMut(&Frame) -> bool) {
   trace_from(Frame::current(), cb);
 }
 
+#[allow(dead_code)]
 pub fn exception_trace() {
   let ctx = crate::lib::cpu::cpu().context();
   #[cfg(target_arch = "aarch64")]
@@ -128,14 +129,16 @@ pub fn panic_handler(info: &PanicInfo) -> ! {
   if let Some(location) = info.location() {
     error!("Location: {}:{}", location.file(), location.line());
   }
-  //
-  // backtrace();
-  // info!("backtrace done");
+
+  backtrace();
+  info!("backtrace done");
 
   unwind::unwind_from_panic(1);
 }
 
+#[allow(dead_code)]
 static mut PANICKED: bool = false;
+#[allow(dead_code)]
 pub fn random_panic() {
   unsafe {
     if !PANICKED {

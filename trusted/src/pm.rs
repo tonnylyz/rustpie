@@ -1,6 +1,6 @@
 use alloc::collections::BTreeMap;
 use alloc::string::String;
-use alloc::vec::Vec;
+
 use core::sync::atomic::AtomicUsize;
 use core::sync::atomic::Ordering::Relaxed;
 
@@ -71,7 +71,7 @@ impl ProcessManager {
       } else {
         if let Ok(_) = microcall::event_wait(common::event::EVENT_THREAD_EXIT, p.main_tid) {
           p.status = ProcessStatus::Exited;
-          microcall::address_space_destroy(p.asid);
+          microcall::address_space_destroy(p.asid).expect("process address space destroy failed");
           return true;
         } else {
           return false;
@@ -117,7 +117,7 @@ fn process_request(asid: u16, msg: &Message) -> Result<(usize, usize, usize), us
       if let Ok(cmd) = cmd {
         if let Ok((child_asid, tid)) = libtrusted::loader::spawn(cmd) {
           let pid = PROCESS_MANAGER.register(child_asid, tid, Some(asid as usize), String::from(cmd));
-          microcall::thread_set_status(tid, common::thread::THREAD_STATUS_RUNNABLE);
+          microcall::thread_set_status(tid, common::thread::THREAD_STATUS_RUNNABLE).expect("pm start thread failed");
           Ok((pid, 0, 0))
         } else {
           Err(PM_RESULT_NOMEM)

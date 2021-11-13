@@ -11,6 +11,7 @@ pub struct ExNode {
 }
 
 impl ExNode {
+    #[allow(dead_code)]
     pub fn default() -> ExNode {
         ExNode {
             prev: 0,
@@ -18,7 +19,7 @@ impl ExNode {
             extents: [Extent::default(); (BLOCK_SIZE as usize - 16) / 16],
         }
     }
-
+    #[allow(dead_code)]
     pub fn size(&self) -> u64 {
         self.extents
             .iter()
@@ -33,7 +34,9 @@ impl fmt::Debug for ExNode {
             .iter()
             .filter(|extent| -> bool { extent.length > 0 })
             .collect();
+        #[allow(unused_unsafe)]
         unsafe {
+            #[allow(unaligned_references)]
             f.debug_struct("ExNode")
                 .field("prev", &self.prev)
                 .field("next", &self.next)

@@ -51,16 +51,5 @@ impl Semaphore {
       }
     }
   }
-
-  pub fn try_signal(&self) -> Option<Thread> {
-    let mut inner = self.inner.lock();
-    inner.value = 0;
-    if let Some(t) = inner.queue.pop_front() {
-      crate::lib::cpu::cpu().schedule();
-      Some(t)
-    } else {
-      None
-    }
-  }
 }
 

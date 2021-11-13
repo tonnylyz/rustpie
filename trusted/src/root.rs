@@ -3,6 +3,7 @@ use libtrusted::thread;
 use libtrusted::wrapper::server_wrapper;
 
 
+#[allow(dead_code)]
 #[cfg(target_arch = "aarch64")]
 pub fn current_cycle() -> usize {
   let r;
@@ -12,6 +13,7 @@ pub fn current_cycle() -> usize {
   r
 }
 
+#[allow(dead_code)]
 #[cfg(target_arch = "riscv64")]
 pub fn current_cycle() -> usize {
   let r;
@@ -73,14 +75,14 @@ pub fn main() {
 
   join_handlers.push(thread::spawn(|| {
     match libtrusted::loader::spawn("shell") {
-      Ok((asid, tid)) => {
-        microcall::thread_set_status(tid, common::thread::THREAD_STATUS_RUNNABLE);
+      Ok((_asid, tid)) => {
+        microcall::thread_set_status(tid, common::thread::THREAD_STATUS_RUNNABLE).expect("root start shell failed");
       }
       Err(s) => { error!("{}", s); }
     }
   }));
 
   for handler in join_handlers {
-    handler.join();
+    handler.join().expect("root join thread failed");
   }
 }

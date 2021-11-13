@@ -1,6 +1,5 @@
 use tock_registers::register_structs;
 use tock_registers::registers::*;
-use tock_registers::interfaces::{Readable, Writeable};
 
 register_structs! {
   #[allow(non_snake_case)]

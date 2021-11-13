@@ -173,7 +173,7 @@ impl PageTableTrait for Riscv64PageTable {
       pages.push(frame);
       drop(pages);
       if va <= common::CONFIG_READ_ONLY_LEVEL_1_PAGE_TABLE_BTM {
-        self.map(common::CONFIG_READ_ONLY_LEVEL_2_PAGE_TABLE_BTM + va.l1x() * PAGE_SIZE, l1e.to_pa(), EntryAttribute::user_readonly());
+        self.map(common::CONFIG_READ_ONLY_LEVEL_2_PAGE_TABLE_BTM + va.l1x() * PAGE_SIZE, l1e.to_pa(), EntryAttribute::user_readonly())?;
       }
       directory.set_entry(va.l1x(), l1e);
     }
@@ -186,7 +186,7 @@ impl PageTableTrait for Riscv64PageTable {
       pages.push(frame);
       drop(pages);
       if va <= common::CONFIG_READ_ONLY_LEVEL_1_PAGE_TABLE_BTM {
-        self.map(common::CONFIG_READ_ONLY_LEVEL_3_PAGE_TABLE_BTM + va.l1x() * PAGE_SIZE * (PAGE_SIZE / MACHINE_SIZE) + va.l2x() * PAGE_SIZE, l2e.to_pa(), EntryAttribute::user_readonly());
+        self.map(common::CONFIG_READ_ONLY_LEVEL_3_PAGE_TABLE_BTM + va.l1x() * PAGE_SIZE * (PAGE_SIZE / MACHINE_SIZE) + va.l2x() * PAGE_SIZE, l2e.to_pa(), EntryAttribute::user_readonly())?;
       }
       l1e.set_entry(va.l2x(), l2e);
     }
@@ -214,12 +214,12 @@ impl PageTableTrait for Riscv64PageTable {
       } else {
         // update attribute
         crate::arch::Arch::invalidate_tlb();
-        self.map(va, pa, attr);
+        self.map(va, pa, attr)?;
         return Ok(());
       }
     }
     crate::arch::Arch::invalidate_tlb();
-    self.map(va, pa, attr);
+    self.map(va, pa, attr)?;
     Ok(())
   }
 
@@ -268,7 +268,7 @@ impl PageTableTrait for Riscv64PageTable {
   }
 
   fn recursive_map(&self, _va: usize) {
-    self.map(common::CONFIG_READ_ONLY_LEVEL_1_PAGE_TABLE_BTM, self.directory.pa(), EntryAttribute::user_readonly());
+    self.map(common::CONFIG_READ_ONLY_LEVEL_1_PAGE_TABLE_BTM, self.directory.pa(), EntryAttribute::user_readonly()).expect("page table recursive map failed");
   }
 
   fn install_user_page_table(base: usize, asid: AddressSpaceId) {

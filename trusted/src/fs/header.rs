@@ -35,7 +35,7 @@ impl Header {
             padding: [0; BLOCK_SIZE as usize - 56],
         }
     }
-
+    #[allow(dead_code)]
     pub fn new(size: u64, root: u64, free: u64) -> Header {
         Header {
             signature: *SIGNATURE,
@@ -55,7 +55,9 @@ impl Header {
 
 impl fmt::Debug for Header {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        #[allow(unused_unsafe)]
         unsafe {
+            #[allow(unaligned_references)]
             f.debug_struct("Header")
                 .field("signature", &self.signature)
                 .field("version", &self.version)

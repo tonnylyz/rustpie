@@ -14,8 +14,6 @@ pub fn timestamp() -> u64 {
   const GOLDFISH_MMIO_BASE: usize = 0x8_0000_0000 + 0x101000;
   let low = unsafe { (GOLDFISH_MMIO_BASE as *mut u32).read() as u64 };
   let high = unsafe { ((GOLDFISH_MMIO_BASE + 4) as *mut u32).read() as u64 };
-  info!("low {:08x}", low);
-  info!("high {:08x}", high);
   ((high << 32) | low) / NSEC_PER_SEC
 }
 
@@ -25,7 +23,7 @@ pub fn timestamp() -> u64 { 0 }
 
 fn rtc_time64_to_tm(time: u64) -> RtcTime {
   let leaps_thru_end_of = |y: i32| {
-    ((y)/4 - (y)/100 + (y)/400)
+    (y)/4 - (y)/100 + (y)/400
   };
   let is_leap_year = |y: i32| {
     ((y % 4 == 0) && (y % 100 != 0)) || (y % 400 == 0)
@@ -77,6 +75,7 @@ pub fn server() {
   loop {
     let (client_tid, _msg) = microcall::message::Message::receive().unwrap();
     let mut msg = microcall::message::Message::default();
+    msg.a = timestamp() as usize;
     let _ = msg.send_to(client_tid);
   }
 }

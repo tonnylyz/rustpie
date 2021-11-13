@@ -2,7 +2,9 @@ use alloc::boxed::Box;
 use super::{Result, SyscallOutRegisters::*};
 use common::syscall::error::ERROR_INVARG;
 
+#[allow(dead_code)]
 struct ResourceA;
+#[allow(dead_code)]
 struct ResourceB;
 impl Drop for ResourceA {
   fn drop(&mut self) {
@@ -10,11 +12,13 @@ impl Drop for ResourceA {
   }
 }
 #[inline(never)]
+#[allow(dead_code)]
 fn make_page_fault() {
   unsafe { (0xdeadbeef0000 as *mut usize).write(0); }
   panic!(); // indicates an exception may happen
 }
 #[inline(never)]
+#[allow(dead_code)]
 pub fn null2() -> Result {
   info!("null called");
   let a = Box::new(ResourceA);

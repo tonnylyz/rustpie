@@ -1,7 +1,7 @@
 use crate::loader::{round_up, round_down};
-use crate::mm::{Entry, PageAttribute, default_page_attribute, virtual_alloc, virtual_free};
+use crate::mm::{default_page_attribute, virtual_alloc, virtual_free};
 use common::PAGE_SIZE;
-use microcall::{mem_map, mem_unmap};
+use microcall::mem_map;
 use redox::*;
 
 pub struct ForeignSlice {

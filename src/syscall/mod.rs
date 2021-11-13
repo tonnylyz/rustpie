@@ -12,11 +12,17 @@ pub type Error = usize;
 
 #[derive(Debug)]
 pub enum SyscallOutRegisters {
+  #[allow(dead_code)]
   Unit,
+  #[allow(dead_code)]
   Single(usize),
+  #[allow(dead_code)]
   Double(usize, usize),
+  #[allow(dead_code)]
   Triple(usize, usize, usize),
+  #[allow(dead_code)]
   Quadruple(usize, usize, usize, usize),
+  #[allow(dead_code)]
   Pentad(usize, usize, usize, usize, usize),
 }
 

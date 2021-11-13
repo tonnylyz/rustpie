@@ -1,5 +1,5 @@
 use microcall::message::Message;
-use libtrusted::mm::{default_page_attribute, Entry, PageAttribute};
+use libtrusted::mm::default_page_attribute;
 use microcall::get_tid;
 use libtrusted::wrapper::request_wrapper;
 
@@ -10,8 +10,10 @@ fn process(msg: Message, tid: usize) -> () {
   let asid = microcall::get_asid(tid).unwrap();
   let r = match msg.a {
     1 => {
-      microcall::mem_alloc(asid, msg.b, default_page_attribute());
-      0
+      match microcall::mem_alloc(asid, msg.b, default_page_attribute()) {
+        Ok(_) => {0}
+        Err(_) => {0x1}
+      }
     },
     _ => {
       0x1
