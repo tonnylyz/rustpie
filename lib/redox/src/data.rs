@@ -1,6 +1,8 @@
+use core::{mem, slice};
 use core::ops::{Deref, DerefMut};
+
 use super::*;
-use core::{slice, mem};
+
 // from redox_syscall data.rs
 
 #[derive(Copy, Clone, Debug, Default)]
@@ -73,7 +75,7 @@ pub struct Packet {
   pub a: usize,
   pub b: usize,
   pub c: usize,
-  pub d: usize
+  pub d: usize,
 }
 
 impl Deref for Packet {

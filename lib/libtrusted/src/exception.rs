@@ -1,11 +1,9 @@
-use unwind::unwind_from_exception;
-use unwind::registers::Registers;
-
 #[cfg(target_arch = "aarch64")]
 use unwind::arch::Aarch64;
-
 #[cfg(target_arch = "riscv64")]
 use unwind::arch::Riscv64;
+use unwind::registers::Registers;
+use unwind::unwind_from_exception;
 
 #[cfg(target_arch = "aarch64")]
 #[repr(C)]

@@ -1,3 +1,13 @@
+use core::fmt::{Display, Formatter};
+
+use common::syscall::error::*;
+
+use SyscallOutRegisters::*;
+
+use crate::lib::address_space::AddressSpace;
+use crate::lib::cpu::cpu;
+use crate::lib::thread::Thread;
+
 pub mod misc;
 pub mod thread;
 pub mod mm;
@@ -5,8 +15,6 @@ pub mod address_space;
 pub mod event;
 pub mod ipc;
 pub mod server;
-
-use core::fmt::{Display, Formatter};
 
 pub type Error = usize;
 
@@ -25,12 +33,6 @@ pub enum SyscallOutRegisters {
   #[allow(dead_code)]
   Pentad(usize, usize, usize, usize, usize),
 }
-
-use SyscallOutRegisters::*;
-use crate::lib::address_space::AddressSpace;
-use common::syscall::error::*;
-use crate::lib::thread::Thread;
-use crate::lib::cpu::cpu;
 
 impl Display for SyscallOutRegisters {
   fn fmt(&self, f: &mut Formatter<'_>) -> core::fmt::Result {

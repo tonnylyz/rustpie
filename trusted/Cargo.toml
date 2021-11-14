@@ -20,6 +20,8 @@ redox = { path = "../lib/redox" }
 fs = { path = "../lib/fs" }
 unwind = { path = "../lib/unwind" }
 bm = { path = "../lib/bm" }
+cs = { path = "../lib/cs" }
+inject = { path = "../inject" }
 
 k210-hal = { git = "https://github.com/tonnylyz/k210-hal", optional = true }
 

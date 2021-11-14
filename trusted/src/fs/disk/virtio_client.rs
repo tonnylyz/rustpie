@@ -1,9 +1,10 @@
-use crate::fs::{Disk, BLOCK_SIZE};
 use common::PAGE_SIZE;
 
-use redox::*;
-use microcall::message::Message;
 use libtrusted::mm::{virtual_alloc, virtual_free};
+use microcall::message::Message;
+use redox::*;
+
+use crate::fs::{BLOCK_SIZE, Disk};
 
 pub struct VirtioClient;
 
@@ -30,9 +31,9 @@ impl VirtioClient {
       a: (block as usize) * 8,
       b: 8,
       c: buffer.as_mut_ptr() as usize,
-      d: 0
+      d: cs::blk::action::READ,
     }.call(common::server::SERVER_BLK).map_err(|_| Error::new(EIO))?;
-    if msg.a == 0 {
+    if msg.a == cs::blk::result::OK {
       Ok(buffer.len())
     } else {
       Err(Error::new(EIO))
@@ -57,9 +58,9 @@ impl VirtioClient {
       a: (block as usize) * 8,
       b: 8,
       c: buffer.as_ptr() as usize,
-      d: 1
+      d: cs::blk::action::WRITE,
     }.call(common::server::SERVER_BLK).map_err(|_| Error::new(EIO))?;
-    if msg.a == 0 {
+    if msg.a == cs::blk::result::OK {
       Ok(buffer.len())
     } else {
       Err(Error::new(EIO))
@@ -102,10 +103,10 @@ impl Disk for VirtioClient {
       a: 0,
       b: 0,
       c: 0,
-      d: 2
+      d: cs::blk::action::SIZE,
     };
     let msg = msg.call(common::server::SERVER_BLK).map_err(|_| Error::new(EIO))?;
-    if msg.a == 0 {
+    if msg.a == cs::blk::result::OK {
       Err(Error::new(EIO))
     } else {
       Ok(msg.a as u64)

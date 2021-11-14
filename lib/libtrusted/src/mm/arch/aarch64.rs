@@ -1,8 +1,8 @@
+use common::{*, CONFIG_RECURSIVE_PAGE_TABLE_BTM as RECURSIVE_PAGE_TABLE_BTM};
 use common::mm::vm_descriptor::*;
-
-use common::{CONFIG_RECURSIVE_PAGE_TABLE_BTM as RECURSIVE_PAGE_TABLE_BTM, *};
-use crate::mm::PageAttribute;
 use tock_registers::LocalRegisterCopy;
+
+use crate::mm::PageAttribute;
 
 const PTE_ADDR_MASK: usize = 0x0000_FFFF_FFFF_F000;
 const PTE_ATTR_MASK: usize = !PTE_ADDR_MASK;
@@ -96,7 +96,7 @@ impl PageAttribute for Entry {
       self.0 &= !(PAGE_DESCRIPTOR::AP.val(0b11)).value as usize;
       self.0 |= (PAGE_DESCRIPTOR::AP::RW_EL1_EL0).value as usize;
     } else {
-      self.0 |= (PAGE_DESCRIPTOR::AP::RO_EL1_EL0).value  as usize;
+      self.0 |= (PAGE_DESCRIPTOR::AP::RO_EL1_EL0).value as usize;
     }
   }
 

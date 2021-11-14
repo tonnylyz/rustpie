@@ -1,9 +1,9 @@
 use riscv::regs::*;
 use tock_registers::interfaces::{Readable, Writeable};
 
-use crate::lib::traits::*;
-use crate::lib::interrupt::InterruptController;
 use crate::arch::ContextFrame;
+use crate::lib::interrupt::InterruptController;
+use crate::lib::traits::*;
 
 global_asm!(include_str!("exception.S"));
 
@@ -80,7 +80,7 @@ unsafe extern "C" fn exception_entry(ctx: *mut ContextFrame) {
         info!("SEPC {:016x}", core.context().exception_pc());
         info!("FAR  {:016x}", crate::arch::Arch::fault_address());
         crate::lib::exception::handle_user()
-      },
+      }
       EXCEPTION_ENVIRONMENT_CALL_FROM_USER_MODE => {
         // Note: we need to set epc to next instruction before doing system call
         //       pay attention to yield and process_alloc
@@ -94,7 +94,7 @@ unsafe extern "C" fn exception_entry(ctx: *mut ContextFrame) {
       | EXCEPTION_LOAD_PAGE_FAULT
       | EXCEPTION_STORE_PAGE_FAULT => {
         crate::mm::page_fault::handle()
-      },
+      }
       _ => panic!("Exception::Unknown")
     }
   }

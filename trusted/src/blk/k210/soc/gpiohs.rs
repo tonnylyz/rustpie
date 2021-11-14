@@ -2,7 +2,7 @@
 use k210_hal::pac;
 
 use super::gpio;
-use super::utils::{set_bit,get_bit};
+use super::utils::{get_bit, set_bit};
 
 // TODO embedded-hal::digital::v2::{InputPin, OutputPin}
 

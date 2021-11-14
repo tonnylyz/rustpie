@@ -1,13 +1,14 @@
 use alloc::boxed::Box;
 use alloc::vec::Vec;
 use core::mem::size_of;
-use tock_registers::*;
-use tock_registers::registers::*;
+
 use spin::{Mutex, Once};
+use tock_registers::*;
+use tock_registers::interfaces::{Readable, Writeable};
+use tock_registers::registers::*;
+
 use libtrusted::mm::virt_to_phys;
 use microcall::get_tid;
-
-use tock_registers::interfaces::{Writeable, Readable};
 
 #[cfg(target_arch = "aarch64")]
 const VIRTIO_MMIO_BASE: usize = 0x8_0000_0000 + 0x0a000000;
@@ -191,10 +192,10 @@ pub fn init() {
 
   let features: u64 =
     1 << VIRTIO_F_VERSION_1
-    | 1 << VIRTIO_BLK_F_SEG_MAX
-    | 1 << VIRTIO_BLK_F_GEOMETRY
-    | 1 << VIRTIO_BLK_F_BLK_SIZE
-    | 1 << VIRTIO_BLK_F_TOPOLOGY;
+      | 1 << VIRTIO_BLK_F_SEG_MAX
+      | 1 << VIRTIO_BLK_F_GEOMETRY
+      | 1 << VIRTIO_BLK_F_BLK_SIZE
+      | 1 << VIRTIO_BLK_F_TOPOLOGY;
 
 
   mmio.DriverFeaturesSel.set(0);
@@ -364,7 +365,7 @@ fn io(sector: usize, count: usize, buf: usize, op: Operation, src: usize) {
     buf,
     imp: hdr,
     status,
-    src
+    src,
   });
 
   let mmio = &VIRTIO_MMIO;
@@ -441,16 +442,15 @@ pub fn server() {
 
   loop {
     let (client_tid, msg) = microcall::message::Message::receive().unwrap();
-    trace!("recv {:x?}", (client_tid, msg));
-    if msg.d == 0 || msg.d == 1 {
+    if msg.d == cs::blk::action::READ || msg.d == cs::blk::action::WRITE {
       let sector = msg.a;
       let count = msg.b;
       let buf = msg.c;
-      let op = if msg.d == 0 { Operation::Read } else { Operation::Write };
+      let op = if msg.d == cs::blk::action::READ { Operation::Read } else { Operation::Write };
       io(sector, count, buf, op, client_tid);
       wait_for_irq();
       irq();
-    } else if msg.d == 2 {
+    } else if msg.d == cs::blk::action::SIZE {
       let mut msg = microcall::message::Message::default();
       msg.a = match VIRTIO_MMIO.disk_size.get() {
         None => 0,
@@ -459,7 +459,7 @@ pub fn server() {
       let _ = msg.send_to(client_tid);
     } else {
       let mut msg = microcall::message::Message::default();
-      msg.a = 1;
+      msg.a = cs::blk::result::ERR;
       let _ = msg.send_to(client_tid);
     }
   }

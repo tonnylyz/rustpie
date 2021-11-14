@@ -2,10 +2,10 @@ use microcall::message::Message;
 
 pub fn exec(cmd: &str) -> Result<usize, &'static str> {
   let result = Message::new(
-    1, cmd.as_ptr() as usize, cmd.len(), 0
+    cs::pm::action::SPAWN, cmd.as_ptr() as usize, cmd.len(), 0,
   ).call(common::server::SERVER_PM).map_err(|_| "server call failed")?;
   match result.a {
-    0 => Ok(result.b),
+    cs::pm::result::OK => Ok(result.b),
     _ => Err("exec failed"),
   }
 }
@@ -13,16 +13,15 @@ pub fn exec(cmd: &str) -> Result<usize, &'static str> {
 pub fn wait(pid: usize) {
   loop {
     let result = Message::new(
-      2, pid, 0, 0
+      cs::pm::action::WAIT, pid, 0, 0,
     ).call(common::server::SERVER_PM).expect("server call failed");
     match result.a {
-      0 => {
-        match result.b {
-          0 => microcall::thread_yield(),
-          1 => break,
-          _ => panic!("wait result invalid"),
-        }
-      },
+      cs::pm::result::OK => {
+        break;
+      }
+      cs::pm::result::HOLD_ON => {
+        microcall::thread_yield();
+      }
       _ => panic!("wait failed"),
     }
   }
@@ -30,6 +29,6 @@ pub fn wait(pid: usize) {
 
 pub fn ps() {
   let _ = Message::new(
-    3, 0, 0, 0
+    cs::pm::action::PS, 0, 0, 0,
   ).call(common::server::SERVER_PM);
 }

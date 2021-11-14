@@ -1,6 +1,7 @@
 use cortex_a::registers::{ESR_EL1, VBAR_EL1};
-use crate::arch::ContextFrame;
 use tock_registers::interfaces::{Readable, Writeable};
+
+use crate::arch::ContextFrame;
 
 global_asm!(include_str!("exception.S"));
 

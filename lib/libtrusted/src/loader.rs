@@ -1,13 +1,14 @@
-use fs::{File, SeekFrom};
 use common::PAGE_SIZE;
+
+use fs::{File, SeekFrom};
+
 use crate::mm::{default_page_attribute, virtual_alloc, virtual_free};
-
-
 
 #[inline(always)]
 pub fn round_up(addr: usize, n: usize) -> usize {
   (addr + n - 1) & !(n - 1)
 }
+
 #[inline(always)]
 pub fn round_down(addr: usize, n: usize) -> usize {
   addr & !(n - 1)
@@ -41,9 +42,7 @@ pub fn spawn<P: AsRef<str>>(cmd: P) -> Result<(u16, usize), &'static str> {
     let entry_point = elf.header.pt2.entry_point() as usize;
     let va_tmp = virtual_alloc(1, false).unwrap();
     for ph in elf.program_iter() {
-      if let Ok(xmas_elf::program::Type::Load) = ph.get_type() {
-
-      } else {
+      if let Ok(xmas_elf::program::Type::Load) = ph.get_type() {} else {
         continue;
       }
       let va_start = ph.virtual_addr() as usize;

@@ -1,10 +1,12 @@
-use super::{Result, SyscallOutRegisters::*};
-use crate::util::round_down;
 use common::PAGE_SIZE;
 use common::syscall::error::*;
+
 use crate::arch::ArchPageTableEntry;
 use crate::lib::traits::ArchPageTableEntryTrait;
-use crate::mm::page_table::{Entry, PageTableTrait, PageTableEntryAttrTrait};
+use crate::mm::page_table::{Entry, PageTableEntryAttrTrait, PageTableTrait};
+use crate::util::round_down;
+
+use super::{Result, SyscallOutRegisters::*};
 
 #[inline(never)]
 #[inject::count_stmts]

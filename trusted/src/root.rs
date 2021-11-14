@@ -1,7 +1,5 @@
-
 use libtrusted::thread;
 use libtrusted::wrapper::server_wrapper;
-
 
 #[allow(dead_code)]
 #[cfg(target_arch = "aarch64")]

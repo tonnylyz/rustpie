@@ -3,8 +3,8 @@ use common::{CONFIG_USER_STACK_BTM, CONFIG_USER_STACK_TOP};
 use crate::arch::PAGE_SIZE;
 use crate::lib::cpu::cpu;
 use crate::lib::traits::*;
+use crate::mm::page_table::{PageTableEntryAttrTrait, PageTableTrait};
 use crate::util::*;
-use crate::mm::page_table::{PageTableTrait, PageTableEntryAttrTrait};
 
 pub fn handle() {
   let t = cpu().running_thread();
@@ -19,7 +19,6 @@ pub fn handle() {
         return;
       }
       Some(a) => {
-
         let addr = crate::arch::Arch::fault_address();
         let va = round_down(addr, PAGE_SIZE);
 
@@ -31,7 +30,7 @@ pub fn handle() {
               if let Ok(frame) = crate::mm::page_pool::page_alloc() {
                 frame.zero();
                 match pt.insert_page(va, crate::mm::Frame::from(frame),
-                               crate::mm::page_table::EntryAttribute::user_default()) {
+                                     crate::mm::page_table::EntryAttribute::user_default()) {
                   Ok(_) => {
                     return;
                   }

@@ -102,7 +102,7 @@ pub mod time {
   use core::fmt::{Display, Formatter};
 
   /// same as `struct rtc_time` in linux kernel
-#[derive(Default)]
+  #[derive(Default)]
   pub struct RtcTime {
     pub sec: i32,
     pub min: i32,

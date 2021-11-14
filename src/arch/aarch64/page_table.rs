@@ -1,16 +1,14 @@
 use alloc::vec::Vec;
 
+use common::mm::vm_descriptor::*;
+use common::syscall::error::ERROR_INVARG;
 use spin::Mutex;
+use tock_registers::interfaces::Writeable;
 
 use crate::arch::*;
-use crate::mm::page_table::{Entry, EntryAttribute, Error, PageTableEntryAttrTrait, PageTableTrait};
-use crate::mm::{PhysicalFrame, Frame};
-
-use common::mm::vm_descriptor::*;
-
 use crate::lib::traits::*;
-use common::syscall::error::ERROR_INVARG;
-use tock_registers::interfaces::Writeable;
+use crate::mm::{Frame, PhysicalFrame};
+use crate::mm::page_table::{Entry, EntryAttribute, Error, PageTableEntryAttrTrait, PageTableTrait};
 
 pub const PAGE_TABLE_L1_SHIFT: usize = 30;
 pub const PAGE_TABLE_L2_SHIFT: usize = 21;

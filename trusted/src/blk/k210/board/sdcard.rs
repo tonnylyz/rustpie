@@ -1,13 +1,15 @@
 //! SD card slot access (in SPI mode) on Maix Go
 use core::convert::TryInto;
+
 use k210_hal::pac::SPI0;
+
 use crate::blk::k210_sdcard::k210::soc::dmac::DMACExt;
 use crate::blk::k210_sdcard::k210::soc::spi::{SPIExt, SPIImpl};
 
 use super::super::soc::dmac::{dma_channel, DMAC};
 use super::super::soc::gpio;
 use super::super::soc::gpiohs;
-use super::super::soc::spi::{aitm, frame_format, tmod, work_mode, SPI};
+use super::super::soc::spi::{aitm, frame_format, SPI, tmod, work_mode};
 
 pub struct SDCard<'a, SPI> {
   spi: SPI,
@@ -81,43 +83,75 @@ pub enum InitError {
  */
 #[derive(Debug, Copy, Clone)]
 pub struct SD_CSD {
-  pub CSDStruct: u8,        /* CSD structure */
-  pub SysSpecVersion: u8,   /* System specification version */
-  pub Reserved1: u8,        /* Reserved */
-  pub TAAC: u8,             /* Data read access-time 1 */
-  pub NSAC: u8,             /* Data read access-time 2 in CLK cycles */
-  pub MaxBusClkFrec: u8,    /* Max. bus clock frequency */
-  pub CardComdClasses: u16, /* Card command classes */
-  pub RdBlockLen: u8,       /* Max. read data block length */
-  pub PartBlockRead: u8,    /* Partial blocks for read allowed */
-  pub WrBlockMisalign: u8,  /* Write block misalignment */
-  pub RdBlockMisalign: u8,  /* Read block misalignment */
-  pub DSRImpl: u8,          /* DSR implemented */
-  pub Reserved2: u8,        /* Reserved */
-  pub DeviceSize: u32,      /* Device Size */
+  pub CSDStruct: u8,
+  /* CSD structure */
+  pub SysSpecVersion: u8,
+  /* System specification version */
+  pub Reserved1: u8,
+  /* Reserved */
+  pub TAAC: u8,
+  /* Data read access-time 1 */
+  pub NSAC: u8,
+  /* Data read access-time 2 in CLK cycles */
+  pub MaxBusClkFrec: u8,
+  /* Max. bus clock frequency */
+  pub CardComdClasses: u16,
+  /* Card command classes */
+  pub RdBlockLen: u8,
+  /* Max. read data block length */
+  pub PartBlockRead: u8,
+  /* Partial blocks for read allowed */
+  pub WrBlockMisalign: u8,
+  /* Write block misalignment */
+  pub RdBlockMisalign: u8,
+  /* Read block misalignment */
+  pub DSRImpl: u8,
+  /* DSR implemented */
+  pub Reserved2: u8,
+  /* Reserved */
+  pub DeviceSize: u32,
+  /* Device Size */
   //MaxRdCurrentVDDMin: u8,   /* Max. read current @ VDD min */
   //MaxRdCurrentVDDMax: u8,   /* Max. read current @ VDD max */
   //MaxWrCurrentVDDMin: u8,   /* Max. write current @ VDD min */
   //MaxWrCurrentVDDMax: u8,   /* Max. write current @ VDD max */
   //DeviceSizeMul: u8,        /* Device size multiplier */
-  pub EraseGrSize: u8,         /* Erase group size */
-  pub EraseGrMul: u8,          /* Erase group size multiplier */
-  pub WrProtectGrSize: u8,     /* Write protect group size */
-  pub WrProtectGrEnable: u8,   /* Write protect group enable */
-  pub ManDeflECC: u8,          /* Manufacturer default ECC */
-  pub WrSpeedFact: u8,         /* Write speed factor */
-  pub MaxWrBlockLen: u8,       /* Max. write data block length */
-  pub WriteBlockPaPartial: u8, /* Partial blocks for write allowed */
-  pub Reserved3: u8,           /* Reserded */
-  pub ContentProtectAppli: u8, /* Content protection application */
-  pub FileFormatGroup: u8,     /* File format group */
-  pub CopyFlag: u8,            /* Copy flag (OTP) */
-  pub PermWrProtect: u8,       /* Permanent write protection */
-  pub TempWrProtect: u8,       /* Temporary write protection */
-  pub FileFormat: u8,          /* File Format */
-  pub ECC: u8,                 /* ECC code */
-  pub CSD_CRC: u8,             /* CSD CRC */
-  pub Reserved4: u8,           /* always 1*/
+  pub EraseGrSize: u8,
+  /* Erase group size */
+  pub EraseGrMul: u8,
+  /* Erase group size multiplier */
+  pub WrProtectGrSize: u8,
+  /* Write protect group size */
+  pub WrProtectGrEnable: u8,
+  /* Write protect group enable */
+  pub ManDeflECC: u8,
+  /* Manufacturer default ECC */
+  pub WrSpeedFact: u8,
+  /* Write speed factor */
+  pub MaxWrBlockLen: u8,
+  /* Max. write data block length */
+  pub WriteBlockPaPartial: u8,
+  /* Partial blocks for write allowed */
+  pub Reserved3: u8,
+  /* Reserded */
+  pub ContentProtectAppli: u8,
+  /* Content protection application */
+  pub FileFormatGroup: u8,
+  /* File format group */
+  pub CopyFlag: u8,
+  /* Copy flag (OTP) */
+  pub PermWrProtect: u8,
+  /* Permanent write protection */
+  pub TempWrProtect: u8,
+  /* Temporary write protection */
+  pub FileFormat: u8,
+  /* File Format */
+  pub ECC: u8,
+  /* ECC code */
+  pub CSD_CRC: u8,
+  /* CSD CRC */
+  pub Reserved4: u8,
+  /* always 1*/
 }
 
 /**
@@ -125,16 +159,26 @@ pub struct SD_CSD {
  */
 #[derive(Debug, Copy, Clone)]
 pub struct SD_CID {
-  pub ManufacturerID: u8, /* ManufacturerID */
-  pub OEM_AppliID: u16,   /* OEM/Application ID */
-  pub ProdName1: u32,     /* Product Name part1 */
-  pub ProdName2: u8,      /* Product Name part2*/
-  pub ProdRev: u8,        /* Product Revision */
-  pub ProdSN: u32,        /* Product Serial Number */
-  pub Reserved1: u8,      /* Reserved1 */
-  pub ManufactDate: u16,  /* Manufacturing Date */
-  pub CID_CRC: u8,        /* CID CRC */
-  pub Reserved2: u8,      /* always 1 */
+  pub ManufacturerID: u8,
+  /* ManufacturerID */
+  pub OEM_AppliID: u16,
+  /* OEM/Application ID */
+  pub ProdName1: u32,
+  /* Product Name part1 */
+  pub ProdName2: u8,
+  /* Product Name part2*/
+  pub ProdRev: u8,
+  /* Product Revision */
+  pub ProdSN: u32,
+  /* Product Serial Number */
+  pub Reserved1: u8,
+  /* Reserved1 */
+  pub ManufactDate: u16,
+  /* Manufacturing Date */
+  pub CID_CRC: u8,
+  /* CID CRC */
+  pub Reserved2: u8,
+  /* always 1 */
 }
 
 /**
@@ -144,8 +188,10 @@ pub struct SD_CID {
 pub struct SD_CardInfo {
   pub SD_csd: SD_CSD,
   pub SD_cid: SD_CID,
-  pub CardCapacity: u64,  /* Card Capacity */
-  pub CardBlockSize: u64, /* Card Block Size */
+  pub CardCapacity: u64,
+  /* Card Capacity */
+  pub CardBlockSize: u64,
+  /* Card Block Size */
 }
 
 impl<'a, X: SPI> SDCard<'a, X> {

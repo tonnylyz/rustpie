@@ -1,16 +1,20 @@
-use crate::lib::thread::thread_destroy;
-use crate::arch::{ContextFrame, PAGE_SIZE};
-use unwind::unwind_from_exception;
-use crate::lib::cpu::cpu;
-use crate::lib::traits::ContextFrameTrait;
-use crate::lib::traits::ArchTrait;
-use crate::util::{round_down, round_up};
 use core::mem::size_of;
+
+use unwind::unwind_from_exception;
+
+use crate::arch::{ContextFrame, PAGE_SIZE};
+use crate::lib::cpu::cpu;
+use crate::lib::thread::thread_destroy;
+use crate::lib::traits::ArchTrait;
+use crate::lib::traits::ContextFrameTrait;
 use crate::mm::page_table::{PageTableEntryAttrTrait, PageTableTrait};
+use crate::util::{round_down, round_up};
 
 enum HandleResult {
-  Ok, // thread can continue running
-  Kill(&'static str), // thread need to be killed
+  Ok,
+  // thread can continue running
+  Kill(&'static str),
+  // thread need to be killed
   Err(&'static str), // system state corrupt (something goes very wrong)
 }
 
@@ -32,11 +36,11 @@ fn handle() -> HandleResult {
             if let Ok(frame) = crate::mm::page_pool::page_alloc() {
               if let Err(_) = pt.insert_page(sp_va, crate::mm::Frame::from(frame),
                                              crate::mm::page_table::EntryAttribute::user_default()) {
-                return HandleResult::Err("page insert failed")
+                return HandleResult::Err("page insert failed");
               }
             } else {
               thread_destroy(t);
-              return HandleResult::Kill("out of memory")
+              return HandleResult::Kill("out of memory");
             }
           }
           unsafe {

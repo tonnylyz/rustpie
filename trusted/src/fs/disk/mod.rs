@@ -1,10 +1,10 @@
+use redox::*;
+
 pub use self::cache::DiskCache;
 pub use self::virtio_client::VirtioClient;
 
 mod cache;
 mod virtio_client;
-
-use redox::*;
 
 /// A disk
 pub trait Disk {

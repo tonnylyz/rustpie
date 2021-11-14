@@ -7,16 +7,13 @@
 
 #[macro_use]
 extern crate alloc;
-extern crate rlibc;
-
-#[macro_use]
-extern crate log;
-
 #[macro_use]
 extern crate libtrusted;
+#[macro_use]
+extern crate log;
+extern crate rlibc;
 
 use unwind::catch::catch_unwind;
-
 
 mod blk;
 mod fs;
@@ -27,6 +24,7 @@ mod pm;
 mod logger;
 mod test;
 mod rtc;
+mod panic;
 
 #[no_mangle]
 fn _start(_arg: usize) -> ! {

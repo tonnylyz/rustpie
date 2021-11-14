@@ -1,8 +1,9 @@
+use core::ops::Range;
+
+use gimli::BaseAddresses;
 use spin::Once;
 use xmas_elf::*;
 use xmas_elf::sections::SectionData;
-use core::ops::Range;
-use gimli::BaseAddresses;
 
 extern "C" {
   static ELF_IMAGE: [u8; 0x40000000];

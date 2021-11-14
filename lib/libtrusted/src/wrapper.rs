@@ -1,7 +1,8 @@
-use unwind::catch::catch_unwind;
 use microcall::message::Message;
+use unwind::catch::catch_unwind;
 
 pub type Error = usize;
+
 pub const ERROR_PERSISTENT_FAILURE: usize = 0x999;
 
 
@@ -25,7 +26,7 @@ pub fn request_wrapper<F: Fn(Message, usize) -> R, R>(f: F, msg: Message, tid: u
   }
 }
 
-pub fn server_wrapper<F: Fn()> (f: F) {
+pub fn server_wrapper<F: Fn()>(f: F) {
   loop {
     let r = catch_unwind(|| {
       f();

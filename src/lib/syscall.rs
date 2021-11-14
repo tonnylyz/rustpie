@@ -1,9 +1,12 @@
 use alloc::string::String;
-use crate::lib::cpu::cpu;
-use crate::lib::traits::ContextFrameTrait;
-use unwind::catch::catch_unwind;
+
 use common::syscall::*;
 use common::syscall::error::{ERROR_HOLD_ON, ERROR_INVARG};
+
+use unwind::catch::catch_unwind;
+
+use crate::lib::cpu::cpu;
+use crate::lib::traits::ContextFrameTrait;
 
 static SYSCALL_NAMES: [&str; SYS_MAX] = [
   "null",
@@ -38,7 +41,7 @@ pub fn syscall() {
   use crate::syscall::*;
 
   let ctx = crate::lib::cpu::cpu().context_mut();
-  let tid = cpu().running_thread().map(|x| {x.tid()}).unwrap_or_default();
+  let tid = cpu().running_thread().map(|x| { x.tid() }).unwrap_or_default();
   let arg = |i: usize| { ctx.syscall_argument(i) };
   let num = ctx.syscall_number();
   let result = catch_unwind(|| {
@@ -86,7 +89,6 @@ pub fn syscall() {
           arg_str += ")";
           info!("#{} {} t{} arg{} Err {:x?}", num, SYSCALL_NAMES[num], tid, arg_str, err);
         }
-
       }
     }
     Err(_) => {
@@ -95,10 +97,10 @@ pub fn syscall() {
   }
 
 
-  if tid == cpu().running_thread().map(|x| {x.tid()}).unwrap_or_default() {
+  if tid == cpu().running_thread().map(|x| { x.tid() }).unwrap_or_default() {
     match result {
-      Ok(ref r) => {ctx.set_syscall_result(r);}
-      Err(_) => {ctx.set_syscall_result(&Err(common::syscall::error::ERROR_PANIC))}
+      Ok(ref r) => { ctx.set_syscall_result(r); }
+      Err(_) => { ctx.set_syscall_result(&Err(common::syscall::error::ERROR_PANIC)) }
     }
   }
 }

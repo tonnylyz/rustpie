@@ -1,4 +1,5 @@
 use common::time::RtcTime;
+
 use microcall::get_tid;
 
 #[cfg(target_arch = "aarch64")]
@@ -10,7 +11,7 @@ pub fn timestamp() -> u64 {
 #[cfg(target_arch = "riscv64")]
 #[cfg(not(feature = "k210"))]
 pub fn timestamp() -> u64 {
-  const NSEC_PER_SEC: u64 =	1000000000;
+  const NSEC_PER_SEC: u64 = 1000000000;
   const GOLDFISH_MMIO_BASE: usize = 0x8_0000_0000 + 0x101000;
   let low = unsafe { (GOLDFISH_MMIO_BASE as *mut u32).read() as u64 };
   let high = unsafe { ((GOLDFISH_MMIO_BASE + 4) as *mut u32).read() as u64 };
@@ -23,12 +24,12 @@ pub fn timestamp() -> u64 { 0 }
 
 fn rtc_time64_to_tm(time: u64) -> RtcTime {
   let leaps_thru_end_of = |y: i32| {
-    (y)/4 - (y)/100 + (y)/400
+    (y) / 4 - (y) / 100 + (y) / 400
   };
   let is_leap_year = |y: i32| {
     ((y % 4 == 0) && (y % 100 != 0)) || (y % 400 == 0)
   };
-  let rtc_month_days= |month: i32, year: i32| -> i32 {
+  let rtc_month_days = |month: i32, year: i32| -> i32 {
     const RTC_DAYS_IN_MONTH: [u8; 12] = [31, 28, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31];
     RTC_DAYS_IN_MONTH[month as usize] as i32 + if is_leap_year(year) && month == 1 { 1 } else { 0 }
   };
@@ -38,11 +39,11 @@ fn rtc_time64_to_tm(time: u64) -> RtcTime {
   r.wday = ((days + 4) % 7) as i32;
   let mut year = 1970 + days / 365;
   days -= (year - 1970) * 365
-          + leaps_thru_end_of(year - 1)
-          - leaps_thru_end_of(1970 - 1);
+    + leaps_thru_end_of(year - 1)
+    - leaps_thru_end_of(1970 - 1);
   if days < 0 {
     year -= 1;
-    days += 365 + if is_leap_year(year) {1} else {0};
+    days += 365 + if is_leap_year(year) { 1 } else { 0 };
   }
   r.year = (year - 1900) as i32;
   r.yday = (days + 1) as i32;

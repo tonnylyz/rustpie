@@ -1,6 +1,8 @@
-use super::{Result, SyscallOutRegisters::*};
-use crate::lib::thread::{Tid, thread_wake, thread_sleep};
 use common::syscall::error::{ERROR_DENIED, ERROR_INVARG};
+
+use crate::lib::thread::{thread_sleep, thread_wake, Tid};
+
+use super::{Result, SyscallOutRegisters::*};
 
 #[inline(never)]
 #[inject::count_stmts]

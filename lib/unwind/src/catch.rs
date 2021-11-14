@@ -16,14 +16,14 @@ pub unsafe fn r#try<R, F: FnOnce() -> R>(f: F) -> Result<R, PanicError> {
 
   let mut data = Data {
     f: ManuallyDrop::new(f),
-    r: ManuallyDrop::new(Err("Catch failed"))
+    r: ManuallyDrop::new(Err("Catch failed")),
   };
 
   let data_ptr = &mut data as *mut _ as *mut u8;
   let _r = core::intrinsics::r#try(
     do_call::<F, R>,
     data_ptr,
-    do_catch::<F, R>
+    do_catch::<F, R>,
   );
   return ManuallyDrop::into_inner(data.r);
 

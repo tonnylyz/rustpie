@@ -1,11 +1,13 @@
-use buddy_system_allocator::LockedHeapWithRescue;
-use microcall::mem_alloc;
-use common::PAGE_SIZE;
-use crate::mm::default_page_attribute;
-use core::sync::atomic::{AtomicUsize, Ordering};
 use core::alloc::Layout;
+use core::sync::atomic::{AtomicUsize, Ordering};
 
+use buddy_system_allocator::LockedHeapWithRescue;
+use common::PAGE_SIZE;
 use spin::Mutex;
+
+use microcall::mem_alloc;
+
+use crate::mm::default_page_attribute;
 
 #[global_allocator]
 static HEAP_ALLOCATOR: LockedHeapWithRescue<32> = LockedHeapWithRescue::new(enlarge);

@@ -1,6 +1,5 @@
-use tock_registers::interfaces::{Readable, Writeable};
 use common::driver::pl011::Pl011Mmio;
-
+use tock_registers::interfaces::{Readable, Writeable};
 
 pub fn init() {}
 

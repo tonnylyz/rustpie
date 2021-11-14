@@ -1,10 +1,10 @@
+use alloc::vec::Vec;
 use core::ops::Range;
 
-use crate::driver::gic::INT_TIMER;
-use crate::lib::interrupt::InterruptController;
 use crate::Address;
-use alloc::vec::Vec;
+use crate::driver::gic::INT_TIMER;
 use crate::lib::device::Device;
+use crate::lib::interrupt::InterruptController;
 use crate::lib::traits::ArchTrait;
 
 pub const BOARD_CORE_NUMBER: usize = 1;

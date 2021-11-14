@@ -1,6 +1,3 @@
-const NS16550_MMIO_BASE: usize = 0xffff_ffff_0000_0000 + 0x1000_0000;
-
-
 use tock_registers::{
   register_bitfields,
   register_structs,
@@ -8,6 +5,7 @@ use tock_registers::{
 };
 use tock_registers::interfaces::{Readable, Writeable};
 
+const NS16550_MMIO_BASE: usize = 0xffff_ffff_0000_0000 + 0x1000_0000;
 
 
 register_bitfields! {

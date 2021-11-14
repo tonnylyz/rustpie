@@ -10,8 +10,9 @@ extern crate log;
 use alloc::boxed::Box;
 
 use fallible_iterator::FallibleIterator;
-use gimli::{CfaRule, Pointer, UninitializedUnwindContext, UnwindSection, read::RegisterRule};
+use gimli::{CfaRule, Pointer, read::RegisterRule, UninitializedUnwindContext, UnwindSection};
 
+use arch::*;
 use registers::Registers;
 
 #[cfg(target_arch = "aarch64")]
@@ -21,9 +22,6 @@ pub mod arch;
 #[cfg(target_arch = "riscv64")]
 #[path = "arch/riscv64.rs"]
 pub mod arch;
-
-use arch::*;
-
 
 pub mod registers;
 
@@ -164,7 +162,7 @@ extern "C" {
 pub fn unwind_from_exception(registers: Registers) -> ! {
   let ctx = Box::into_raw(Box::new(UnwindingContext {
     skip: 0,
-    stack_frame_iter: StackFrameIter::new(registers)
+    stack_frame_iter: StackFrameIter::new(registers),
   }));
   unwind(ctx);
   cleanup(ctx);
@@ -175,7 +173,7 @@ pub fn unwind_from_exception(registers: Registers) -> ! {
 pub fn unwind_from_panic(stack_frames_to_skip: usize) -> ! {
   let ctx = Box::into_raw(Box::new(UnwindingContext {
     skip: stack_frames_to_skip,
-    stack_frame_iter: StackFrameIter::new(Registers::default())
+    stack_frame_iter: StackFrameIter::new(Registers::default()),
   }));
   unsafe {
     unwind_trampoline(ctx as usize);
@@ -206,7 +204,7 @@ fn unwind(ctx: *mut UnwindingContext) {
     Ok(None) => {
       error!("no frame left");
       return;
-    },
+    }
     Ok(Some(frame)) => {
       info!("function addr {:016x}", frame.initial_address);
       info!("call site {:016x}", frame.call_site_address);
@@ -268,7 +266,7 @@ fn unwind(ctx: *mut UnwindingContext) {
               };
 
               #[cfg(target_arch = "aarch64")]
-              unsafe {
+                unsafe {
                 // brk #?
                 if (landing_pad as usize as *const u32).read() & 0xFF_E0_00_00 == 0xd4_20_00_00 {
                   warn!("land at {:016x} is `brk #?`, continue", landing_pad);

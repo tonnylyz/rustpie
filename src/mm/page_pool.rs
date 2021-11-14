@@ -1,14 +1,14 @@
+use alloc::alloc::Global;
 use alloc::vec::Vec;
+use core::alloc::{Allocator, AllocError, Layout};
 use core::ops::Range;
+use core::ptr::NonNull;
 
+use common::syscall::error::{ERROR_INVARG, ERROR_OOM};
 use spin::Mutex;
 
 use crate::arch::*;
 use crate::mm::PhysicalFrame;
-use common::syscall::error::{ERROR_OOM, ERROR_INVARG};
-use core::alloc::{Allocator, Layout, AllocError};
-use core::ptr::NonNull;
-use alloc::alloc::Global;
 
 pub type Error = usize;
 
@@ -57,7 +57,6 @@ impl PagePool {
       Ok(())
     }
   }
-
 }
 
 
@@ -77,7 +76,7 @@ pub fn page_alloc() -> Result<PhysicalFrame, Error> {
   pool.allocate()
 }
 
-pub fn page_free(pa: usize) -> Result<(), Error>{
+pub fn page_free(pa: usize) -> Result<(), Error> {
   let mut pool = PAGE_POOL.lock();
   pool.free(pa)
 }

@@ -1,6 +1,7 @@
+use alloc::collections::VecDeque;
 
 use spin::{Mutex, Once};
-use alloc::collections::VecDeque;
+
 use microcall::get_tid;
 
 pub fn input_server() {
@@ -18,7 +19,7 @@ static BUFFER: Once<Mutex<VecDeque<u8>>> = Once::new();
 fn buffer() -> &'static Mutex<VecDeque<u8>> {
   match BUFFER.get() {
     None => { BUFFER.call_once(|| Mutex::new(VecDeque::new())) }
-    Some(x) => {x}
+    Some(x) => { x }
   }
 }
 

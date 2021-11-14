@@ -1,24 +1,14 @@
 use alloc::collections::BTreeMap;
 use alloc::string::String;
-
 use core::sync::atomic::AtomicUsize;
 use core::sync::atomic::Ordering::Relaxed;
-
 
 use spin::Mutex;
 
 use libtrusted::foreign_slice::ForeignSlice;
-
+use libtrusted::wrapper::request_wrapper;
 use microcall::{get_asid, get_tid};
 use microcall::message::Message;
-
-pub const PM_ACTION_SPAWN: usize = 1;
-pub const PM_ACTION_WAIT: usize = 2;
-pub const PM_ACTION_PS: usize = 3;
-
-pub const PM_RESULT_OK: usize = 0;
-pub const PM_RESULT_INVARG: usize = 1;
-pub const PM_RESULT_NOMEM: usize = 2;
 
 #[derive(Debug, Copy, Clone, Ord, PartialOrd, Eq, PartialEq)]
 enum ProcessStatus {
@@ -101,15 +91,19 @@ impl ProcessManager {
 
 static PROCESS_MANAGER: ProcessManager = ProcessManager::new();
 
-fn process_request(asid: u16, msg: &Message) -> Result<(usize, usize, usize), usize> {
+#[inject::count_stmts]
+#[inject::panic_inject]
+#[inject::page_fault_inject]
+fn pm(msg: Message, tid: usize) -> (usize, usize) {
+  let asid = get_asid(tid).unwrap();
   match msg.a {
-    PM_ACTION_SPAWN => {
+    cs::pm::action::SPAWN => {
       let length = msg.c;
       if length == 0 {
-        return Err(PM_RESULT_INVARG);
+        return (cs::pm::result::INVARG, 0);
       }
       if length >= 128 {
-        return Err(PM_RESULT_INVARG);
+        return (cs::pm::result::INVARG, 0);
       }
       let s = ForeignSlice::new(asid, msg.b, msg.c).unwrap();
       let cmd = s.local_slice();
@@ -118,28 +112,28 @@ fn process_request(asid: u16, msg: &Message) -> Result<(usize, usize, usize), us
         if let Ok((child_asid, tid)) = libtrusted::loader::spawn(cmd) {
           let pid = PROCESS_MANAGER.register(child_asid, tid, Some(asid as usize), String::from(cmd));
           microcall::thread_set_status(tid, common::thread::THREAD_STATUS_RUNNABLE).expect("pm start thread failed");
-          Ok((pid, 0, 0))
+          (cs::pm::result::OK, pid)
         } else {
-          Err(PM_RESULT_NOMEM)
+          (cs::pm::result::SPAWN_FAILED, 0)
         }
       } else {
-        Err(PM_RESULT_INVARG)
+        (cs::pm::result::INVARG, 0)
       }
     }
-    PM_ACTION_WAIT => {
+    cs::pm::action::WAIT => {
       let pid = msg.b;
       if PROCESS_MANAGER.poll_exit(pid) {
-        Ok((1, 0, 0))
+        (cs::pm::result::OK, 0)
       } else {
-        Ok((0, 0, 0))
+        (cs::pm::result::HOLD_ON, 0)
       }
     }
-    PM_ACTION_PS => {
+    cs::pm::action::PS => {
       PROCESS_MANAGER.ps();
-      Ok((0, 0, 0))
+      (cs::pm::result::OK, 0)
     }
     _ => {
-      Err(PM_RESULT_INVARG)
+      (cs::pm::result::INVARG, 0)
     }
   }
 }
@@ -149,20 +143,8 @@ pub fn server() {
   microcall::server_register(common::server::SERVER_PM).unwrap();
   loop {
     let (client_tid, msg) = Message::receive().unwrap();
-    trace!("t{}: {:x?}", client_tid, msg);
-    let asid = get_asid(client_tid).unwrap();
-    let mut result = Message::default();
-    match process_request(asid, &msg) {
-      Ok((b, c, d)) => {
-        result.a = PM_RESULT_OK;
-        result.b = b;
-        result.c = c;
-        result.d = d;
-      }
-      Err(e) => {
-        result.a = e;
-      }
-    }
+    let (a, b) = request_wrapper(pm, msg, client_tid).unwrap();
+    let result = Message::new(a, b, 0, 0);
     let _ = result.send_to(client_tid);
   }
 }

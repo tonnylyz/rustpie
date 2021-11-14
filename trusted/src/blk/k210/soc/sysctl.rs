@@ -1,10 +1,10 @@
 //! SYSCTL peripheral
-use k210_hal::pac;
-
 use core::convert::TryInto;
 
-use super::utils::set_bit;
+use k210_hal::pac;
+
 use super::sleep::usleep;
+use super::utils::set_bit;
 
 mod pll_compute;
 
@@ -13,7 +13,7 @@ const SYSCTRL_CLOCK_FREQ_IN0: u32 = 26000000;
 #[derive(Copy, Clone, PartialEq, Eq)]
 pub enum pll {
   /** PLL0 can usually be selected as alternative to IN0, for example the CPU
-      * clock speed. It can be used as source for PLL2. */
+        * clock speed. It can be used as source for PLL2. */
   PLL0,
   /** PLL1 is used for the KPU clock, and can be used as source for PLL2. */
   PLL1,
@@ -670,12 +670,12 @@ pub fn dma_select(channel: dma_channel, select: dma_select)
     use dma_channel::*;
     let ptr = pac::SYSCTL::ptr();
     match channel {
-      CHANNEL0 => (*ptr).dma_sel0.modify(|_,w| w.dma_sel0().variant(select)),
-      CHANNEL1 => (*ptr).dma_sel0.modify(|_,w| w.dma_sel1().variant(select)),
-      CHANNEL2 => (*ptr).dma_sel0.modify(|_,w| w.dma_sel2().variant(select)),
-      CHANNEL3 => (*ptr).dma_sel0.modify(|_,w| w.dma_sel3().variant(select)),
-      CHANNEL4 => (*ptr).dma_sel0.modify(|_,w| w.dma_sel4().variant(select)),
-      CHANNEL5 => (*ptr).dma_sel1.modify(|_,w| w.dma_sel5().variant(select)),
+      CHANNEL0 => (*ptr).dma_sel0.modify(|_, w| w.dma_sel0().variant(select)),
+      CHANNEL1 => (*ptr).dma_sel0.modify(|_, w| w.dma_sel1().variant(select)),
+      CHANNEL2 => (*ptr).dma_sel0.modify(|_, w| w.dma_sel2().variant(select)),
+      CHANNEL3 => (*ptr).dma_sel0.modify(|_, w| w.dma_sel3().variant(select)),
+      CHANNEL4 => (*ptr).dma_sel0.modify(|_, w| w.dma_sel4().variant(select)),
+      CHANNEL5 => (*ptr).dma_sel1.modify(|_, w| w.dma_sel5().variant(select)),
     }
   }
 }
@@ -695,7 +695,7 @@ fn pll_is_lock(pll: pll) -> bool {
 fn pll_clear_slip(pll: pll) -> bool {
   let ptr = pac::SYSCTL::ptr();
   unsafe {
-    (*ptr).pll_lock.modify(|_,w|
+    (*ptr).pll_lock.modify(|_, w|
       match pll {
         pll::PLL0 => w.pll_slip_clear0().set_bit(),
         pll::PLL1 => w.pll_slip_clear1().set_bit(),
@@ -706,7 +706,7 @@ fn pll_clear_slip(pll: pll) -> bool {
   pll_is_lock(pll)
 }
 
-fn pll_source_set_freq(pll: pll, source: clock_source, freq: u32) -> Result<u32,()> {
+fn pll_source_set_freq(pll: pll, source: clock_source, freq: u32) -> Result<u32, ()> {
   use pll::*;
   /* PLL0 and 1 can only source from IN0 */
   if (pll == PLL0 || pll == PLL1) && source != clock_source::IN0 {
@@ -721,7 +721,7 @@ fn pll_source_set_freq(pll: pll, source: clock_source, freq: u32) -> Result<u32,
     unsafe {
       match pll {
         PLL0 => {
-          (*ptr).pll0.modify(|_,w|
+          (*ptr).pll0.modify(|_, w|
             w.clkr().bits(found.clkr)
               .clkf().bits(found.clkf)
               .clkod().bits(found.clkod)
@@ -729,7 +729,7 @@ fn pll_source_set_freq(pll: pll, source: clock_source, freq: u32) -> Result<u32,
           );
         }
         PLL1 => {
-          (*ptr).pll1.modify(|_,w|
+          (*ptr).pll1.modify(|_, w|
             w.clkr().bits(found.clkr)
               .clkf().bits(found.clkf)
               .clkod().bits(found.clkod)
@@ -737,7 +737,7 @@ fn pll_source_set_freq(pll: pll, source: clock_source, freq: u32) -> Result<u32,
           );
         }
         PLL2 => {
-          (*ptr).pll2.modify(|_,w|
+          (*ptr).pll2.modify(|_, w|
             w.ckin_sel().bits(pll2_source_to_cksel(source))
               .clkr().bits(found.clkr)
               .clkf().bits(found.clkf)
@@ -759,7 +759,7 @@ fn pll_source_set_freq(pll: pll, source: clock_source, freq: u32) -> Result<u32,
  * @param[in]   pll_freq       The desired frequency in Hz
 
  */
-pub fn pll_set_freq(pll: pll, freq: u32) -> Result<u32,()> {
+pub fn pll_set_freq(pll: pll, freq: u32) -> Result<u32, ()> {
   assert!(freq != 0);
   let ptr = pac::SYSCTL::ptr();
   use pll::*;
@@ -772,18 +772,18 @@ pub fn pll_set_freq(pll: pll, freq: u32) -> Result<u32,()> {
   /* 2. Disable PLL output */
   unsafe {
     match pll {
-      PLL0 => (*ptr).pll0.modify(|_,w| w.out_en().clear_bit()),
-      PLL1 => (*ptr).pll1.modify(|_,w| w.out_en().clear_bit()),
-      PLL2 => (*ptr).pll2.modify(|_,w| w.out_en().clear_bit()),
+      PLL0 => (*ptr).pll0.modify(|_, w| w.out_en().clear_bit()),
+      PLL1 => (*ptr).pll1.modify(|_, w| w.out_en().clear_bit()),
+      PLL2 => (*ptr).pll2.modify(|_, w| w.out_en().clear_bit()),
     };
   }
 
   /* 3. Turn off PLL */
   unsafe {
     match pll {
-      PLL0 => (*ptr).pll0.modify(|_,w| w.pwrd().clear_bit()),
-      PLL1 => (*ptr).pll1.modify(|_,w| w.pwrd().clear_bit()),
-      PLL2 => (*ptr).pll2.modify(|_,w| w.pwrd().clear_bit()),
+      PLL0 => (*ptr).pll0.modify(|_, w| w.pwrd().clear_bit()),
+      PLL1 => (*ptr).pll1.modify(|_, w| w.pwrd().clear_bit()),
+      PLL2 => (*ptr).pll2.modify(|_, w| w.pwrd().clear_bit()),
     };
   }
 
@@ -797,9 +797,9 @@ pub fn pll_set_freq(pll: pll, freq: u32) -> Result<u32,()> {
   /* 5. Power on PLL */
   unsafe {
     match pll {
-      PLL0 => (*ptr).pll0.modify(|_,w| w.pwrd().set_bit()),
-      PLL1 => (*ptr).pll1.modify(|_,w| w.pwrd().set_bit()),
-      PLL2 => (*ptr).pll2.modify(|_,w| w.pwrd().set_bit()),
+      PLL0 => (*ptr).pll0.modify(|_, w| w.pwrd().set_bit()),
+      PLL1 => (*ptr).pll1.modify(|_, w| w.pwrd().set_bit()),
+      PLL2 => (*ptr).pll2.modify(|_, w| w.pwrd().set_bit()),
     };
   }
 
@@ -809,23 +809,23 @@ pub fn pll_set_freq(pll: pll, freq: u32) -> Result<u32,()> {
   /* 6. Reset PLL then Release Reset*/
   unsafe {
     match pll {
-      PLL0 => (*ptr).pll0.modify(|_,w| w.reset().clear_bit()),
-      PLL1 => (*ptr).pll1.modify(|_,w| w.reset().clear_bit()),
-      PLL2 => (*ptr).pll2.modify(|_,w| w.reset().clear_bit()),
+      PLL0 => (*ptr).pll0.modify(|_, w| w.reset().clear_bit()),
+      PLL1 => (*ptr).pll1.modify(|_, w| w.reset().clear_bit()),
+      PLL2 => (*ptr).pll2.modify(|_, w| w.reset().clear_bit()),
     };
     match pll {
-      PLL0 => (*ptr).pll0.modify(|_,w| w.reset().set_bit()),
-      PLL1 => (*ptr).pll1.modify(|_,w| w.reset().set_bit()),
-      PLL2 => (*ptr).pll2.modify(|_,w| w.reset().set_bit()),
+      PLL0 => (*ptr).pll0.modify(|_, w| w.reset().set_bit()),
+      PLL1 => (*ptr).pll1.modify(|_, w| w.reset().set_bit()),
+      PLL2 => (*ptr).pll2.modify(|_, w| w.reset().set_bit()),
     };
   }
   /* wait >100ns */
   usleep(1);
   unsafe {
     match pll {
-      PLL0 => (*ptr).pll0.modify(|_,w| w.reset().clear_bit()),
-      PLL1 => (*ptr).pll1.modify(|_,w| w.reset().clear_bit()),
-      PLL2 => (*ptr).pll2.modify(|_,w| w.reset().clear_bit()),
+      PLL0 => (*ptr).pll0.modify(|_, w| w.reset().clear_bit()),
+      PLL1 => (*ptr).pll1.modify(|_, w| w.reset().clear_bit()),
+      PLL2 => (*ptr).pll2.modify(|_, w| w.reset().clear_bit()),
     };
   }
 
@@ -837,9 +837,9 @@ pub fn pll_set_freq(pll: pll, freq: u32) -> Result<u32,()> {
   /* 8. Enable PLL output */
   unsafe {
     match pll {
-      PLL0 => (*ptr).pll0.modify(|_,w| w.out_en().set_bit()),
-      PLL1 => (*ptr).pll1.modify(|_,w| w.out_en().set_bit()),
-      PLL2 => (*ptr).pll2.modify(|_,w| w.out_en().set_bit()),
+      PLL0 => (*ptr).pll0.modify(|_, w| w.out_en().set_bit()),
+      PLL1 => (*ptr).pll1.modify(|_, w| w.out_en().set_bit()),
+      PLL2 => (*ptr).pll2.modify(|_, w| w.out_en().set_bit()),
     };
   }
 

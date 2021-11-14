@@ -1,9 +1,10 @@
 //! DMAC peripheral
 use k210_hal::pac;
-use pac::dmac::channel::cfg::{TT_FC_A,HS_SEL_SRC_A};
-use pac::dmac::channel::ctl::{SMS_A};
+use pac::dmac::channel::cfg::{HS_SEL_SRC_A, TT_FC_A};
+use pac::dmac::channel::ctl::SMS_A;
 
 use super::sysctl;
+pub use super::sysctl::dma_channel;
 
 /** Extension trait for adding configure() to DMAC peripheral */
 pub trait DMACExt: Sized {
@@ -38,7 +39,6 @@ pub enum src_dst_select {
   SRC_DST = 0x3,
 }
 
-pub use super::sysctl::dma_channel;
 pub type master_number = pac::dmac::channel::ctl::SMS_A;
 pub type address_increment = pac::dmac::channel::ctl::SINC_A;
 pub type burst_length = pac::dmac::channel::ctl::SRC_MSIZE_A;
@@ -79,19 +79,19 @@ impl DMAC {
 
   /** Enable DMAC peripheral. */
   fn enable(&self) {
-    self.dmac.cfg.modify(|_,w| w.dmac_en().set_bit()
+    self.dmac.cfg.modify(|_, w| w.dmac_en().set_bit()
       .int_en().set_bit());
   }
 
   /** Disable DMAC peripheral. */
   pub fn disable(&self) {
-    self.dmac.cfg.modify(|_,w| w.dmac_en().clear_bit()
+    self.dmac.cfg.modify(|_, w| w.dmac_en().clear_bit()
       .int_en().clear_bit());
   }
 
   pub fn src_transaction_complete_int_enable(&self, channel_num: dma_channel) {
     self.dmac.channel[channel_num.idx()].intstatus_en.modify(
-      |_,w| w.src_transcomp().set_bit());
+      |_, w| w.src_transcomp().set_bit());
   }
 
   /** Enable a DMA channel. */
@@ -100,27 +100,27 @@ impl DMAC {
     // Note: chX bit names start counting from 1, while channels start counting from 0
     match channel_num {
       CHANNEL0 => {
-        self.dmac.chen.modify(|_,w| w.ch1_en().set_bit()
+        self.dmac.chen.modify(|_, w| w.ch1_en().set_bit()
           .ch1_en_we().set_bit());
       }
       CHANNEL1 => {
-        self.dmac.chen.modify(|_,w| w.ch2_en().set_bit()
+        self.dmac.chen.modify(|_, w| w.ch2_en().set_bit()
           .ch2_en_we().set_bit());
       }
       CHANNEL2 => {
-        self.dmac.chen.modify(|_,w| w.ch3_en().set_bit()
+        self.dmac.chen.modify(|_, w| w.ch3_en().set_bit()
           .ch3_en_we().set_bit());
       }
       CHANNEL3 => {
-        self.dmac.chen.modify(|_,w| w.ch4_en().set_bit()
+        self.dmac.chen.modify(|_, w| w.ch4_en().set_bit()
           .ch4_en_we().set_bit());
       }
       CHANNEL4 => {
-        self.dmac.chen.modify(|_,w| w.ch5_en().set_bit()
+        self.dmac.chen.modify(|_, w| w.ch5_en().set_bit()
           .ch5_en_we().set_bit());
       }
       CHANNEL5 => {
-        self.dmac.chen.modify(|_,w| w.ch6_en().set_bit()
+        self.dmac.chen.modify(|_, w| w.ch6_en().set_bit()
           .ch6_en_we().set_bit());
       }
     }
@@ -132,27 +132,27 @@ impl DMAC {
     // Note: chX bit names start counting from 1, while channels start counting from 0
     match channel_num {
       CHANNEL0 => {
-        self.dmac.chen.modify(|_,w| w.ch1_en().clear_bit()
+        self.dmac.chen.modify(|_, w| w.ch1_en().clear_bit()
           .ch1_en_we().set_bit());
       }
       CHANNEL1 => {
-        self.dmac.chen.modify(|_,w| w.ch2_en().clear_bit()
+        self.dmac.chen.modify(|_, w| w.ch2_en().clear_bit()
           .ch2_en_we().set_bit());
       }
       CHANNEL2 => {
-        self.dmac.chen.modify(|_,w| w.ch3_en().clear_bit()
+        self.dmac.chen.modify(|_, w| w.ch3_en().clear_bit()
           .ch3_en_we().set_bit());
       }
       CHANNEL3 => {
-        self.dmac.chen.modify(|_,w| w.ch4_en().clear_bit()
+        self.dmac.chen.modify(|_, w| w.ch4_en().clear_bit()
           .ch4_en_we().set_bit());
       }
       CHANNEL4 => {
-        self.dmac.chen.modify(|_,w| w.ch5_en().clear_bit()
+        self.dmac.chen.modify(|_, w| w.ch5_en().clear_bit()
           .ch5_en_we().set_bit());
       }
       CHANNEL5 => {
-        self.dmac.chen.modify(|_,w| w.ch6_en().clear_bit()
+        self.dmac.chen.modify(|_, w| w.ch6_en().clear_bit()
           .ch6_en_we().set_bit());
       }
     }
@@ -173,10 +173,10 @@ impl DMAC {
     // is this necessary? It seems not.
   }
 
-  pub fn set_list_master_select(&self, channel_num: dma_channel, sd_sel: src_dst_select, mst_num: master_number) -> Result<(),()> {
+  pub fn set_list_master_select(&self, channel_num: dma_channel, sd_sel: src_dst_select, mst_num: master_number) -> Result<(), ()> {
     if !self.check_channel_busy(channel_num) {
       use src_dst_select::*;
-      self.dmac.channel[channel_num.idx()].ctl.modify(|_,w| {
+      self.dmac.channel[channel_num.idx()].ctl.modify(|_, w| {
         let w = if sd_sel == SRC || sd_sel == SRC_DST {
           w.sms().variant(mst_num)
         } else {
@@ -198,7 +198,7 @@ impl DMAC {
   }
 
   pub fn enable_common_interrupt_status(&self) {
-    self.dmac.com_intstatus_en.modify(|_,w|
+    self.dmac.com_intstatus_en.modify(|_, w|
       w.slvif_dec_err().set_bit()
         .slvif_wr2ro_err().set_bit()
         .slvif_rd2wo_err().set_bit()
@@ -208,7 +208,7 @@ impl DMAC {
   }
 
   pub fn enable_common_interrupt_signal(&self) {
-    self.dmac.com_intsignal_en.modify(|_,w|
+    self.dmac.com_intsignal_en.modify(|_, w|
       w.slvif_dec_err().set_bit()
         .slvif_wr2ro_err().set_bit()
         .slvif_rd2wo_err().set_bit()
@@ -260,10 +260,10 @@ impl DMAC {
        * cfg register must configure before ts_block and
        * sar dar register
        */
-      ch.cfg.modify(|_,w|
+      ch.cfg.modify(|_, w|
         w.tt_fc().variant(flow_control)
-          .hs_sel_src().variant(if src_is_mem { HS_SEL_SRC_A::SOFTWARE } else { HS_SEL_SRC_A::HARDWARE } )
-          .hs_sel_dst().variant(if dest_is_mem { HS_SEL_SRC_A::SOFTWARE } else { HS_SEL_SRC_A::HARDWARE } )
+          .hs_sel_src().variant(if src_is_mem { HS_SEL_SRC_A::SOFTWARE } else { HS_SEL_SRC_A::HARDWARE })
+          .hs_sel_dst().variant(if dest_is_mem { HS_SEL_SRC_A::SOFTWARE } else { HS_SEL_SRC_A::HARDWARE })
           // Note: from SVD: "Assign a hardware handshaking interface to source of channel",
           // these are set using sysctl::dma_select; this configuration seems to indicate
           // that in principle, it's possible to use a different source and destination
@@ -278,7 +278,7 @@ impl DMAC {
       ch.sar.write(|w| w.bits(src));
       ch.dar.write(|w| w.bits(dest));
 
-      ch.ctl.modify(|_,w|
+      ch.ctl.modify(|_, w|
         w.sms().variant(SMS_A::AXI_MASTER_1)
           .dms().variant(SMS_A::AXI_MASTER_2)
           /* master select */
@@ -409,13 +409,13 @@ impl DMAC {
     sysctl::clock_enable(sysctl::clock::DMA);
 
     /* reset dmac */
-    self.dmac.reset.modify(|_,w| w.rst().set_bit());
+    self.dmac.reset.modify(|_, w| w.rst().set_bit());
     while self.dmac.reset.read().rst().bit() {
       // IDLE
     }
 
     /* clear common register interrupt */
-    self.dmac.com_intclear.modify(|_,w|
+    self.dmac.com_intclear.modify(|_, w|
       w.slvif_dec_err().set_bit()
         .slvif_wr2ro_err().set_bit()
         .slvif_rd2wo_err().set_bit()
@@ -424,7 +424,7 @@ impl DMAC {
     );
 
     /* disable dmac and disable interrupt */
-    self.dmac.cfg.modify(|_,w|
+    self.dmac.cfg.modify(|_, w|
       w.dmac_en().clear_bit()
         .int_en().clear_bit()
     );
@@ -435,7 +435,7 @@ impl DMAC {
     /* disable all channel before configure */
     /* Note: changed from the SDK code, which doesn't clear channel 4 and 5,
      * and doesn't set associated _we bits */
-    self.dmac.chen.modify(|_,w|
+    self.dmac.chen.modify(|_, w|
       w.ch1_en().clear_bit()
         .ch1_en_we().set_bit()
         .ch2_en().clear_bit()
@@ -611,8 +611,7 @@ impl DMAC {
 
   /** Wait for a DMA channel to be idle. */
   pub fn wait_idle(&self, channel_num: dma_channel) {
-    while !self.is_idle(channel_num) {
-    }
+    while !self.is_idle(channel_num) {}
     self.channel_interrupt_clear(channel_num); /* clear interrupt */
   }
 
@@ -629,5 +628,4 @@ impl DMAC {
   */
 
 // TODO: completion IRQ functionality
-
 }

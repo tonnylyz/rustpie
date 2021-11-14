@@ -343,7 +343,7 @@ pub fn compute_params(freq_in: u32, freq_out: u32) -> Option<Params> {
           Some(factor) => {
             r = unpack_r(&factor);
             od = unpack_od(&factor);
-          },
+          }
           None => break 'outer,
         }
       }
@@ -370,7 +370,7 @@ pub fn compute_params(freq_in: u32, freq_out: u32) -> Option<Params> {
           Some(factor) => {
             r = unpack_r(factor);
             od = unpack_od(factor)
-          },
+          }
           None => break 'outer,
         }
 
@@ -453,7 +453,7 @@ pub fn compute_params(freq_in: u32, freq_out: u32) -> Option<Params> {
               } else {
                 break;
               }
-            },
+            }
             None => break 'outer,
           }
         }

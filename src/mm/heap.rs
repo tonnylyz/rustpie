@@ -13,6 +13,7 @@ pub fn init() {
 }
 
 struct Failure;
+
 unsafe impl GlobalAlloc for Failure {
   #[inline(never)]
   unsafe fn alloc(&self, layout: Layout) -> *mut u8 {

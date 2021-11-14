@@ -1,3 +1,9 @@
+pub use heap::{virtual_alloc, virtual_free};
+pub use heap::init as heap_init;
+pub use page_table::Entry;
+pub use page_table::query;
+pub use page_table::traverse;
+
 #[cfg(target_arch = "aarch64")]
 #[path = "arch/aarch64.rs"]
 mod page_table;
@@ -6,11 +12,6 @@ mod page_table;
 #[path = "arch/riscv64.rs"]
 mod page_table;
 mod heap;
-
-pub use heap::init as heap_init;
-pub use page_table::Entry;
-pub use page_table::traverse;
-pub use page_table::query;
 
 pub fn default_page_attribute() -> usize {
   Entry::new(true, true, false, false).attribute()
@@ -25,9 +26,6 @@ pub fn virt_to_phys(va: usize) -> usize {
   }
 }
 
-
-
-pub use heap::{virtual_alloc, virtual_free};
 
 pub trait PageAttribute {
   fn executable(&self) -> bool;

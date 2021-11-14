@@ -1,4 +1,5 @@
-use core::{slice, mem};
+use core::{mem, slice};
+
 use super::*;
 
 pub trait Scheme {

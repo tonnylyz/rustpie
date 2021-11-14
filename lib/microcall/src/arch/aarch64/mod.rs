@@ -44,7 +44,7 @@ macro_rules! syscall {
 
 }
 
-syscall!{
+syscall! {
     syscall_0_0(a, ) -> ();
     syscall_1_0(a, b, ) -> ();
     syscall_2_0(a, b, c, ) -> ();

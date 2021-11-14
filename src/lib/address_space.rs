@@ -1,18 +1,19 @@
 use alloc::collections::BTreeMap;
 use alloc::sync::Arc;
+use core::sync::atomic::{AtomicU16, Ordering};
 
+use common::{CONFIG_ELF_IMAGE, PAGE_SIZE};
+use common::syscall::error::{ERROR_OOM, ERROR_OOR};
 use spin::Mutex;
 
 use crate::arch::PageTable;
-use crate::mm::page_table::{PageTableTrait, EntryAttribute, PageTableEntryAttrTrait};
-use crate::util::round_up;
-use common::{PAGE_SIZE, CONFIG_ELF_IMAGE};
 use crate::lib::traits::Address;
-use core::sync::atomic::{AtomicU16, Ordering};
-use common::syscall::error::{ERROR_OOR, ERROR_OOM};
+use crate::mm::page_table::{EntryAttribute, PageTableEntryAttrTrait, PageTableTrait};
+use crate::util::round_up;
 
 pub type Asid = u16;
 pub type Error = usize;
+
 #[derive(Debug)]
 struct Inner {
   asid: Asid,
@@ -52,7 +53,6 @@ impl AddressSpace {
     let mut lock = self.0.exception_handler.lock();
     *lock = handler;
   }
-
 }
 
 static ASID_ALLOCATOR: AtomicU16 = AtomicU16::new(1);
@@ -75,7 +75,7 @@ pub fn address_space_alloc() -> Result<AddressSpace, Error> {
   let a = AddressSpace(Arc::try_new(Inner {
     asid: id,
     page_table,
-    exception_handler: Mutex::new(None)
+    exception_handler: Mutex::new(None),
   }).map_err(|_| ERROR_OOM)?);
   let mut map = ADDRESS_SPACE_MAP.lock();
   map.insert(id, a.clone());

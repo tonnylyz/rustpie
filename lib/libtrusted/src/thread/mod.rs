@@ -1,5 +1,3 @@
-mod thread_sys;
-
 use alloc::boxed::Box;
 use alloc::sync::Arc;
 use core::any::Any;
@@ -7,6 +5,8 @@ use core::cell::UnsafeCell;
 use core::num::NonZeroU64;
 
 use thread_sys as imp;
+
+mod thread_sys;
 
 ////////////////////////////////////////////////////////////////////////////////
 // Builder

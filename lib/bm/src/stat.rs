@@ -1,8 +1,9 @@
 use alloc::vec::Vec;
+
 use hashbrown::HashMap;
 
 /// Helper function to calculate statistics of a provided dataset
-pub fn calculate_stats(vec: &Vec<u64>) -> Option<Stats>{
+pub fn calculate_stats(vec: &Vec<u64>) -> Option<Stats> {
   let mean;
   let median;
   let mode;
@@ -43,10 +44,9 @@ pub fn calculate_stats(vec: &Vec<u64>) -> Option<Stats>{
     for &val in vec {
       let x = val as f64;
       if x > mean {
-        diff_sum = diff_sum + ((x - mean)*(x - mean));
-      }
-      else {
-        diff_sum = diff_sum + ((mean - x)*(mean - x));
+        diff_sum = diff_sum + ((x - mean) * (x - mean));
+      } else {
+        diff_sum = diff_sum + ((mean - x) * (mean - x));
       }
     }
 
@@ -55,24 +55,24 @@ pub fn calculate_stats(vec: &Vec<u64>) -> Option<Stats>{
   }
 
   { // calculate mode
-    let mut values: HashMap<u64,usize> = HashMap::with_capacity(len);
+    let mut values: HashMap<u64, usize> = HashMap::with_capacity(len);
     for val in vec {
-      values.entry(*val).and_modify(|v| {*v += 1}).or_insert(1);
+      values.entry(*val).and_modify(|v| { *v += 1 }).or_insert(1);
     }
-    mode = *values.iter().max_by(|(_k1,v1), (_k2,v2)| v1.cmp(v2)).unwrap().0; // safe to call unwrap since we've already checked if the vector is empty
+    mode = *values.iter().max_by(|(_k1, v1), (_k2, v2)| v1.cmp(v2)).unwrap().0; // safe to call unwrap since we've already checked if the vector is empty
   }
 
-  Some(Stats{ min, p_25, median, p_75, max, mode, mean, std_dev })
+  Some(Stats { min, p_25, median, p_75, max, mode, mean, std_dev })
 }
 
 pub struct Stats {
-  pub min: 	u64,
-  pub p_25: 	u64,
+  pub min: u64,
+  pub p_25: u64,
   pub median: u64,
-  pub p_75:	u64,
-  pub max: 	u64,
-  pub mode: 	u64,
-  pub mean: 	f64,
+  pub p_75: u64,
+  pub max: u64,
+  pub mode: u64,
+  pub mean: f64,
   pub std_dev: f64,
 }
 

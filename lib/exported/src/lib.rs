@@ -5,6 +5,8 @@
 
 extern crate alloc;
 
+use alloc::vec::Vec;
+
 #[macro_export]
 macro_rules! print {
     ($($arg:tt)*) => ($crate::stdio::print_arg(format_args!($($arg)*)));
@@ -27,8 +29,6 @@ pub mod rtc;
 pub fn sched_yield() {
   microcall::thread_yield();
 }
-
-use alloc::vec::Vec;
 
 #[inline(always)]
 fn round_up(addr: usize, n: usize) -> usize {

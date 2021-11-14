@@ -11,16 +11,20 @@
 
 #[macro_use]
 extern crate alloc;
+#[macro_use]
+extern crate log;
 extern crate rlibc;
+#[macro_use]
+extern crate static_assertions;
+
+use arch::ContextFrame;
+use lib::interrupt::InterruptController;
+use lib::traits::*;
+use mm::page_table::PageTableEntryAttrTrait;
+use mm::page_table::PageTableTrait;
 
 #[macro_use]
 mod misc;
-
-#[macro_use]
-extern crate log;
-
-#[macro_use]
-extern crate static_assertions;
 
 cfg_if::cfg_if! {
   if #[cfg(target_arch = "aarch64")] {
@@ -59,12 +63,6 @@ mod panic;
 mod util;
 mod logger;
 mod syscall;
-
-use arch::ContextFrame;
-use lib::traits::*;
-use lib::interrupt::InterruptController;
-use mm::page_table::PageTableTrait;
-use mm::page_table::PageTableEntryAttrTrait;
 
 #[macro_use]
 mod macros {
@@ -139,15 +137,15 @@ pub unsafe fn main(core_id: arch::CoreId) -> ! {
                            mm::page_table::EntryAttribute::user_default()).unwrap();
 
     #[cfg(feature = "k210")]
-    {
-      let dma_frame = mm::page_pool::page_alloc().expect("failed to allocate trusted dma frame");
-      let dma_frame_no_cache = dma_frame.pa() - 0x40000000;
-      info!("dma_frame {:016x}", dma_frame_no_cache);
-      page_table.insert_page(0x8_0000_0000,
-                             mm::Frame::Device(dma_frame_no_cache),
-                             mm::page_table::EntryAttribute::user_device()).unwrap();
-      core::mem::forget(dma_frame);
-    }
+      {
+        let dma_frame = mm::page_pool::page_alloc().expect("failed to allocate trusted dma frame");
+        let dma_frame_no_cache = dma_frame.pa() - 0x40000000;
+        info!("dma_frame {:016x}", dma_frame_no_cache);
+        page_table.insert_page(0x8_0000_0000,
+                               mm::Frame::Device(dma_frame_no_cache),
+                               mm::page_table::EntryAttribute::user_device()).unwrap();
+        core::mem::forget(dma_frame);
+      }
 
     info!("user stack ok");
     let t = crate::lib::thread::new_user(

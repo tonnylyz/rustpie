@@ -149,9 +149,12 @@ pub struct LandingRegs {
 
 #[repr(C)]
 pub struct CalleeSavedRegs {
-  pub s0: u64,      // x8
-  pub s1: u64,      // x9
-  pub r: [u64; 10], // x18 - x27
+  pub s0: u64,
+  // x8
+  pub s1: u64,
+  // x9
+  pub r: [u64; 10],
+  // x18 - x27
   pub ra: u64,      // x1
 }
 

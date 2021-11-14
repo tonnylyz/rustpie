@@ -14,3 +14,4 @@ buddy_system_allocator = "0.8.0"
 microcall = { path = "../microcall" }
 common = { path = "../../common" }
 redox = { path = "../redox" }
+cs = { path = "../cs" }

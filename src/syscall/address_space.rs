@@ -1,6 +1,8 @@
-use super::{Result, SyscallOutRegisters::*};
 use common::syscall::error::*;
+
 use crate::lib::thread::Tid;
+
+use super::{Result, SyscallOutRegisters::*};
 
 #[inline(never)]
 #[inject::count_stmts]

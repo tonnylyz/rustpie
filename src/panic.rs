@@ -1,6 +1,5 @@
 use core::panic::PanicInfo;
 
-
 use crate::lib::traits::*;
 
 #[derive(Debug, Clone)]
@@ -30,7 +29,6 @@ impl Frame {
 
   #[cfg(target_arch = "riscv64")]
   fn current() -> Frame {
-
     let fp: u64;
     let pc: u64;
     unsafe {
@@ -86,7 +84,7 @@ pub fn exception_trace() {
   #[cfg(target_arch = "aarch64")]
     let frame_zero = Frame {
     pc: ctx.exception_pc() as u64,
-    fp: ctx.gpr(29) as u64
+    fp: ctx.gpr(29) as u64,
   };
 
   #[cfg(target_arch = "riscv64")]
@@ -139,6 +137,7 @@ pub fn panic_handler(info: &PanicInfo) -> ! {
 
 #[allow(dead_code)]
 static mut PANICKED: bool = false;
+
 #[allow(dead_code)]
 pub fn random_panic() {
   unsafe {
@@ -151,6 +150,7 @@ pub fn random_panic() {
 
 #[allow(dead_code)]
 static mut PAGEFAULT: bool = false;
+
 #[allow(dead_code)]
 pub fn random_page_fault() {
   unsafe {

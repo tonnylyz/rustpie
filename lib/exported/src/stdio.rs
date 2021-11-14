@@ -1,6 +1,8 @@
 use alloc::string::String;
 use alloc::vec::Vec;
+
 use spin::Mutex;
+
 use microcall::message::Message;
 
 pub fn getchar() -> u8 {
@@ -10,8 +12,8 @@ pub fn getchar() -> u8 {
       0 => microcall::thread_yield(),
       c => {
         print!("{}", c as u8 as char);
-        break c as u8
-      },
+        break c as u8;
+      }
     }
   }
 }
@@ -21,7 +23,7 @@ pub fn getline() -> String {
   loop {
     let c = getchar();
     if c == 0xd {
-      break
+      break;
     }
     v.push(c);
   }

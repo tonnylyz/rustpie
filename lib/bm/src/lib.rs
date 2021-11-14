@@ -9,18 +9,20 @@
 
 #![no_std]
 
-#[macro_use] extern crate alloc;
-#[macro_use] extern crate log;
+#[macro_use]
+extern crate alloc;
 extern crate hashbrown;
+#[macro_use]
+extern crate log;
 extern crate microcall;
 
-mod stat;
-
-use core::str;
 use alloc::vec::Vec;
-use microcall::get_tid;
+use core::str;
 
+use microcall::get_tid;
 use stat::calculate_stats;
+
+mod stat;
 
 #[allow(dead_code)]
 const SEC_TO_NANO: u64 = 1_000_000_000;
@@ -37,9 +39,9 @@ const TRIES: usize = 10;
 const THRESHOLD_ERROR_RATIO: u64 = 2;
 
 #[allow(dead_code)]
-const READ_BUF_SIZE: usize = 64*1024;
+const READ_BUF_SIZE: usize = 64 * 1024;
 #[allow(dead_code)]
-const WRITE_BUF_SIZE: usize = 1024*1024;
+const WRITE_BUF_SIZE: usize = 1024 * 1024;
 #[allow(dead_code)]
 const WRITE_BUF: [u8; WRITE_BUF_SIZE] = [65; WRITE_BUF_SIZE];
 
@@ -149,6 +151,7 @@ pub fn main(args: Vec<&str>) -> isize {
 
 #[derive(Copy, Clone)]
 struct Hpet;
+
 impl Hpet {
   fn get_counter(&self) -> u64 {
     // let r;
@@ -184,22 +187,22 @@ fn do_null() -> Result<(), &'static str> {
   let mut vec = Vec::with_capacity(TRIES);
 
   let overhead_ct = hpet_timing_overhead()?;
-  print_header(TRIES, ITERATIONS*1000);
+  print_header(TRIES, ITERATIONS * 1000);
 
   for i in 0..TRIES {
-    let lat = do_null_inner(overhead_ct, i+1, TRIES)?;
+    let lat = do_null_inner(overhead_ct, i + 1, TRIES)?;
 
     tries += lat;
     vec.push(lat);
 
-    if lat > max {max = lat;}
-    if lat < min {min = lat;}
+    if lat > max { max = lat; }
+    if lat < min { min = lat; }
   }
 
   let lat = tries / TRIES as u64;
   // We expect the maximum and minimum to be within 10*THRESHOLD_ERROR_RATIO % of the mean value
   let err = (lat * 10 * THRESHOLD_ERROR_RATIO) / 100;
-  if 	max - lat > err || lat - min > err {
+  if max - lat > err || lat - min > err {
     warn!("null_test diff is too big: {} ({} - {}) {}", max-min, max, min, T_UNIT);
   }
   let stats = calculate_stats(&vec).ok_or("couldn't calculate stats")?;
@@ -219,7 +222,7 @@ fn do_null_inner(overhead_ct: u64, th: usize, nr: usize) -> Result<u64, &'static
   let hpet = get_hpet().ok_or("Could not retrieve hpet counter")?;
 
   // Since this test takes very little time we multiply the default iterations by 1000
-  let tmp_iterations = ITERATIONS *1000;
+  let tmp_iterations = ITERATIONS * 1000;
 
   start_hpet = hpet.get_counter();
   for _ in 0..tmp_iterations {
@@ -228,8 +231,9 @@ fn do_null_inner(overhead_ct: u64, th: usize, nr: usize) -> Result<u64, &'static
   end_hpet = hpet.get_counter();
 
   let mut delta_hpet: u64 = end_hpet - start_hpet;
-  if delta_hpet < overhead_ct { // Erroneous case
-  warn!("Ignore overhead for null because overhead({}) > diff({})", overhead_ct, delta_hpet);
+  if delta_hpet < overhead_ct {
+    // Erroneous case
+    warn!("Ignore overhead for null because overhead({}) > diff({})", overhead_ct, delta_hpet);
   } else {
     delta_hpet -= overhead_ct;
   }
@@ -244,7 +248,7 @@ fn do_null_inner(overhead_ct: u64, th: usize, nr: usize) -> Result<u64, &'static
 
 /// Measures the time to spawn an application. 
 /// Calls `do_spawn_inner` multiple times and averages the value. 
-fn do_spawn() -> Result<(), &'static str>{
+fn do_spawn() -> Result<(), &'static str> {
   // let child_core = match pick_free_core() {
   //   Ok(child_core) => {
   //     info!("core_{} is idle, so my children will play on it.", child_core);
@@ -265,20 +269,20 @@ fn do_spawn() -> Result<(), &'static str>{
   print_header(TRIES, ITERATIONS);
 
   for i in 0..TRIES {
-    let lat = do_spawn_inner(overhead_ct, i+1, TRIES, 0)?;
+    let lat = do_spawn_inner(overhead_ct, i + 1, TRIES, 0)?;
 
     tries += lat;
     vec.push(lat);
 
-    if lat > max {max = lat;}
-    if lat < min {min = lat;}
+    if lat > max { max = lat; }
+    if lat < min { min = lat; }
   }
 
   let lat = tries / TRIES as u64;
 
   // We expect the maximum and minimum to be within 10*THRESHOLD_ERROR_RATIO % of the mean value
   let err = (lat * 10 * THRESHOLD_ERROR_RATIO) / 100;
-  if 	max - lat > err || lat - min > err {
+  if max - lat > err || lat - min > err {
     warn!("spawn_test diff is too big: {} ({} - {}) {}", max-min, max, min, T_UNIT);
   }
   let stats = calculate_stats(&vec).ok_or("couldn't calculate stats")?;
@@ -299,7 +303,7 @@ fn do_spawn_inner(overhead_ct: u64, th: usize, nr: usize, _child_core: u8) -> Re
   let hpet = get_hpet().ok_or("Could not retrieve hpet counter")?;
 
   let iterations = 100;
-  for _ in 0..iterations{
+  for _ in 0..iterations {
     start_hpet = hpet.get_counter();
     // exported::pm::exec("hello");
     let _ = libtrusted::loader::spawn("hello");

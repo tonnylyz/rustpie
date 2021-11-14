@@ -4,9 +4,9 @@
 #![feature(alloc_error_handler)]
 
 extern crate alloc;
-extern crate rlibc;
 extern crate exported;
 extern crate microcall;
+extern crate rlibc;
 
 use microcall::message::Message;
 

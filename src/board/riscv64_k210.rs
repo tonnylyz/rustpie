@@ -1,5 +1,6 @@
 use alloc::vec::Vec;
 use core::ops::Range;
+
 use crate::lib::device::Device;
 use crate::lib::interrupt::InterruptController;
 use crate::lib::traits::ArchTrait;

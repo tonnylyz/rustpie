@@ -1,9 +1,9 @@
 #![no_std]
 
-use microcall::message::Message;
-use redox::*;
 use common::server::SERVER_REDOX_FS;
 
+use microcall::message::Message;
+use redox::*;
 pub use redox::Stat;
 
 pub struct File {
@@ -28,7 +28,7 @@ impl File {
       d: O_RDONLY,
     };
     let msg = msg.call(SERVER_REDOX_FS).map_err(|_| Error::new(EIO))?;
-    Error::demux(msg.a).map(|handle| File{ handle })
+    Error::demux(msg.a).map(|handle| File { handle })
   }
 
   pub fn create<P: AsRef<str>>(path: P) -> Result<File> {
@@ -39,7 +39,7 @@ impl File {
       d: O_CREAT | O_RDWR,
     };
     let msg = msg.call(SERVER_REDOX_FS).map_err(|_| Error::new(EIO))?;
-    Error::demux(msg.a).map(|handle| File{ handle })
+    Error::demux(msg.a).map(|handle| File { handle })
   }
 
   pub fn read(&mut self, buf: &mut [u8]) -> Result<usize> {
@@ -77,7 +77,7 @@ impl File {
         SeekFrom::Start(_u) => SEEK_SET,
         SeekFrom::End(_i) => SEEK_END,
         SeekFrom::Current(_i) => SEEK_CUR,
-      }
+      },
     };
     let msg = msg.call(SERVER_REDOX_FS).map_err(|_| Error::new(EIO))?;
     Error::demux(msg.a).map(|u| u as u64)
@@ -116,7 +116,6 @@ impl File {
     let msg = msg.call(SERVER_REDOX_FS).map_err(|_| Error::new(EIO))?;
     Error::demux(msg.a).map(|_| ())
   }
-
 }
 
 impl Drop for File {
@@ -139,7 +138,7 @@ pub fn create_dir<P: AsRef<str>>(path: P) -> Result<()> {
     d: O_CREAT | O_DIRECTORY,
   };
   let msg = msg.call(SERVER_REDOX_FS).map_err(|_| Error::new(EIO))?;
-  let f = Error::demux(msg.a).map(|handle| File{ handle })?;
+  let f = Error::demux(msg.a).map(|handle| File { handle })?;
   drop(f);
   Ok(())
 }

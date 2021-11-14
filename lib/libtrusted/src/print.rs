@@ -1,7 +1,8 @@
 use core::fmt;
+
 use spin::Mutex;
 
-use microcall::{putc, get_tid};
+use microcall::{get_tid, putc};
 
 struct Writer;
 
@@ -34,7 +35,7 @@ fn panic_handler(info: &core::panic::PanicInfo) -> ! {
     println!("          [E][trusted] panic t{} no message", get_tid());
   }
   #[cfg(not(feature = "k210"))]
-  unwind::unwind_from_panic(1);
+    unwind::unwind_from_panic(1);
   #[cfg(feature = "k210")]
   loop {}
 }

@@ -1,16 +1,21 @@
 use alloc::boxed::Box;
-use super::{Result, SyscallOutRegisters::*};
+
 use common::syscall::error::ERROR_INVARG;
+
+use super::{Result, SyscallOutRegisters::*};
 
 #[allow(dead_code)]
 struct ResourceA;
+
 #[allow(dead_code)]
 struct ResourceB;
+
 impl Drop for ResourceA {
   fn drop(&mut self) {
     info!("resource a drop")
   }
 }
+
 #[inline(never)]
 #[allow(dead_code)]
 fn make_page_fault() {

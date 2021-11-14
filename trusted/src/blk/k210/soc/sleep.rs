@@ -6,7 +6,7 @@ pub fn cycle_sleep(n: usize) {
   loop {
     start += 1;
     if start > n {
-      break
+      break;
     }
   }
 }

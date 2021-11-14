@@ -4,9 +4,9 @@
 #![feature(alloc_error_handler)]
 
 extern crate alloc;
-extern crate rlibc;
 #[macro_use]
 extern crate exported;
+extern crate rlibc;
 
 #[no_mangle]
 fn _start(arg: *const u8) {

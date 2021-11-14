@@ -2,13 +2,24 @@
 use core::cmp;
 use core::convert::TryInto;
 use core::ops::Deref;
+
+/** Borrow frame format from pac */
+pub use ctrlr0::FRAME_FORMAT_A as frame_format;
+/** Borrow tmod from pac */
+pub use ctrlr0::TMOD_A as tmod;
+/** Borrow work mode from pac */
+pub use ctrlr0::WORK_MODE_A as work_mode;
 use k210_hal::pac;
-use pac::{SPI0,SPI1,spi0};
+use pac::{SPI0, spi0, SPI1};
 use pac::spi0::ctrlr0;
 use pac::spi0::spi_ctrlr0;
+/** Borrow aitm from pac */
+pub use spi_ctrlr0::AITM_A as aitm;
 
-use super::sysctl::{dma_channel, self};
-use super::dmac::{DMAC, address_increment, burst_length, transfer_width};
+use libtrusted::mm::virt_to_phys;
+
+use super::dmac::{address_increment, burst_length, DMAC, transfer_width};
+use super::sysctl::{self, dma_channel};
 
 /// Extension trait that constrains SPI peripherals
 pub trait SPIExt: Sized {
@@ -17,7 +28,7 @@ pub trait SPIExt: Sized {
 }
 
 /// Trait for generalizing over SPI0 and SPI1 (SPI2 is slave-only and SPI3 is !!!special!!!)
-pub trait SPI01: Deref<Target = spi0::RegisterBlock> {
+pub trait SPI01: Deref<Target=spi0::RegisterBlock> {
   #[doc(hidden)]
   const CLK: sysctl::clock;
   #[doc(hidden)]
@@ -34,6 +45,7 @@ impl SPI01 for SPI0 {
   const DMA_RX: sysctl::dma_select = sysctl::dma_select::SSI0_RX_REQ;
   const DMA_TX: sysctl::dma_select = sysctl::dma_select::SSI0_TX_REQ;
 }
+
 impl SPI01 for SPI1 {
   const CLK: sysctl::clock = sysctl::clock::SPI1;
   const DIV: sysctl::threshold = sysctl::threshold::SPI1;
@@ -50,16 +62,6 @@ impl<SPI: SPI01> SPIExt for SPI {
 pub struct SPIImpl<IF> {
   spi: IF,
 }
-
-/** Borrow work mode from pac */
-pub use ctrlr0::WORK_MODE_A as work_mode;
-/** Borrow frame format from pac */
-pub use ctrlr0::FRAME_FORMAT_A as frame_format;
-/** Borrow aitm from pac */
-pub use spi_ctrlr0::AITM_A as aitm;
-/** Borrow tmod from pac */
-pub use ctrlr0::TMOD_A as tmod;
-use libtrusted::mm::virt_to_phys;
 
 pub trait SPI {
   fn configure(
@@ -91,11 +93,14 @@ impl<IF: SPI01> SPIImpl<IF> {
 
 /** Trait for trunction of a SPI frame from u32 register to other unsigned integer types. */
 pub trait TruncU32 {
-  fn trunc(val: u32)-> Self;
+  fn trunc(val: u32) -> Self;
 }
-impl TruncU32 for u32 { fn  trunc(val: u32) -> u32 { return val; } }
-impl TruncU32 for u16 { fn  trunc(val: u32) -> u16 { return (val & 0xffff) as u16; } }
-impl TruncU32 for u8 { fn  trunc(val: u32) -> u8 { return (val & 0xff) as u8; } }
+
+impl TruncU32 for u32 { fn trunc(val: u32) -> u32 { return val; } }
+
+impl TruncU32 for u16 { fn trunc(val: u32) -> u16 { return (val & 0xffff) as u16; } }
+
+impl TruncU32 for u8 { fn trunc(val: u32) -> u8 { return (val & 0xff) as u8; } }
 
 impl<IF: SPI01> SPI for SPIImpl<IF> {
   /// Configure SPI transaction
@@ -208,7 +213,7 @@ impl<IF: SPI01> SPI for SPIImpl<IF> {
 
       sysctl::dma_select(channel_num, IF::DMA_RX);
       trace!("recv_data_dma src {:016x} dst {:016x}",  self.spi.dr.as_ptr() as u64 & 0xffff_ffff, virt_to_phys(rx.as_ptr() as usize) as u64);
-      dmac.set_single_mode(channel_num, self.spi.dr.as_ptr() as u64 & 0xffff_ffff,  virt_to_phys(rx.as_ptr() as usize) as u64,
+      dmac.set_single_mode(channel_num, self.spi.dr.as_ptr() as u64 & 0xffff_ffff, virt_to_phys(rx.as_ptr() as usize) as u64,
                            address_increment::NOCHANGE, address_increment::INCREMENT,
                            burst_length::LENGTH_1, transfer_width::WIDTH_32, rx.len() as u32);
       self.spi.dr[0].write(|w| w.bits(0xffffffff));

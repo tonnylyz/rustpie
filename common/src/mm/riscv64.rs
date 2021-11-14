@@ -73,5 +73,4 @@ pub mod vm_descriptor {
       ]
     ]
   }
-
 }

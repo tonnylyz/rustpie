@@ -122,15 +122,19 @@ unwind_lander:
 
 #[repr(C)]
 pub struct LandingRegs {
-  pub x: [u64; 29], // x0 - x28
-  pub fp: u64,      // x29
-  pub lr: u64,      // x30
+  pub x: [u64; 29],
+  // x0 - x28
+  pub fp: u64,
+  // x29
+  pub lr: u64,
+  // x30
   pub sp: u64,      // x31
 }
 
 #[repr(C)]
 pub struct CalleeSavedRegs {
-  pub r: [u64; 11], // x19 - x29
+  pub r: [u64; 11],
+  // x19 - x29
   pub lr: u64,
 }
 

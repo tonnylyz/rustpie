@@ -1,10 +1,10 @@
-use super::{Result, SyscallOutRegisters::*};
-use crate::lib::thread::{thread_sleep, Tid};
 use common::syscall::error::*;
 
-
-use crate::lib::traits::ContextFrameTrait;
+use crate::lib::thread::{thread_sleep, Tid};
 use crate::lib::thread::Status as ThreadStatus;
+use crate::lib::traits::ContextFrameTrait;
+
+use super::{Result, SyscallOutRegisters::*};
 
 #[inline(never)]
 #[inject::count_stmts]

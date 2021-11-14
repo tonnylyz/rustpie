@@ -4,8 +4,9 @@
 #![allow(nonstandard_style)]
 
 use core::ops::Range;
-use gimli::{Reader, DwEhPe, Endianity, EndianSlice, constants::*, };
+
 use fallible_iterator::FallibleIterator;
+use gimli::{constants::*, DwEhPe, Endianity, EndianSlice, Reader};
 
 /// `GccExceptTableArea` contains the contents of the Language-Specific Data Area (LSDA)
 /// that is used to locate cleanup (run destructors for) a given function during stack unwinding.
@@ -115,6 +116,7 @@ struct LsdaHeader {
   /// which is quite common in Rust-compiled object files.
   type_table_offset: Option<u64>,
 }
+
 impl LsdaHeader {
   fn parse<R: gimli::Reader>(reader: &mut R) -> gimli::Result<LsdaHeader> {
     let lp_encoding = DwEhPe(reader.read_u8()?);
@@ -131,7 +133,7 @@ impl LsdaHeader {
       Some(read_encoded_pointer(reader, DW_EH_PE_uleb128)?)
     };
 
-    Ok(LsdaHeader{
+    Ok(LsdaHeader {
       landing_pad_base_encoding: lp_encoding,
       landing_pad_base: lp,
       type_table_encoding: tt_encoding,
@@ -152,13 +154,14 @@ struct CallSiteTableHeader {
   /// This is always encoded in uleb128.
   length: u64,
 }
+
 impl CallSiteTableHeader {
   fn parse<R: gimli::Reader>(reader: &mut R) -> gimli::Result<CallSiteTableHeader> {
     let encoding = DwEhPe(reader.read_u8()?);
     let length = read_encoded_pointer(reader, DW_EH_PE_uleb128)?;
     Ok(CallSiteTableHeader {
       encoding,
-      length
+      length,
     })
   }
 }
@@ -187,17 +190,18 @@ pub struct CallSiteTableEntry {
   /// The starting address of the function that this GccExceptTableArea pertains to.
   /// This is not actually part of the table entry as defined in the gcc LSDA spec,
   /// it comes from the top-level LSDA header and is replicated here for convenience.
-  landing_pad_base: u64
+  landing_pad_base: u64,
 }
+
 impl CallSiteTableEntry {
   fn parse<R: gimli::Reader>(
     reader: &mut R,
     call_site_encoding: DwEhPe,
     landing_pad_base: u64,
   ) -> gimli::Result<CallSiteTableEntry> {
-    let cs_start  = read_encoded_pointer(reader, call_site_encoding)?;
+    let cs_start = read_encoded_pointer(reader, call_site_encoding)?;
     let cs_length = read_encoded_pointer(reader, call_site_encoding)?;
-    let cs_lp     = read_encoded_pointer(reader, call_site_encoding)?;
+    let cs_lp = read_encoded_pointer(reader, call_site_encoding)?;
     let cs_action = read_encoded_pointer(reader, DW_EH_PE_uleb128)?;
     Ok(CallSiteTableEntry {
       starting_offset: cs_start,
@@ -210,7 +214,7 @@ impl CallSiteTableEntry {
 
   /// The range of addresses (instruction pointers) that are covered by this entry.
   pub fn range_of_covered_addresses(&self) -> Range<u64> {
-    (self.landing_pad_base + self.starting_offset) .. (self.landing_pad_base + self.starting_offset + self.length)
+    (self.landing_pad_base + self.starting_offset)..(self.landing_pad_base + self.starting_offset + self.length)
   }
 
   /// The address of the actual landing pad, i.e., the cleanup routine that should run, if one exists.
@@ -271,16 +275,16 @@ impl<R: Reader> FallibleIterator for CallSiteTableIterator<R> {
 /// Decodes the next pointer from the given `reader` (a stream of bytes) using the given `encoding` format.
 fn read_encoded_pointer<R: gimli::Reader>(reader: &mut R, encoding: DwEhPe) -> gimli::Result<u64> {
   match encoding {
-    DW_EH_PE_omit     => Err(gimli::Error::CannotParseOmitPointerEncoding),
-    DW_EH_PE_absptr   => reader.read_u64().map(|v| v as u64),
-    DW_EH_PE_uleb128  => reader.read_uleb128().map(|v| v as u64),
-    DW_EH_PE_udata2   => reader.read_u16().map(|v| v as u64),
-    DW_EH_PE_udata4   => reader.read_u32().map(|v| v as u64),
-    DW_EH_PE_udata8   => reader.read_u64().map(|v| v as u64),
-    DW_EH_PE_sleb128  => reader.read_sleb128().map(|v| v as u64),
-    DW_EH_PE_sdata2   => reader.read_i16().map(|v| v as u64),
-    DW_EH_PE_sdata4   => reader.read_i32().map(|v| v as u64),
-    DW_EH_PE_sdata8   => reader.read_i64().map(|v| v as u64),
+    DW_EH_PE_omit => Err(gimli::Error::CannotParseOmitPointerEncoding),
+    DW_EH_PE_absptr => reader.read_u64().map(|v| v as u64),
+    DW_EH_PE_uleb128 => reader.read_uleb128().map(|v| v as u64),
+    DW_EH_PE_udata2 => reader.read_u16().map(|v| v as u64),
+    DW_EH_PE_udata4 => reader.read_u32().map(|v| v as u64),
+    DW_EH_PE_udata8 => reader.read_u64().map(|v| v as u64),
+    DW_EH_PE_sleb128 => reader.read_sleb128().map(|v| v as u64),
+    DW_EH_PE_sdata2 => reader.read_i16().map(|v| v as u64),
+    DW_EH_PE_sdata4 => reader.read_i32().map(|v| v as u64),
+    DW_EH_PE_sdata8 => reader.read_i64().map(|v| v as u64),
     _ => {
       error!("read_encoded_pointer(): unsupported pointer encoding: {:#X}: {:?}",
              encoding.0,

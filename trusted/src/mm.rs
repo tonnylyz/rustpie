@@ -1,28 +1,24 @@
-use microcall::message::Message;
 use libtrusted::mm::default_page_attribute;
-use microcall::get_tid;
 use libtrusted::wrapper::request_wrapper;
+use microcall::get_tid;
+use microcall::message::Message;
 
-// static mut PANICKED: bool = false;
-
-fn process(msg: Message, tid: usize) -> () {
-  trace!("t{}: {:x?}", tid, msg);
+#[inject::count_stmts]
+#[inject::panic_inject]
+#[inject::page_fault_inject]
+fn mm(msg: Message, tid: usize) -> usize {
   let asid = microcall::get_asid(tid).unwrap();
-  let r = match msg.a {
-    1 => {
+  match msg.a {
+    cs::mm::action::ALLOC => {
       match microcall::mem_alloc(asid, msg.b, default_page_attribute()) {
-        Ok(_) => {0}
-        Err(_) => {0x1}
+        Ok(_) => cs::mm::result::OK,
+        Err(_) => cs::mm::result::ERR
       }
-    },
-    _ => {
-      0x1
     }
-  };
-
-  let mut msg = Message::default();
-  msg.a = r;
-  let _ = msg.send_to(tid);
+    _ => {
+      cs::mm::result::UNKNOWN_ACTION
+    }
+  }
 }
 
 pub fn server() {
@@ -30,6 +26,8 @@ pub fn server() {
   microcall::server_register(common::server::SERVER_MM).unwrap();
   loop {
     let (client_tid, msg) = Message::receive().unwrap();
-    request_wrapper(process, msg, client_tid).unwrap();
+    let r = request_wrapper(mm, msg, client_tid).unwrap();
+    let result = Message::new(r, 0, 0, 0);
+    let _ = result.send_to(client_tid);
   }
 }

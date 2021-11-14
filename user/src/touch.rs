@@ -4,12 +4,13 @@
 #![feature(alloc_error_handler)]
 
 extern crate alloc;
-extern crate rlibc;
 #[macro_use]
 extern crate exported;
+extern crate rlibc;
 
 use alloc::string::ToString;
 use alloc::vec::Vec;
+
 use getopts::Options;
 
 #[no_mangle]

@@ -1,9 +1,9 @@
 use tock_registers::*;
+use tock_registers::interfaces::{Readable, Writeable};
+use tock_registers::registers::*;
 
 use crate::lib::interrupt::InterruptController;
 use crate::lib::traits::ArchTrait;
-use tock_registers::registers::*;
-use tock_registers::interfaces::{Writeable, Readable};
 
 const GIC_INTERRUPT_NUM: usize = 1024;
 const GIC_SGI_NUM: usize = 16;
@@ -175,7 +175,7 @@ impl GicDistributor {
     let offset = (int * 2) % 32;
     let mask: u32 = 0b11 << offset;
     let prev = self.ICFGR[idx].get();
-    self.ICFGR[idx].set((prev & (!mask)) | ((if edge {0b10} else {0b00} << offset) & mask));
+    self.ICFGR[idx].set((prev & (!mask)) | ((if edge { 0b10 } else { 0b00 } << offset) & mask));
   }
 }
 

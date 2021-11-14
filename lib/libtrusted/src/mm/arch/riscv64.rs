@@ -1,12 +1,11 @@
+use common::{PAGE_SIZE, PAGE_TABLE_L1_SHIFT, PAGE_TABLE_L2_SHIFT, PAGE_TABLE_L3_SHIFT};
+use common::CONFIG_READ_ONLY_LEVEL_1_PAGE_TABLE_BTM;
+use common::CONFIG_READ_ONLY_LEVEL_2_PAGE_TABLE_BTM;
+use common::CONFIG_READ_ONLY_LEVEL_3_PAGE_TABLE_BTM;
+use common::mm::vm_descriptor::*;
 use tock_registers::LocalRegisterCopy;
 
-use common::mm::vm_descriptor::*;
 use crate::mm::PageAttribute;
-
-use common::{PAGE_SIZE, PAGE_TABLE_L1_SHIFT, PAGE_TABLE_L2_SHIFT, PAGE_TABLE_L3_SHIFT};
-use common::CONFIG_READ_ONLY_LEVEL_3_PAGE_TABLE_BTM;
-use common::CONFIG_READ_ONLY_LEVEL_2_PAGE_TABLE_BTM;
-use common::CONFIG_READ_ONLY_LEVEL_1_PAGE_TABLE_BTM;
 
 fn read_directory_entry(l1_index: usize) -> usize {
   let ppte = CONFIG_READ_ONLY_LEVEL_1_PAGE_TABLE_BTM + l1_index * 8;
@@ -136,8 +135,8 @@ impl PageAttribute for Entry {
 
   fn is_table(&self) -> bool {
     self.is_valid() && self.reg().matches_all(PAGE_DESCRIPTOR::R::False)
-    && self.reg().matches_all(PAGE_DESCRIPTOR::W::False)
-    && self.reg().matches_all(PAGE_DESCRIPTOR::X::False)
+      && self.reg().matches_all(PAGE_DESCRIPTOR::W::False)
+      && self.reg().matches_all(PAGE_DESCRIPTOR::X::False)
   }
 
   fn is_page(&self) -> bool {

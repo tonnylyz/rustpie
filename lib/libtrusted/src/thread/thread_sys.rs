@@ -1,6 +1,9 @@
 use alloc::boxed::Box;
+
 use common::PAGE_SIZE;
+
 use microcall::{thread_alloc, thread_set_status};
+
 use crate::mm::{virtual_alloc, virtual_free};
 
 pub struct Thread {
@@ -10,6 +13,7 @@ pub struct Thread {
 }
 
 unsafe impl Send for Thread {}
+
 unsafe impl Sync for Thread {}
 
 pub type IoResult<T> = core::result::Result<T, ()>; // alias of io::Result
@@ -40,7 +44,7 @@ impl Thread {
           stack_btm: stack,
           stack_size_in_page: THREAD_STACK_PAGE_NUM,
         })
-      },
+      }
       Err(_) => {
         drop(Box::from_raw(p));
         Err(())

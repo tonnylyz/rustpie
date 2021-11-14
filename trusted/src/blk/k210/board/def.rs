@@ -1,4 +1,3 @@
-
 /** I/O pins for FPIOA */
 #[derive(Copy, Clone)]
 #[allow(non_camel_case_types)]

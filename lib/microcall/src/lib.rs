@@ -2,6 +2,10 @@
 #![feature(asm)]
 #![feature(global_asm)]
 
+use common::syscall::*;
+
+use arch::*;
+
 #[cfg(target_arch = "aarch64")]
 #[path = "arch/aarch64/mod.rs"]
 mod arch;
@@ -9,9 +13,6 @@ mod arch;
 #[cfg(target_arch = "riscv64")]
 #[path = "arch/riscv64/mod.rs"]
 mod arch;
-
-use arch::*;
-use common::syscall::*;
 
 pub fn null() { syscall_0_0(SYS_NULL).unwrap() }
 

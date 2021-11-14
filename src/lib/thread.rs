@@ -1,6 +1,5 @@
 use alloc::collections::BTreeMap;
 use alloc::sync::Arc;
-
 use core::sync::atomic::AtomicUsize;
 use core::sync::atomic::Ordering::Relaxed;
 
@@ -9,9 +8,9 @@ use spin::Mutex;
 use crate::arch::ContextFrame;
 use crate::lib::address_space::AddressSpace;
 use crate::lib::cpu::cpu;
-use crate::syscall::event::thread_exit_signal;
 use crate::lib::scheduler::scheduler;
 use crate::lib::traits::*;
+use crate::syscall::event::thread_exit_signal;
 
 pub type Tid = usize;
 
