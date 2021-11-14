@@ -4,6 +4,11 @@ PROFILE ?= release
 USER_PROFILE ?= release
 TRUSTED_PROFILE ?= release
 
+# Panic Inject Function
+export PI
+# Page Fault Inject Function
+export FI
+
 # NOTE: this is to deal with `(signal: 11, SIGSEGV: invalid memory reference)`
 # https://github.com/rust-lang/rust/issues/73677
 RUSTFLAGS := -C llvm-args=-global-isel=false

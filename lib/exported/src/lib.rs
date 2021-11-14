@@ -22,6 +22,7 @@ pub mod heap;
 pub mod mm;
 pub mod pm;
 pub mod stdio;
+pub mod rtc;
 
 pub fn sched_yield() {
   microcall::thread_yield();
@@ -53,7 +54,7 @@ pub fn parse(arg: *const u8) -> Vec<&'static str> {
 }
 
 pub fn exit() -> ! {
-  microcall::thread_destroy(0).unwrap();
+  let _ = microcall::thread_destroy(0);
   loop {}
 }
 
@@ -62,12 +63,12 @@ fn panic_handler(info: &core::panic::PanicInfo) -> ! {
   let asid = microcall::get_asid(0).unwrap();
   if let Some(m) = info.message() {
     if let Some(l) = info.location() {
-      println!("[USER][panic] p{} {} \n {}", asid, m, l);
+      println!("[USER][panic] asid{} {} \n {}", asid, m, l);
     } else {
-      println!("[USER][panic] p{} {}", asid, m);
+      println!("[USER][panic] asid{} {}", asid, m);
     }
   } else {
-    println!("[USER][panic] p{} no message", asid);
+    println!("[USER][panic] asid{} no message", asid);
   }
   exit()
 }

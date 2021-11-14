@@ -28,13 +28,13 @@ macro_rules! registers {
 
 #[derive(Clone)]
 pub struct Registers {
-  registers: [Option<u64>; 96],
+  registers: [Option<u64>; 32],
 }
 
 impl Default for Registers {
   fn default() -> Self {
     Registers {
-      registers: [None; 96]
+      registers: [None; 32]
     }
   }
 }

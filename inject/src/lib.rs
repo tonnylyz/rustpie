@@ -11,10 +11,18 @@ pub fn panic_inject(_args: TokenStream, input: TokenStream) -> TokenStream {
     _ => panic!("This attribute only targets function"),
   };
   let statements = &mut fn_item.block.stmts;
-  let len = statements.len();
-  let at = rand::random::<usize>() % len;
-  statements.insert(at, syn::parse(quote!(crate::panic::random_panic();).into()).unwrap());
-
+  let ident = &fn_item.sig.ident;
+  let id = ident.to_string();
+  if let Some(x) = option_env!("PI") {
+    if x == id {
+      let len = statements.len();
+      let at = rand::random::<usize>() % len;
+      statements.insert(at, syn::parse(quote!(crate::panic::random_panic();).into()).unwrap());
+      println!("page_fault_inject {}: {}", ident, at);
+    }
+  } else {
+    println!("PI not found");
+  }
   item.into_token_stream().into()
 }
 
@@ -26,10 +34,18 @@ pub fn page_fault_inject(_args: TokenStream, input: TokenStream) -> TokenStream 
     _ => panic!("This attribute only targets function"),
   };
   let statements = &mut fn_item.block.stmts;
-  let len = statements.len();
-  let at = rand::random::<usize>() % len;
-  statements.insert(at, syn::parse(quote!(crate::panic::random_page_fault();).into()).unwrap());
-
+  let ident = &fn_item.sig.ident;
+  let id = ident.to_string();
+  if let Some(x) = option_env!("FI") {
+    if x == id {
+      let len = statements.len();
+      let at = rand::random::<usize>() % len;
+      statements.insert(at, syn::parse(quote!(crate::panic::random_page_fault();).into()).unwrap());
+      println!("page_fault_inject {}: {}", ident, at);
+    }
+  } else {
+    println!("PI not found");
+  }
   item.into_token_stream().into()
 }
 

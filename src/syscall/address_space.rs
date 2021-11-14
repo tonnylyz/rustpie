@@ -4,6 +4,8 @@ use crate::lib::thread::Tid;
 
 #[inline(never)]
 #[inject::count_stmts]
+#[inject::panic_inject]
+#[inject::page_fault_inject]
 pub fn get_asid(tid: Tid) -> Result {
   if tid == 0 {
     match crate::lib::cpu::cpu().address_space() {
@@ -23,6 +25,8 @@ pub fn get_asid(tid: Tid) -> Result {
 
 #[inline(never)]
 #[inject::count_stmts]
+#[inject::panic_inject]
+#[inject::page_fault_inject]
 pub fn address_space_alloc() -> Result {
   let a = crate::lib::address_space::address_space_alloc()?;
   Ok(Single(a.asid() as usize))
@@ -30,6 +34,8 @@ pub fn address_space_alloc() -> Result {
 
 #[inline(never)]
 #[inject::count_stmts]
+#[inject::panic_inject]
+#[inject::page_fault_inject]
 pub fn address_space_destroy(asid: u16) -> Result {
   let a = super::lookup_as(asid)?;
   crate::lib::address_space::address_space_destroy(a);

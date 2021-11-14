@@ -31,6 +31,7 @@ pub enum Status {
 }
 
 #[derive(Debug)]
+#[allow(dead_code)]
 struct Inner {
   uuid: usize,
   parent: Option<usize>,

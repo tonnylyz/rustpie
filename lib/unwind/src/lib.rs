@@ -32,6 +32,7 @@ mod lsda;
 pub mod catch;
 
 pub struct UnwindingContext {
+  skip: usize,
   stack_frame_iter: StackFrameIter,
 }
 
@@ -157,11 +158,12 @@ impl FallibleIterator for StackFrameIter {
 
 extern "C" {
   #[allow(improper_ctypes)]
-  fn unwind_trampoline(_func: *const dyn Fn(Registers) -> ());
+  fn unwind_trampoline(ctx: usize);
 }
 
 pub fn unwind_from_exception(registers: Registers) -> ! {
   let ctx = Box::into_raw(Box::new(UnwindingContext {
+    skip: 0,
     stack_frame_iter: StackFrameIter::new(registers)
   }));
   unwind(ctx);
@@ -172,23 +174,24 @@ pub fn unwind_from_exception(registers: Registers) -> ! {
 
 pub fn unwind_from_panic(stack_frames_to_skip: usize) -> ! {
   let ctx = Box::into_raw(Box::new(UnwindingContext {
+    skip: stack_frames_to_skip,
     stack_frame_iter: StackFrameIter::new(Registers::default())
   }));
-  let ctx_addr = ctx as usize;
-  let f = move |registers: Registers| {
-    let ctx = unsafe { (ctx_addr as *mut UnwindingContext).as_mut().unwrap() };
-    ctx.stack_frame_iter.registers = registers;
-    for _i in 0..stack_frames_to_skip {
-      let _ = ctx.stack_frame_iter.next();
-    }
-    unwind(ctx_addr as *mut UnwindingContext);
-  };
   unsafe {
-    unwind_trampoline(&f);
+    unwind_trampoline(ctx as usize);
   }
   cleanup(ctx);
   error!("unwind failed!");
   loop {}
+}
+
+fn unwind_from_panic_stub(registers: Registers, ctx2: *mut UnwindingContext) {
+  let ctx = unsafe { &mut *ctx2 };
+  ctx.stack_frame_iter.registers = registers;
+  for _i in 0..ctx.skip {
+    let _ = ctx.stack_frame_iter.next();
+  }
+  unwind(ctx2);
 }
 
 /// Main unwind function

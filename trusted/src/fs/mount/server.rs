@@ -15,13 +15,13 @@ pub fn server() {
       let scheme = FileScheme::new(String::from("virtio"), filesystem);
       loop {
         let mut packet = Packet::default();
-        let (tid, msg) = Message::receive().unwrap();
+        let (client_tid, msg) = Message::receive().unwrap();
         packet.a = msg.a;
         packet.b = msg.b;
         packet.c = msg.c;
         packet.d = msg.d;
-        let asid = get_asid(tid).unwrap();
-        trace!("from t{}: {:x?}", tid, msg);
+        let asid = get_asid(client_tid).unwrap();
+        trace!("from t{}: {:x?}", client_tid, msg);
         if asid == get_asid(0).unwrap() {
           scheme.handle(&mut packet);
         } else {
@@ -70,7 +70,7 @@ pub fn server() {
         let mut msg = Message::default();
         msg.a = packet.a;
         trace!("handle packet err {:?}", Error::demux(msg.a));
-        let _ = msg.send_to(tid);
+        let _ = msg.send_to(client_tid);
       }
     }
     Err(e) => { error!("FileSystem::open {:?}", e); }

@@ -10,13 +10,11 @@ extern "C" {
 #[no_mangle]
 #[allow(improper_ctypes_definitions)]
 unsafe extern "C" fn unwind_recorder(
-  func: *const dyn Fn(Registers) -> (),
+  ctx: *mut super::UnwindingContext,
   stack: u64,
   saved_regs: *mut CalleeSavedRegs,
 ) {
-  let func = &*func;
   let saved_regs = &*saved_regs;
-
   let mut registers = Registers::default();
 
   registers[Aarch64::X19] = Some(saved_regs.r[0]);
@@ -32,7 +30,8 @@ unsafe extern "C" fn unwind_recorder(
   registers[Aarch64::X29] = Some(saved_regs.r[10]);
   registers[Aarch64::SP] = Some(stack);
   registers[Aarch64::X30] = Some(saved_regs.lr);
-  func(registers);
+
+  super::unwind_from_panic_stub(registers, ctx);
 }
 
 pub unsafe fn land(regs: &Registers, landing_pad_address: u64) {

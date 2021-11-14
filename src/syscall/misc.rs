@@ -17,13 +17,16 @@ fn make_page_fault() {
   unsafe { (0xdeadbeef0000 as *mut usize).write(0); }
   panic!(); // indicates an exception may happen
 }
+
 #[inline(never)]
 #[allow(dead_code)]
+#[allow(unreachable_code)]
+#[allow(unused_variables)]
 pub fn null2() -> Result {
   info!("null called");
   let a = Box::new(ResourceA);
-  make_page_fault();
-  // panic!();
+  // make_page_fault();
+  panic!();
   let b = Box::new(ResourceB);
   Box::leak(a);
   Box::leak(b);
@@ -37,12 +40,17 @@ pub fn null() -> Result {
 
 #[inline(never)]
 #[inject::count_stmts]
+#[inject::panic_inject]
+#[inject::page_fault_inject]
 pub fn putc(c: char) -> Result {
   crate::driver::uart::putc(c as u8);
   Ok(Unit)
 }
 
 #[inline(never)]
+#[inject::count_stmts]
+#[inject::panic_inject]
+#[inject::page_fault_inject]
 pub fn getc() -> Result {
   match crate::driver::uart::getc() {
     None => Err(common::syscall::error::ERROR_HOLD_ON),
@@ -52,6 +60,8 @@ pub fn getc() -> Result {
 
 #[inline(never)]
 #[inject::count_stmts]
+#[inject::panic_inject]
+#[inject::page_fault_inject]
 pub fn set_exception_handler(handler: usize) -> Result {
   let t = super::current_thread()?;
   match t.address_space() {

@@ -110,6 +110,7 @@ fn backtrace_from(frame_zero: Frame) {
   });
 }
 
+#[allow(dead_code)]
 fn backtrace() {
   info!("backtrace begin");
   let mut count = 0;
@@ -130,8 +131,8 @@ pub fn panic_handler(info: &PanicInfo) -> ! {
     error!("Location: {}:{}", location.file(), location.line());
   }
 
-  backtrace();
-  info!("backtrace done");
+  // backtrace();
+  // info!("backtrace done");
 
   unwind::unwind_from_panic(1);
 }
@@ -143,7 +144,20 @@ pub fn random_panic() {
   unsafe {
     if !PANICKED {
       PANICKED = true;
-      panic!("[[RANDOM]]");
+      panic!("[[RANDOM]][[PANIC]]");
+    }
+  }
+}
+
+#[allow(dead_code)]
+static mut PAGEFAULT: bool = false;
+#[allow(dead_code)]
+pub fn random_page_fault() {
+  unsafe {
+    if !PAGEFAULT {
+      PAGEFAULT = true;
+      info!("[[RANDOM]][[PAGEFAULT]]");
+      (0xdeafbeef00000000 as *mut u32).read_volatile();
     }
   }
 }

@@ -8,6 +8,8 @@ use crate::mm::page_table::{Entry, PageTableTrait, PageTableEntryAttrTrait};
 
 #[inline(never)]
 #[inject::count_stmts]
+#[inject::panic_inject]
+#[inject::page_fault_inject]
 pub fn mem_alloc(asid: u16, va: usize, attr: usize) -> Result {
   let va = round_down(va, PAGE_SIZE);
   let a = super::lookup_as(asid)?;
@@ -21,6 +23,8 @@ pub fn mem_alloc(asid: u16, va: usize, attr: usize) -> Result {
 
 #[inline(never)]
 #[inject::count_stmts]
+#[inject::panic_inject]
+#[inject::page_fault_inject]
 pub fn mem_map(src_asid: u16, src_va: usize, dst_asid: u16, dst_va: usize, attr: usize) -> Result {
   let src_va = round_down(src_va, PAGE_SIZE);
   let dst_va = round_down(dst_va, PAGE_SIZE);
@@ -37,6 +41,8 @@ pub fn mem_map(src_asid: u16, src_va: usize, dst_asid: u16, dst_va: usize, attr:
 
 #[inline(never)]
 #[inject::count_stmts]
+#[inject::panic_inject]
+#[inject::page_fault_inject]
 pub fn mem_unmap(asid: u16, va: usize) -> Result {
   let va = round_down(va, PAGE_SIZE);
   let a = super::lookup_as(asid)?;

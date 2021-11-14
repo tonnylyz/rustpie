@@ -148,9 +148,9 @@ pub fn server() {
   info!("server started t{}", get_tid());
   microcall::server_register(common::server::SERVER_PM).unwrap();
   loop {
-    let (tid, msg) = Message::receive().unwrap();
-    trace!("t{}: {:x?}", tid, msg);
-    let asid = get_asid(tid).unwrap();
+    let (client_tid, msg) = Message::receive().unwrap();
+    trace!("t{}: {:x?}", client_tid, msg);
+    let asid = get_asid(client_tid).unwrap();
     let mut result = Message::default();
     match process_request(asid, &msg) {
       Ok((b, c, d)) => {
@@ -163,6 +163,6 @@ pub fn server() {
         result.a = e;
       }
     }
-    let _ = result.send_to(tid);
+    let _ = result.send_to(client_tid);
   }
 }

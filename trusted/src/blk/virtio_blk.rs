@@ -299,6 +299,7 @@ const VRING_DESC_F_NEXT: u16 = 1;
 const VRING_DESC_F_WRITE: u16 = 2;
 
 #[derive(Debug)]
+#[allow(dead_code)]
 pub struct DiskRequest {
   sector: usize,
   count: usize,

@@ -13,6 +13,8 @@ use super::{Result, SyscallOutRegisters::*};
 
 #[inline(never)]
 #[inject::count_stmts]
+#[inject::panic_inject]
+#[inject::page_fault_inject]
 pub fn event_wait(event_type: usize, event_num: usize) -> Result {
   let t = super::current_thread()?;
   if let Some(e) = Event::from(event_type, event_num) {
