@@ -29,8 +29,10 @@ pub mod elf;
 mod lsda;
 pub mod catch;
 
+#[allow(dead_code)]
 pub struct UnwindingContext {
   skip: usize,
+  reason: usize,
   stack_frame_iter: StackFrameIter,
 }
 
@@ -162,6 +164,7 @@ extern "C" {
 pub fn unwind_from_exception(registers: Registers) -> ! {
   let ctx = Box::into_raw(Box::new(UnwindingContext {
     skip: 0,
+    reason: 0x1,
     stack_frame_iter: StackFrameIter::new(registers),
   }));
   unwind(ctx);
@@ -173,6 +176,7 @@ pub fn unwind_from_exception(registers: Registers) -> ! {
 pub fn unwind_from_panic(stack_frames_to_skip: usize) -> ! {
   let ctx = Box::into_raw(Box::new(UnwindingContext {
     skip: stack_frames_to_skip,
+    reason: 0x2,
     stack_frame_iter: StackFrameIter::new(Registers::default()),
   }));
   unsafe {
