@@ -92,6 +92,36 @@ mod macros {
 #[repr(align(4096))]
 struct AlignPage;
 
+#[allow(dead_code)]
+fn test_create_as() {
+  for _ in 0..1000 {
+    let icntr = lib::timer::current_cycle();
+    let a = lib::address_space::address_space_alloc().unwrap();
+    let icntr2 = lib::timer::current_cycle();
+    lib::address_space::address_space_destroy(a);
+    println!("{}", icntr2 - icntr);
+  }
+}
+
+#[allow(dead_code)]
+fn test_create_thread() {
+  let a = lib::address_space::address_space_alloc().unwrap();
+  for _ in 0..1000 {
+    let icntr = lib::timer::current_cycle();
+    let t = lib::thread::new_user(
+      0x40000,
+      common::CONFIG_USER_STACK_TOP,
+      0,
+      a.clone(),
+      None,
+    );
+    let icntr2 = lib::timer::current_cycle();
+    lib::thread::thread_destroy(t);
+    lib::address_space::address_space_destroy(a.clone());
+    println!("{}", icntr2 - icntr);
+  }
+}
+
 #[no_mangle]
 pub unsafe fn main(core_id: arch::CoreId) -> ! {
   crate::arch::Arch::exception_init();
@@ -110,6 +140,9 @@ pub unsafe fn main(core_id: arch::CoreId) -> ! {
   info!("init core {}", core_id);
 
   if core_id == 0 {
+    // test_create_as();
+    // loop {}
+
     #[cfg(target_arch = "aarch64")]
       #[cfg(not(feature = "user_release"))]
       let bin = include_bytes_align_as!(AlignPage, "../trusted/target/aarch64/debug/trusted");

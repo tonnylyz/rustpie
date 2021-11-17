@@ -1,5 +1,7 @@
 use libtrusted::thread;
 use libtrusted::wrapper::server_wrapper;
+use microcall::{get_tid, thread_destroy};
+use microcall::message::Message;
 
 #[allow(dead_code)]
 #[cfg(target_arch = "aarch64")]
@@ -21,16 +23,31 @@ pub fn current_cycle() -> usize {
   r
 }
 
-pub fn main() {
-  // let icntr = current_cycle();
-  // microcall::null();
-  // let icntr2 = current_cycle();
-  // info!("syscall cycle {}", icntr2 - icntr);
+#[allow(dead_code)]
+fn test_thread_switch() {
+  let mut join_handlers = vec![];
+  join_handlers.push(thread::spawn(|| {
+    info!("t1: {}", get_tid());
+    loop {
+      microcall::thread_yield();
+    }
+  }));
 
-  // microcall::get_asid(0);
-  // microcall::get_asid(0);
-  // info!("[[RECOVERY]]");
-  // loop{}
+  join_handlers.push(thread::spawn(|| {
+    info!("t2: {}", get_tid());
+    let mut msg = Message::default();
+    for _ in 0..1000 {
+      let icntr = current_cycle();
+      microcall::thread_yield();
+      let icntr2 = current_cycle();
+      println!("{}", icntr2 - icntr);
+    }
+  }));
+
+  let _ = thread_destroy(0);
+}
+
+pub fn main() {
   let mut join_handlers = vec![];
 
   join_handlers.push(thread::spawn(|| {
@@ -79,7 +96,7 @@ pub fn main() {
       Err(s) => { error!("{}", s); }
     }
   }));
-
+  // thread_destroy(0);
   for handler in join_handlers {
     handler.join().expect("root join thread failed");
   }

@@ -87,6 +87,7 @@ impl Core {
 
   fn run(&mut self, t: Thread) {
     if let Some(prev) = self.running_thread() {
+      // info!("switch thread from {} to {}", prev.tid(), t.tid());
       // Note: normal switch
       prev.set_context(*self.context());
       // add back to scheduler queue
@@ -118,6 +119,7 @@ impl Core {
       if prev.asid() == a.asid() {
         return;
       }
+      // info!("switch as from {} to {}", prev.asid(), a.asid());
     }
     self.address_space = Some(a.clone());
     crate::arch::PageTable::install_user_page_table(a.page_table().base_pa(), a.asid() as AddressSpaceId);
