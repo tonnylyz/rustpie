@@ -6,9 +6,9 @@ use tock_registers::{
 use tock_registers::interfaces::{Readable, Writeable};
 use common::driver::ns16550::*;
 
-const NS16550_MMIO_BASE: usize = 0xffff_ffff_0000_0000 + 0x1000_0000;
+const NS16550_MMIO_BASE: usize = 0xFFFF_FF80_0000_0000 + 0x3100000;
 
-static NS16550_MMIO: Ns16550Mmio = Ns16550Mmio::new(NS16550_MMIO_BASE);
+static NS16550_MMIO: Ns16550Mmio32 = Ns16550Mmio32::new(NS16550_MMIO_BASE);
 
 pub fn init() {
   let uart = &NS16550_MMIO;
@@ -25,6 +25,9 @@ fn send(c: u8) {
 }
 
 pub fn putc(c: u8) {
+  if c == b'\0' {
+    return;
+  }
   if c == b'\n' {
     send(b'\r');
   }

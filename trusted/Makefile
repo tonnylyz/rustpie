@@ -12,9 +12,7 @@ else
 CARGO_FLAGS =
 endif
 
-ifeq (${MACHINE}, k210)
-CARGO_FLAGS := ${CARGO_FLAGS} --features k210
-endif
+CARGO_FLAGS := ${CARGO_FLAGS} --features ${MACHINE}
 
 TRUSTED_IMAGE := target/${ARCH}/${TRUSTED_PROFILE}/trusted
 

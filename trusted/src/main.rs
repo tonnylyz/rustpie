@@ -15,7 +15,18 @@ extern crate rlibc;
 
 use unwind::catch::catch_unwind;
 
+#[cfg(any(feature = "shyper", feature = "virt"))]
+#[path = "blk/virtio_blk.rs"]
 mod blk;
+
+#[cfg(feature = "k210")]
+#[path = "blk/k210_sdcard.rs"]
+mod blk;
+
+#[cfg(feature = "tx2")]
+#[path = "blk/ramdisk.rs"]
+mod blk;
+
 mod fs;
 mod root;
 mod terminal;

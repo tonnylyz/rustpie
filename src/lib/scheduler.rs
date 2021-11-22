@@ -15,6 +15,11 @@ impl RoundRobinScheduler {
     }
   }
 
+  pub fn add_front(&self, thread: Thread) {
+    let mut inner = self.inner.lock();
+    inner.push_front(thread);
+  }
+
   pub fn add(&self, thread: Thread) {
     let mut inner = self.inner.lock();
     inner.push_back(thread);

@@ -54,16 +54,11 @@ pub fn main() {
     server_wrapper(crate::test::server);
   }));
 
-  #[cfg(not(feature = "k210"))]
-    join_handlers.push(thread::spawn(|| {
-    server_wrapper(crate::blk::virtio_blk::server);
+  join_handlers.push(thread::spawn(|| {
+    server_wrapper(crate::blk::server);
   }));
 
-  #[cfg(feature = "k210")]
-    join_handlers.push(thread::spawn(|| {
-    server_wrapper(crate::blk::k210_sdcard::server);
-  }));
-
+  #[cfg(not(feature = "tx2"))]
   join_handlers.push(thread::spawn(|| {
     server_wrapper(crate::rtc::server);
   }));

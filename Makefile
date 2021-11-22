@@ -16,13 +16,7 @@ RUSTFLAGS := -C llvm-args=-global-isel=false
 # NOTE: generate frame pointer for every function
 export RUSTFLAGS := ${RUSTFLAGS} -C force-frame-pointers=yes
 
-ifeq (${MACHINE}, guest)
-CARGO_FLAGS := ${CARGO_FLAGS} --features guest
-endif
-
-ifeq (${MACHINE}, k210)
-CARGO_FLAGS := ${CARGO_FLAGS} --features k210
-endif
+CARGO_FLAGS := ${CARGO_FLAGS} --features ${MACHINE}
 
 ifeq (${PROFILE}, release)
 CARGO_FLAGS := ${CARGO_FLAGS} --release
@@ -32,26 +26,16 @@ ifeq (${TRUSTED_PROFILE}, release)
 CARGO_FLAGS := ${CARGO_FLAGS} --features user_release
 endif
 
-#TRUSTED_IMAGE := trusted/target/${ARCH}/${TRUSTED_PROFILE}/trusted
-
-ifeq (${MACHINE}, k210)
-KERNEL := target/${ARCH}k210/${PROFILE}/rustpi
-else
-KERNEL := target/${ARCH}/${PROFILE}/rustpi
-endif
+KERNEL := target/${ARCH}${MACHINE}/${PROFILE}/rustpi
 
 .PHONY: all emu debug dependencies clean disk trusted_image user_image
 
 all: ${KERNEL} ${KERNEL}.bin ${KERNEL}.asm
 
 ${KERNEL}: trusted_image
-ifeq (${MACHINE}, k210)
-	cargo build --target src/target/${ARCH}k210.json -Z build-std=core,alloc,std ${CARGO_FLAGS}
-else
-	cargo build --target src/target/${ARCH}.json -Z build-std=core,alloc,std ${CARGO_FLAGS}
-endif
+	cargo build --target src/target/${ARCH}${MACHINE}.json -Z build-std=core,alloc,std ${CARGO_FLAGS}
 
-trusted_image:
+trusted_image: $(if eq(${MACHINE}, tx2), ramdisk.img)
 	make ARCH=${ARCH} TRUSTED_PROFILE=${TRUSTED_PROFILE} MACHINE=${MACHINE} -C trusted
 
 user_image:
@@ -76,7 +60,7 @@ endif
 QEMU_DISK_OPTIONS := -drive file=disk.img,if=none,format=raw,id=x0 \
 					 -device virtio-blk-device,drive=x0,bus=virtio-mmio-bus.0 \
 					 -global virtio-mmio.force-legacy=false
-QEMU_COMMON_OPTIONS := -serial stdio -display none -smp 4 -m 2048
+QEMU_COMMON_OPTIONS := -serial stdio -display none -smp 1 -m 2048
 
 emu: ${KERNEL}.bin ${KERNEL}.asm disk
 	${QEMU_CMD} ${QEMU_COMMON_OPTIONS} ${QEMU_DISK_OPTIONS} -kernel $< -s
@@ -86,6 +70,11 @@ debug: ${KERNEL}.bin ${KERNEL}.asm disk
 
 flash: ${KERNEL}-flash.bin
 	sudo kflash -tp /dev/ttyUSB0 -b 3000000 -B dan ${KERNEL}-flash.bin
+
+tftp: ${KERNEL}.bin
+	mkimage -n rustpi -A arm64 -O linux -C none -T kernel -a 0x80080000 -e 0x80080000 -d $< ${KERNEL}.ubi
+	scp ${KERNEL}.ubi root@192.168.106.153:/tftp
+#   tftp 0x8a000000 192.168.106.153:rustpi.ubi; bootm start 0x8a000000 - 0x80000000; bootm loados; bootm go
 
 clean:
 	-cargo clean
@@ -109,6 +98,15 @@ sdcard: user_image
 	sync
 	sudo umount sdcard
 
+ramdisk.img: user_image
+	rm -rf ramdisk
+	mkdir ramdisk
+	dd if=/dev/zero of=ramdisk.img bs=1M count=4
+	redoxfs-mkfs ramdisk.img
+	redoxfs ramdisk.img ramdisk
+	cp user/target/${ARCH}/${USER_PROFILE}/{shell,cat,ls,mkdir,touch,rm,rd,stat,test,hello,ps,write} ramdisk/
+	sync
+	umount ramdisk
 
 dependencies:
 	rustup component add rust-src

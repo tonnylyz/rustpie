@@ -7,7 +7,7 @@ use crate::lib::device::Device;
 use crate::lib::interrupt::InterruptController;
 use crate::lib::traits::*;
 
-pub const BOARD_CORE_NUMBER: usize = 4;
+pub const BOARD_CORE_NUMBER: usize = 1;
 
 pub const BOARD_NORMAL_MEMORY_RANGE: Range<usize> = 0x8000_0000..0xc000_0000;
 #[allow(dead_code)]

@@ -14,7 +14,7 @@ mod arch;
 #[path = "arch/riscv64/mod.rs"]
 mod arch;
 
-pub fn null() { syscall_0_0(SYS_NULL).unwrap() }
+pub fn null() { let _ = syscall_0_0(SYS_NULL); }
 
 fn try_putc(c: char) -> Result<(), Error> {
   syscall_1_0(SYS_PUTC, c as usize).map(|_| ())

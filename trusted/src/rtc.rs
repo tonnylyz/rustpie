@@ -3,13 +3,20 @@ use common::time::RtcTime;
 use microcall::get_tid;
 
 #[cfg(target_arch = "aarch64")]
+#[cfg(not(feature = "tx2"))]
 pub fn timestamp() -> u64 {
   const PL031_MMIO_BASE: usize = 0x8_0000_0000 + 0x9010000;
   unsafe { (PL031_MMIO_BASE as *mut u32).read() as u64 }
 }
 
+#[cfg(target_arch = "aarch64")]
+#[cfg(feature = "tx2")]
+pub fn timestamp() -> u64 {
+  0
+}
+
 #[cfg(target_arch = "riscv64")]
-#[cfg(not(feature = "k210"))]
+#[cfg(feature = "virt")]
 pub fn timestamp() -> u64 {
   const NSEC_PER_SEC: u64 = 1000000000;
   const GOLDFISH_MMIO_BASE: usize = 0x8_0000_0000 + 0x101000;

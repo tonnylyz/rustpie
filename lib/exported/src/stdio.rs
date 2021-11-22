@@ -8,11 +8,12 @@ use microcall::message::Message;
 pub fn getchar() -> u8 {
   loop {
     let result = Message::default().call(common::server::SERVER_TERMINAL).unwrap();
-    match result.a {
+    match result.a as u8 {
       0 => microcall::thread_yield(),
+      b'\n' => continue, // tx2 feed 'CR' and 'LF', ignore 'LF'
       c => {
-        print!("{}", c as u8 as char);
-        break c as u8;
+        print!("{}", c as char);
+        break c;
       }
     }
   }

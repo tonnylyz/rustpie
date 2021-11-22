@@ -19,7 +19,6 @@ common = { path = "../common" }
 redox = { path = "../lib/redox" }
 fs = { path = "../lib/fs" }
 unwind = { path = "../lib/unwind" }
-bm = { path = "../lib/bm" }
 cs = { path = "../lib/cs" }
 inject = { path = "../inject" }
 
@@ -34,7 +33,9 @@ features = ["register_types"]
 [features]
 default = []
 k210 = ["k210-hal"]
-
+tx2 = []
+shyper = []
+virt = []
 #
 #[profile.release]
 #debug = true

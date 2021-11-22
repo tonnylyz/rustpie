@@ -3,8 +3,8 @@
 .global _start
 _start:
     mrs x1, mpidr_el1
-    and x2, x1, #0x100
-    cbnz x2, _loop
+#    and x2, x1, #0x100
+#    cbnz x2, _loop
     and x1, x1, #0xff
     mrs x2, currentel
     cmp x2, #0x4
@@ -14,14 +14,13 @@ _start:
     b _loop
 
 _el2_entry:
-    mrs x3, hcr_el2
-    mov x4, #(1 << 31) // EL1 is aarch64
-    orr x3, x3, x4
+    ldr x3, =(1 << 31) // EL1 is aarch64
     msr hcr_el2, x3
 
-    mrs x3, spsr_el2
-    mov x4, #(0b0101) // El1h
-    orr x3, x3, x4
+    ldr x3, =((3 << 28) | (3 << 22) | (1 << 20) | (1 << 11)) // Reserved-1
+    msr sctlr_el1, x3
+
+    ldr x3, =((7 << 6) | 5) // El1h mask all
     msr spsr_el2, x3
 
     adr x3, _el1_entry

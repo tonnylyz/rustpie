@@ -85,7 +85,7 @@ impl Thread {
     if *status == Status::WaitForReply {
       f();
       *status = Status::Runnable;
-      scheduler().add(self.clone());
+      scheduler().add_front(self.clone());
       true
     } else {
       false
@@ -97,7 +97,7 @@ impl Thread {
     if *status == Status::WaitForRequest {
       f();
       *status = Status::Runnable;
-      scheduler().add(self.clone());
+      scheduler().add_front(self.clone());
       true
     } else {
       false
