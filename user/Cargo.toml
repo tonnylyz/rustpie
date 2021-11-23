@@ -59,4 +59,4 @@ fs = { path = "../lib/fs" }
 microcall = { path = "../lib/microcall" }
 common = { path = "../common" }
 rlibc = "1.0.0"
-getopts = { path = "../../getopts" }
+getopts = { git = "https://github.com/tonnylyz/getopts" }
