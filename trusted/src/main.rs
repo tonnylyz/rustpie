@@ -11,7 +11,7 @@ extern crate alloc;
 extern crate libtrusted;
 #[macro_use]
 extern crate log;
-extern crate rlibc;
+
 
 use unwind::catch::catch_unwind;
 

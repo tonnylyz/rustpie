@@ -8,7 +8,6 @@ build = "build.rs"
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [dependencies]
-rlibc = "1.0.0"
 spin = "0.9.2"
 log = "0.4.14"
 fallible_collections = "0.4.3"

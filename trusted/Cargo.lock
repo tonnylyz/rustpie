@@ -302,12 +302,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "rlibc"
-version = "1.0.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "fc874b127765f014d792f16763a81245ab80500e2ad921ed4ee9e82481ee08fe"
-
-[[package]]
 name = "rustc_version"
 version = "0.2.3"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -389,7 +383,6 @@ dependencies = [
  "log",
  "microcall",
  "redox",
- "rlibc",
  "spin 0.9.2",
  "tock-registers",
  "unwind",

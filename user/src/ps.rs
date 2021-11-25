@@ -5,7 +5,7 @@
 
 extern crate alloc;
 extern crate exported;
-extern crate rlibc;
+
 
 #[no_mangle]
 fn _start(_arg: *const u8) {

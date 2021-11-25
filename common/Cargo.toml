@@ -13,3 +13,7 @@ cfg-if = "1.0.0"
 version = "0.7.0"
 default-features = false
 features = ["register_types"]
+
+[features]
+default = []
+asm = []

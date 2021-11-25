@@ -1,3 +1,4 @@
+#![feature(global_asm)]
 #![no_std]
 
 cfg_if::cfg_if! {
@@ -20,6 +21,9 @@ pub mod mm;
 #[cfg(target_arch = "riscv64")]
 #[path = "mm/riscv64.rs"]
 pub mod mm;
+
+// functions in `string.h`
+pub mod string;
 
 pub mod driver;
 

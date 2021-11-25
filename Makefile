@@ -33,7 +33,7 @@ KERNEL := target/${ARCH}${MACHINE}/${PROFILE}/rustpi
 all: ${KERNEL} ${KERNEL}.bin ${KERNEL}.asm
 
 ${KERNEL}: trusted_image
-	cargo build --target src/target/${ARCH}${MACHINE}.json -Z build-std=core,alloc,std ${CARGO_FLAGS}
+	cargo build --target src/target/${ARCH}${MACHINE}.json -Z build-std=core,alloc  ${CARGO_FLAGS}
 
 trusted_image: $(if eq(${MACHINE}, tx2), ramdisk.img)
 	make ARCH=${ARCH} TRUSTED_PROFILE=${TRUSTED_PROFILE} MACHINE=${MACHINE} -C trusted
@@ -74,7 +74,7 @@ flash: ${KERNEL}-flash.bin
 tftp: ${KERNEL}.bin
 	mkimage -n rustpi -A arm64 -O linux -C none -T kernel -a 0x80080000 -e 0x80080000 -d $< ${KERNEL}.ubi
 	scp ${KERNEL}.ubi root@192.168.106.153:/tftp
-#   tftp 0x8a000000 192.168.106.153:rustpi.ubi; bootm start 0x8a000000 - 0x80000000; bootm loados; bootm go
+	echo "tftp 0x8a000000 192.168.106.153:rustpi.ubi; bootm start 0x8a000000 - 0x80000000; bootm loados; bootm go"
 
 clean:
 	-cargo clean
@@ -94,7 +94,7 @@ sdcard: user_image
 	mkdir sdcard
 	sudo redoxfs-mkfs /dev/sda
 	sudo redoxfs /dev/sda sdcard
-	cp user/target/${ARCH}/${USER_PROFILE}/{shell,cat,ls,mkdir,touch,rm,rd,stat,test,hello,ps,write} sdcard/
+	sudo cp user/target/${ARCH}/${USER_PROFILE}/{shell,cat,ls,mkdir,touch,rm,rd,stat,test,hello,ps,write} sdcard/
 	sync
 	sudo umount sdcard
 

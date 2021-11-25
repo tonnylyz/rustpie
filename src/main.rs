@@ -13,7 +13,6 @@
 extern crate alloc;
 #[macro_use]
 extern crate log;
-extern crate rlibc;
 #[macro_use]
 extern crate static_assertions;
 

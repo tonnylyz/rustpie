@@ -7,7 +7,7 @@
 extern crate alloc;
 #[macro_use]
 extern crate exported;
-extern crate rlibc;
+
 
 #[no_mangle]
 fn _start() -> ! {

@@ -6,7 +6,7 @@
 extern crate alloc;
 #[macro_use]
 extern crate exported;
-extern crate rlibc;
+
 
 use alloc::string::ToString;
 use alloc::vec::Vec;

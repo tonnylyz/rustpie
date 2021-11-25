@@ -58,5 +58,5 @@ exported = { path = "../lib/exported" }
 fs = { path = "../lib/fs" }
 microcall = { path = "../lib/microcall" }
 common = { path = "../common" }
-rlibc = "1.0.0"
 getopts = { git = "https://github.com/tonnylyz/getopts" }
+spin = "0.9.2"

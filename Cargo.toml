@@ -5,9 +5,6 @@ edition = "2021"
 authors = ["tonnylyz <lyztonny@gmail.com>"]
 
 [dependencies]
-# to be phased out
-rlibc = "1.0.0"
-
 # fundamental
 cfg-if = "1.0.0"
 log = "0.4.14"
