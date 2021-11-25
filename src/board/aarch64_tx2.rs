@@ -22,11 +22,25 @@ pub fn init_per_core() {
   crate::driver::INTERRUPT_CONTROLLER.init();
   crate::driver::INTERRUPT_CONTROLLER.enable(INT_TIMER);
   crate::driver::timer::init();
-  let pmcr = 1u64;
-  let pmcntenset = 1u64 << 32;
+  let mut pmcr: u32;
+  let pmcntenclr = u32::MAX as u64;
+  let pmcntenset = 1u64 << 31;
   let pmuserenr = 1u64 << 2 | 1u64;
   unsafe {
-    asm!("msr pmcr_el0, {}", in(reg) pmcr);
+    asm!("msr pmcntenclr_el0, {}", in(reg) pmcntenclr);
+
+    asm!("mrs {:x}, pmcr_el0", out(reg) pmcr);
+    pmcr &= !(1u32 << 3);
+    asm!("msr pmcr_el0, {:x}", in(reg) pmcr);
+
+    asm!("mrs {:x}, pmcr_el0", out(reg) pmcr);
+    pmcr |= (1u32 << 1) | (1u32 << 2);
+    asm!("msr pmcr_el0, {:x}", in(reg) pmcr);
+
+    asm!("mrs {:x}, pmcr_el0", out(reg) pmcr);
+    pmcr |= 1;
+    asm!("msr pmcr_el0, {:x}", in(reg) pmcr);
+
     asm!("msr pmcntenset_el0, {}", in(reg) pmcntenset);
     asm!("msr pmuserenr_el0, {}", in(reg) pmuserenr);
   }

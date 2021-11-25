@@ -68,7 +68,9 @@ pub mod syscall {
   pub const SYS_SERVER_TID: usize = 18;
   pub const SYS_SET_EXCEPTION_HANDLER: usize = 19;
   pub const SYS_GETC: usize = 20;
-  pub const SYS_MAX: usize = 21;
+  pub const SYS_YIELD_TO: usize = 21;
+  pub const SYS_REPLY_RECV: usize = 22;
+  pub const SYS_MAX: usize = 23;
 
   pub mod error {
     pub const ERROR_INVARG: usize = 1;

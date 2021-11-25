@@ -85,6 +85,10 @@ impl Core {
     }
   }
 
+  pub fn schedule_to(&mut self, t: Thread) {
+    self.run(t);
+  }
+
   fn run(&mut self, t: Thread) {
     if let Some(prev) = self.running_thread() {
       // info!("switch thread from {} to {}", prev.tid(), t.tid());

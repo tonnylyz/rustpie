@@ -206,3 +206,10 @@ pub fn thread_sleep(t: &Thread, reason: Status) {
     }
   }
 }
+
+pub fn thread_sleep_to(t: &Thread, reason: Status, next: Thread) {
+  assert_ne!(reason, Status::Runnable);
+  let mut status = t.0.inner_mut.status.lock();
+  *status = reason;
+  drop(status);
+}

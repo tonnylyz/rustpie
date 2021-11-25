@@ -1,8 +1,8 @@
-use alloc::alloc::Global;
+// use alloc::alloc::Global;
 use alloc::vec::Vec;
-use core::alloc::{Allocator, AllocError, Layout};
+// use core::alloc::{Allocator, AllocError, Layout};
 use core::ops::Range;
-use core::ptr::NonNull;
+// use core::ptr::NonNull;
 
 use common::syscall::error::{ERROR_INVARG, ERROR_OOM};
 use spin::Mutex;
@@ -12,28 +12,29 @@ use crate::mm::PhysicalFrame;
 
 pub type Error = usize;
 
-struct PPAllocator;
-
-unsafe impl Allocator for PPAllocator {
-  fn allocate(&self, layout: Layout) -> Result<NonNull<[u8]>, AllocError> {
-    Global.allocate(layout)
-  }
-
-  unsafe fn deallocate(&self, ptr: NonNull<u8>, layout: Layout) {
-    Global.deallocate(ptr, layout)
-  }
-}
+// struct PPAllocator;
+//
+// unsafe impl Allocator for PPAllocator {
+//   fn allocate(&self, layout: Layout) -> Result<NonNull<[u8]>, AllocError> {
+//     Global.allocate(layout)
+//   }
+//
+//   unsafe fn deallocate(&self, ptr: NonNull<u8>, layout: Layout) {
+//     Global.deallocate(ptr, layout)
+//   }
+// }
 
 
 struct PagePool {
-  free: Vec<usize, PPAllocator>,
-  allocated: Vec<usize, PPAllocator>,
+  free: Vec<usize>,
+  allocated: Vec<usize>,
 }
 
 impl PagePool {
   pub fn init(&mut self, range: Range<usize>) {
     assert_eq!(range.start % PAGE_SIZE, 0);
     assert_eq!(range.end % PAGE_SIZE, 0);
+    unsafe { core::ptr::write_bytes(range.start as *mut u8, 0, range.len()); }
     for pa in range.step_by(PAGE_SIZE) {
       self.free.push(pa);
     }
@@ -61,8 +62,8 @@ impl PagePool {
 
 
 static PAGE_POOL: Mutex<PagePool> = Mutex::new(PagePool {
-  free: Vec::new_in(PPAllocator),
-  allocated: Vec::new_in(PPAllocator),
+  free: Vec::new(),
+  allocated: Vec::new(),
 });
 
 pub fn init() {

@@ -203,7 +203,17 @@ pub fn getc() -> Result<u8, Error> {
   syscall_0_1(SYS_GETC).map(|c| c as u8)
 }
 
+pub fn yield_to(tid: usize) {
+  let _ = syscall_1_1(SYS_YIELD_TO, tid);
+}
+
+pub fn itc_recv_reply(tid: usize, a: usize, b: usize, c: usize, d: usize) -> Result<(usize, usize, usize, usize, usize), Error> {
+  syscall_5_5(SYS_REPLY_RECV, tid as usize, a, b, c, d)
+}
+
 pub mod message {
+  use crate::arch::Error;
+
   #[repr(C)]
   #[derive(Copy, Clone, Debug, Default)]
   pub struct Message {
@@ -234,7 +244,12 @@ pub mod message {
         x => x,
       }
     }
-
+    
+    pub fn reply_recv(&self, tid: usize) -> Result<(usize, Self), super::Error> {
+      super::itc_recv_reply(tid, self.a, self.b, self.c, self.d).map(|(tid, a, b, c, d)|
+        (tid, Message { a, b, c, d }))
+    }
+    
     pub fn call(&self, server_id: usize) -> Result<Self, super::Error> {
       use common::syscall::error::{ERROR_HOLD_ON, ERROR_PANIC};
       let server_tid = super::server_tid_wait(server_id);

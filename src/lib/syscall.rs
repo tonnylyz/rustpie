@@ -30,11 +30,13 @@ static SYSCALL_NAMES: [&str; SYS_MAX] = [
   "server_tid",
   "set_exception_handler",
   "getc",
+  "yield_to",
+  "reply_recv",
 ];
 
 
 static SYSCALL_ARGC: [usize; SYS_MAX] = [
-  0, 1, 1, 0, 0, 1, 2, 3, 5, 2, 0, 4, 2, 1, 0, 5, 5, 1, 1, 1, 0
+  0, 1, 1, 0, 0, 1, 2, 3, 5, 2, 0, 4, 2, 1, 0, 5, 5, 1, 1, 1, 0, 1, 5
 ];
 
 pub fn syscall() {
@@ -67,6 +69,8 @@ pub fn syscall() {
       SYS_SERVER_TID => server::server_tid(arg(0)),
       SYS_SET_EXCEPTION_HANDLER => misc::set_exception_handler(arg(0)),
       SYS_GETC => misc::getc(),
+      SYS_YIELD_TO => thread::yield_to(arg(0)),
+      SYS_REPLY_RECV => ipc::itc_reply_recv(arg(0), arg(1), arg(2), arg(3), arg(4)),
       _ => {
         warn!("system call: unrecognized system call number");
         Err(ERROR_INVARG)

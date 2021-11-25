@@ -101,18 +101,25 @@ struct AlignPage;
 
 #[allow(dead_code)]
 fn test_create_as() {
+  let mut results = vec![];
   for _ in 0..1000 {
     let icntr = lib::timer::current_cycle();
     let a = lib::address_space::address_space_alloc().unwrap();
     let icntr2 = lib::timer::current_cycle();
     lib::address_space::address_space_destroy(a);
-    println!("{}", icntr2 - icntr);
+    results.push(icntr2 - icntr);
   }
+  let mut sum = 0;
+  for result in results {
+    sum += result;
+  }
+  info!("[[TEST]] test_create_as {}/1000", sum);
 }
 
 #[allow(dead_code)]
 fn test_create_thread() {
   let a = lib::address_space::address_space_alloc().unwrap();
+  let mut results = vec![];
   for _ in 0..1000 {
     let icntr = lib::timer::current_cycle();
     let t = lib::thread::new_user(
@@ -125,8 +132,13 @@ fn test_create_thread() {
     let icntr2 = lib::timer::current_cycle();
     lib::thread::thread_destroy(t);
     lib::address_space::address_space_destroy(a.clone());
-    println!("{}", icntr2 - icntr);
+    results.push(icntr2 - icntr);
   }
+  let mut sum = 0;
+  for result in results {
+    sum += result;
+  }
+  info!("[[TEST]] test_create_thread {}/1000", sum);
 }
 
 #[no_mangle]
@@ -147,8 +159,11 @@ pub unsafe fn main(core_id: arch::CoreId) -> ! {
   info!("init core {}", core_id);
 
   if core_id == 0 {
-    // test_create_as();
-    // loop {}
+    // {
+    //   test_create_thread();
+    //   test_create_as();
+    //   loop {}
+    // }
 
     #[cfg(target_arch = "aarch64")]
       #[cfg(not(feature = "user_release"))]
