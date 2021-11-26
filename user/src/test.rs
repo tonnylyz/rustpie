@@ -84,8 +84,8 @@ fn test_call() {
   let mut results = vec![];
   for _ in 0..1000 {
     let icntr = current_cycle();
-    let _ = msg.call(common::server::SERVER_TEST);
-    let icntr2 = current_cycle();
+    let r = msg.call(common::server::SERVER_TEST).unwrap();
+    let icntr2 = r.a;
     results.push(icntr2 - icntr);
     println!("{}", icntr2 - icntr);
   }
