@@ -49,7 +49,7 @@ pub fn load(src: &'static [u8], page_table: &PageTable) -> Result<usize, Error> 
           EntryAttribute::user_data()
         } else {
           // R
-          EntryAttribute::user_readonly()
+          EntryAttribute::user_data()
         }
       };
 
