@@ -14,7 +14,7 @@ fallible_collections = "0.4.3"
 
 libtrusted = { path = "../lib/libtrusted" }
 microcall = { path = "../lib/microcall" }
-common = { path = "../common" }
+common = { path = "../common", features = ["asm"] }
 redox = { path = "../lib/redox" }
 fs = { path = "../lib/fs" }
 unwind = { path = "../lib/unwind" }
