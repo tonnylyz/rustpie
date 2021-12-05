@@ -60,7 +60,7 @@ endif
 QEMU_DISK_OPTIONS := -drive file=disk.img,if=none,format=raw,id=x0 \
 					 -device virtio-blk-device,drive=x0,bus=virtio-mmio-bus.0 \
 					 -global virtio-mmio.force-legacy=false
-QEMU_COMMON_OPTIONS := -serial stdio -display none -smp 1 -m 2048
+QEMU_COMMON_OPTIONS := -serial stdio -display none -smp 4 -m 2048
 
 emu: ${KERNEL}.bin ${KERNEL}.asm disk
 	${QEMU_CMD} ${QEMU_COMMON_OPTIONS} ${QEMU_DISK_OPTIONS} -kernel $< -s

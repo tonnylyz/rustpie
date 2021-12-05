@@ -7,7 +7,7 @@ use crate::lib::device::Device;
 use crate::lib::interrupt::InterruptController;
 use crate::lib::traits::ArchTrait;
 
-pub const BOARD_CORE_NUMBER: usize = 1;
+pub const BOARD_CORE_NUMBER: usize = 4;
 pub const BOARD_NORMAL_MEMORY_RANGE: Range<usize> = 0x8000_0000..0xf000_0000;
 pub const BOARD_DEVICE_MEMORY_RANGE: Range<usize> = 0x0000_0000..0x8000_0000;
 
@@ -53,7 +53,7 @@ pub fn launch_other_cores() {
   let core_id = crate::arch::Arch::core_id();
   for i in 0..BOARD_CORE_NUMBER {
     if i != core_id {
-      crate::driver::psci::cpu_on(i as u64, (KERNEL_ENTRY as usize).kva2pa() as u64, 0);
+      crate::driver::psci::cpu_on((i as u64) | 0x80000100, (KERNEL_ENTRY as usize).kva2pa() as u64, 0);
     }
   }
 }
