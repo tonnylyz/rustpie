@@ -3,6 +3,7 @@ use alloc::collections::VecDeque;
 use spin::{Mutex, Once};
 
 use microcall::get_tid;
+use microcall::message::Message;
 
 pub fn input_server() {
   loop {
@@ -26,15 +27,16 @@ fn buffer() -> &'static Mutex<VecDeque<u8>> {
 pub fn server() {
   info!("server started t{}",  get_tid());
   microcall::server_register(common::server::SERVER_TERMINAL).unwrap();
-
+  let mut client_tid;
+  client_tid = Message::receive().unwrap().0;
   loop {
-    let (client_tid, _msg) = microcall::message::Message::receive().unwrap();
     let mut msg = microcall::message::Message::default();
     let mut buf = buffer().lock();
     match buf.pop_front() {
       None => { msg.a = 0 }
       Some(c) => { msg.a = c as usize }
     }
-    let _ = msg.send_to(client_tid);
+    drop(buf);
+    client_tid = msg.reply_recv(client_tid).unwrap().0;
   }
 }
