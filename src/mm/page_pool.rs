@@ -1,3 +1,4 @@
+use alloc::collections::VecDeque;
 // use alloc::alloc::Global;
 use alloc::vec::Vec;
 // use core::alloc::{Allocator, AllocError, Layout};
@@ -5,7 +6,7 @@ use core::ops::Range;
 // use core::ptr::NonNull;
 
 use common::syscall::error::{ERROR_INVARG, ERROR_OOM};
-use spin::Mutex;
+use spin::{Mutex, Once};
 
 use crate::arch::*;
 use crate::mm::PhysicalFrame;
@@ -26,8 +27,7 @@ pub type Error = usize;
 
 
 struct PagePool {
-  free: Vec<usize>,
-  allocated: Vec<usize>,
+  free: VecDeque<usize>,
 }
 
 impl PagePool {
@@ -36,13 +36,12 @@ impl PagePool {
     assert_eq!(range.end % PAGE_SIZE, 0);
     unsafe { core::ptr::write_bytes(range.start as *mut u8, 0, range.len()); }
     for pa in range.step_by(PAGE_SIZE) {
-      self.free.push(pa);
+      self.free.push_back(pa);
     }
   }
 
   pub fn allocate(&mut self) -> Result<PhysicalFrame, Error> {
-    if let Some(pa) = self.free.pop() {
-      self.allocated.push(pa);
+    if let Some(pa) = self.free.pop_front() {
       Ok(PhysicalFrame::new(pa))
     } else {
       Err(ERROR_OOM)
@@ -50,34 +49,33 @@ impl PagePool {
   }
 
   pub fn free(&mut self, pa: usize) -> Result<(), Error> {
-    if !self.allocated.contains(&pa) {
-      Err(ERROR_INVARG)
-    } else {
-      self.allocated.retain(|p| { *p != pa });
-      self.free.push(pa);
-      Ok(())
-    }
+    self.free.push_back(pa);
+    Ok(())
   }
 }
 
 
-static PAGE_POOL: Mutex<PagePool> = Mutex::new(PagePool {
-  free: Vec::new(),
-  allocated: Vec::new(),
-});
+static PAGE_POOL: Once<Mutex<PagePool>> = Once::new();
+
+fn page_pool() -> &'static Mutex<PagePool> {
+  PAGE_POOL.get().unwrap()
+}
 
 pub fn init() {
   let range = super::config::paged_range();
-  let mut pool = PAGE_POOL.lock();
+  PAGE_POOL.call_once(|| {Mutex::new(PagePool {
+    free: VecDeque::new(),
+  })});
+  let mut pool = page_pool().lock();
   pool.init(range);
 }
 
 pub fn page_alloc() -> Result<PhysicalFrame, Error> {
-  let mut pool = PAGE_POOL.lock();
+  let mut pool = page_pool().lock();
   pool.allocate()
 }
 
 pub fn page_free(pa: usize) -> Result<(), Error> {
-  let mut pool = PAGE_POOL.lock();
+  let mut pool = page_pool().lock();
   pool.free(pa)
 }

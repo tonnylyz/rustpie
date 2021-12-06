@@ -127,7 +127,6 @@ impl Core {
     }
     self.address_space = Some(a.clone());
     crate::arch::PageTable::install_user_page_table(a.page_table().base_pa(), a.asid() as AddressSpaceId);
-    crate::arch::Arch::invalidate_tlb();
   }
 }
 

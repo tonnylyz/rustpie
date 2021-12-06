@@ -1,3 +1,4 @@
+use alloc::collections::BTreeMap;
 use alloc::vec::Vec;
 use common::mm::vm_descriptor::*;
 use common::syscall::error::ERROR_INVARG;
@@ -18,7 +19,7 @@ pub const PAGE_TABLE_L3_SHIFT: usize = 12;
 pub struct Riscv64PageTable {
   directory: PhysicalFrame,
   pages: Mutex<Vec<PhysicalFrame>>,
-  user_pages: Mutex<Vec<Frame>>,
+  user_pages: Mutex<BTreeMap<usize, Frame>>,
 }
 
 #[repr(transparent)]
@@ -148,7 +149,7 @@ impl PageTableTrait for Riscv64PageTable {
     let r = Riscv64PageTable {
       directory,
       pages: Mutex::new(Vec::new()),
-      user_pages: Mutex::new(Vec::new()),
+      user_pages: Mutex::new(BTreeMap::new()),
     };
     r.map_kernel_gigabyte_page(0xffff_ffff_0000_0000, 0x0000_0000);
     r.map_kernel_gigabyte_page(0xffff_ffff_4000_0000, 0x4000_0000);
@@ -204,21 +205,16 @@ impl PageTableTrait for Riscv64PageTable {
 
   fn insert_page(&self, va: usize, user_frame: crate::mm::Frame, attr: EntryAttribute) -> Result<(), Error> {
     let pa = user_frame.pa();
-    let mut user_frames = self.user_pages.lock();
-    user_frames.push(user_frame);
     if let Some(p) = self.lookup_page(va) {
       if p.pa() != pa {
         // replace mapped frame
         self.remove_page(va)?;
-      } else {
-        // update attribute
-        crate::arch::Arch::invalidate_tlb();
-        self.map(va, pa, attr)?;
-        return Ok(());
       }
     }
-    crate::arch::Arch::invalidate_tlb();
     self.map(va, pa, attr)?;
+    let mut user_frames = self.user_pages.lock();
+    user_frames.insert(va, user_frame);
+    crate::arch::Arch::invalidate_tlb();
     Ok(())
   }
 
@@ -241,24 +237,15 @@ impl PageTableTrait for Riscv64PageTable {
   }
 
   fn lookup_user_page(&self, va: usize) -> Option<Frame> {
-    match self.lookup_page(va) {
-      None => { None }
-      Some(entry) => {
-        let pa = entry.pa();
-        let user_frames = self.user_pages.lock();
-        for uf in user_frames.iter() {
-          if uf.pa() == pa {
-            return Some(uf.clone());
-          }
-        }
-        None
-      }
-    }
+    let user_frames = self.user_pages.lock();
+    user_frames.get(&va).map(|x| x.clone())
   }
 
   fn remove_page(&self, va: usize) -> Result<(), crate::mm::page_table::Error> {
-    if let Some(_pte) = self.lookup_page(va) {
+    if let Some(_) = self.lookup_page(va) {
       self.unmap(va);
+      let mut user_frames = self.user_pages.lock();
+      user_frames.remove(&va);
       crate::arch::Arch::invalidate_tlb();
       Ok(())
     } else {

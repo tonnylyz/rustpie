@@ -1,3 +1,4 @@
+use alloc::collections::BTreeMap;
 use alloc::vec::Vec;
 
 use common::mm::vm_descriptor::*;
@@ -18,7 +19,7 @@ pub const PAGE_TABLE_L3_SHIFT: usize = 12;
 pub struct Aarch64PageTable {
   directory: PhysicalFrame,
   pages: Mutex<Vec<PhysicalFrame>>,
-  user_pages: Mutex<Vec<Frame>>,
+  user_pages: Mutex<BTreeMap<usize, Frame>>,
 }
 
 #[repr(transparent)]
@@ -133,7 +134,7 @@ impl PageTableTrait for Aarch64PageTable {
     Aarch64PageTable {
       directory,
       pages: Mutex::new(Vec::new()),
-      user_pages: Mutex::new(Vec::new()),
+      user_pages: Mutex::new(BTreeMap::new()),
     }
   }
 
@@ -176,16 +177,16 @@ impl PageTableTrait for Aarch64PageTable {
 
   fn insert_page(&self, va: usize, user_frame: crate::mm::Frame, attr: EntryAttribute) -> Result<(), Error> {
     let pa = user_frame.pa();
-    let mut user_frames = self.user_pages.lock();
-    user_frames.push(user_frame);
     if let Some(p) = self.lookup_page(va) {
       if p.pa() != pa {
         // replace mapped frame
         self.remove_page(va)?;
       }
     }
-    crate::arch::Arch::invalidate_tlb();
     self.map(va, pa, attr)?;
+    let mut user_frames = self.user_pages.lock();
+    user_frames.insert(va, user_frame);
+    crate::arch::Arch::invalidate_tlb();
     Ok(())
   }
 
@@ -208,25 +209,16 @@ impl PageTableTrait for Aarch64PageTable {
   }
 
   fn lookup_user_page(&self, va: usize) -> Option<Frame> {
-    match self.lookup_page(va) {
-      None => { None }
-      Some(entry) => {
-        let pa = entry.pa();
-        let user_frames = self.user_pages.lock();
-        for uf in user_frames.iter() {
-          if uf.pa() == pa {
-            return Some(uf.clone());
-          }
-        }
-        None
-      }
-    }
+    let user_frames = self.user_pages.lock();
+    user_frames.get(&va).map(|x| x.clone())
   }
 
   fn remove_page(&self, va: usize) -> Result<(), Error> {
     if let Some(_) = self.lookup_page(va) {
       self.unmap(va);
-      crate::arch::Arch::invalidate_tlb();
+      let mut user_frames = self.user_pages.lock();
+      user_frames.remove(&va);
+      // crate::arch::Arch::invalidate_tlb();
       Ok(())
     } else {
       Err(ERROR_INVARG)
@@ -244,13 +236,12 @@ impl PageTableTrait for Aarch64PageTable {
   }
 
   fn install_user_page_table(base: usize, asid: AddressSpaceId) {
+    use tock_registers::interfaces::Readable;
     use cortex_a::registers::TTBR0_EL1;
     use cortex_a::asm::barrier::*;
     unsafe {
-      TTBR0_EL1.write(TTBR0_EL1::ASID.val(asid as u64));
-      TTBR0_EL1.set_baddr(base as u64);
-      isb(SY);
-      dsb(SY);
+      TTBR0_EL1.write(TTBR0_EL1::BADDR.val((base >> 1) as u64));
+      crate::arch::Arch::invalidate_tlb();
     }
   }
 }
