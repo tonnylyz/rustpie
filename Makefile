@@ -73,8 +73,9 @@ flash: ${KERNEL}-flash.bin
 
 tftp: ${KERNEL}.bin
 	mkimage -n rustpi -A arm64 -O linux -C none -T kernel -a 0x80080000 -e 0x80080000 -d $< ${KERNEL}.ubi
+	scp ${KERNEL} root@192.168.106.153:/tftp
 	scp ${KERNEL}.ubi root@192.168.106.153:/tftp
-	echo "tftp 0x8a000000 192.168.106.153:rustpi.ubi; bootm start 0x8a000000 - 0x80000000; bootm loados; bootm go" | xclip -selection c
+	echo "tftp 0xf0200000 192.168.106.153:rustpi; tftp 0x8a000000 192.168.106.153:rustpi.ubi; bootm start 0x8a000000 - 0x80000000; bootm loados; bootm go" | xclip -selection c
 
 clean:
 	-cargo clean
