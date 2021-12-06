@@ -10,11 +10,13 @@ pub fn getchar() -> u8 {
     let result = Message::default().call(common::server::SERVER_TERMINAL).unwrap();
     match result.a as u8 {
       0 => microcall::thread_yield(),
-      b'\n' => continue, // tx2 feed 'CR' and 'LF', ignore 'LF'
-      c => {
+      8 | 127 => break 127, // backspace
+      b'\r' | 32..=126 => { // carriage return or visible
+        let c = result.a as u8;
         print!("{}", c as char);
         break c;
       }
+      _ => continue,
     }
   }
 }
@@ -23,8 +25,15 @@ pub fn getline() -> String {
   let mut v = Vec::new();
   loop {
     let c = getchar();
-    if c == 0xd {
+    if c == b'\r' {
       break;
+    }
+    if c == 127 {
+      if !v.is_empty() {
+        microcall::putraw(c);
+      }
+      v.pop();
+      continue;
     }
     v.push(c);
   }

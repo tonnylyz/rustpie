@@ -20,6 +20,10 @@ fn try_putc(c: char) -> Result<(), Error> {
   syscall_1_0(SYS_PUTC, c as usize).map(|_| ())
 }
 
+pub fn putraw(c: u8) {
+  let _ = syscall_1_0(SYS_PUTC, c as usize);
+}
+
 pub fn putc(c: char) {
   match try_putc(c) {
     Err(common::syscall::error::ERROR_PANIC) => { let _ = try_putc(c); } // retry once

@@ -48,7 +48,13 @@ pub fn null() -> Result {
 #[inject::panic_inject]
 #[inject::page_fault_inject]
 pub fn putc(c: char) -> Result {
-  crate::driver::uart::putc(c as u8);
+  let mut c = c as u8;
+  if c == 127 {
+    crate::driver::uart::putc(8);
+    crate::driver::uart::putc(b' ');
+    c = 8;
+  }
+  crate::driver::uart::putc(c);
   Ok(Unit)
 }
 
