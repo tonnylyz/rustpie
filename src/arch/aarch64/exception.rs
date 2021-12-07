@@ -1,7 +1,9 @@
+use core::mem::size_of;
 use cortex_a::registers::{ESR_EL1, VBAR_EL1};
 use tock_registers::interfaces::{Readable, Writeable};
 
 use crate::arch::ContextFrame;
+use crate::lib::traits::ContextFrameTrait;
 
 global_asm!(include_str!("exception.S"));
 
@@ -20,6 +22,8 @@ unsafe extern "C" fn current_el_sp0_irq(ctx: *mut ContextFrame) {
 unsafe extern "C" fn current_el_spx_synchronous(ctx: *mut ContextFrame) {
   let ec = ESR_EL1.read(ESR_EL1::EC);
   error!("current_el_spx_synchronous EC {:#X} \n{}", ec, ctx.read());
+  let ctx_mut = ctx.as_mut().unwrap();
+  ctx_mut.set_stack_pointer(ctx as usize + size_of::<ContextFrame>());
   let page_fault = ESR_EL1.matches_all(ESR_EL1::EC::InstrAbortCurrentEL) | ESR_EL1.matches_all(ESR_EL1::EC::DataAbortCurrentEL);
   crate::lib::exception::handle_kernel(ctx.as_ref().unwrap(), page_fault);
   loop {}
