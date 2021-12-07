@@ -3,10 +3,10 @@
 #![feature(format_args_nl)]
 #![feature(alloc_error_handler)]
 
-
+use exported::println;
 
 #[no_mangle]
 fn _start(_arg: *const u8) {
-  // let arg = exported::parse(arg);
+  println!("hello world!");
   exported::exit();
 }

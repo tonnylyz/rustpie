@@ -36,7 +36,7 @@ static SYSCALL_NAMES: [&str; SYS_MAX] = [
 
 
 static SYSCALL_ARGC: [usize; SYS_MAX] = [
-  0, 1, 1, 0, 0, 1, 2, 3, 5, 2, 0, 4, 2, 1, 0, 5, 5, 1, 1, 1, 0, 1, 5
+  1, 1, 1, 0, 0, 1, 2, 3, 5, 2, 0, 4, 2, 1, 0, 5, 5, 1, 1, 1, 0, 1, 5
 ];
 
 pub fn syscall() {
@@ -48,7 +48,7 @@ pub fn syscall() {
   let num = ctx.syscall_number();
   let result = catch_unwind(|| {
     match num {
-      SYS_NULL => misc::null(),
+      SYS_NULL => misc::null(arg(0)),
       SYS_PUTC => misc::putc(arg(0) as u8 as char),
       SYS_GET_ASID => address_space::get_asid(arg(0)),
       SYS_GET_TID => thread::get_tid(),

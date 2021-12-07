@@ -6,7 +6,7 @@ pub type Error = usize;
 pub const ERROR_PERSISTENT_FAILURE: usize = 0x999;
 
 
-const RETRY_MAX: usize = 2;
+const RETRY_MAX: usize = 0;
 
 pub fn request_wrapper<F: Fn(Message, usize) -> R, R>(f: F, msg: Message, tid: usize) -> Result<R, Error> {
   let mut i = 0;
@@ -18,7 +18,7 @@ pub fn request_wrapper<F: Fn(Message, usize) -> R, R>(f: F, msg: Message, tid: u
     if r.is_ok() {
       break Ok(r.unwrap());
     } else {
-      info!("retry #{}", i);
+      // info!("retry #{}", i);
       if i > RETRY_MAX {
         break Err(ERROR_PERSISTENT_FAILURE);
       }

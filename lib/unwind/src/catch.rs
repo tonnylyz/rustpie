@@ -49,6 +49,7 @@ pub unsafe fn r#try<R, F: FnOnce() -> R>(f: F) -> Result<R, PanicError> {
     unsafe {
       let data = data as *mut Data<F, R>;
       let data = &mut (*data);
+      if payload as usize == 0 { return }
       let obj = cleanup(payload);
       data.p = ManuallyDrop::new(obj);
     }

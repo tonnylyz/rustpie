@@ -20,27 +20,35 @@ impl Drop for ResourceA {
 #[allow(dead_code)]
 fn make_page_fault() {
   unsafe { (0xdeadbeef0000 as *mut usize).write(0); }
-  panic!(); // indicates an exception may happen
 }
 
 #[inline(never)]
-#[allow(dead_code)]
-#[allow(unreachable_code)]
-#[allow(unused_variables)]
-pub fn null2() -> Result {
-  info!("null called");
-  let a = Box::new(ResourceA);
-  // make_page_fault();
-  panic!();
-  let b = Box::new(ResourceB);
-  Box::leak(a);
-  Box::leak(b);
-  Ok(Unit)
-}
-
-#[inline(never)]
-pub fn null() -> Result {
-  Ok(Unit)
+pub fn null(dummy: usize) -> Result {
+  match dummy {
+    0 => {
+      Ok(Unit) // normal null call
+    }
+    1 => {
+      info!("null called - kernel panic");
+      let a = Box::new(ResourceA);
+      panic!();
+      let b = Box::new(ResourceB);
+      Box::leak(a);
+      Box::leak(b);
+      Ok(Unit)
+    }
+    2 => {
+      info!("null called - kernel page fault");
+      let a = Box::new(ResourceA);
+      make_page_fault();
+      panic!();
+      let b = Box::new(ResourceB);
+      Box::leak(a);
+      Box::leak(b);
+      Ok(Unit)
+    }
+    _ => Ok(Unit)
+  }
 }
 
 #[inline(never)]

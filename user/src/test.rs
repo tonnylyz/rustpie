@@ -40,7 +40,7 @@ fn test_null_syscall() {
   let mut results = vec![];
   for _ in 0..1000 {
     let icntr = current_cycle();
-    microcall::null();
+    microcall::null(0);
     let icntr2 = current_cycle();
     results.push(icntr2 - icntr);
   }
@@ -74,12 +74,12 @@ fn test_thread_switch() {
     sum += result;
   }
   println!("[[TEST]] test_thread_switch {}/1000", sum);
+  println!("after this test, system cannot continue, please restart");
   loop {}
-  exported::exit();
 }
 
 #[allow(dead_code)]
-fn test_call() {
+fn test_ipc_call() {
   let msg = Message::default();
   let mut results = vec![];
   for _ in 0..1000 {
@@ -101,15 +101,39 @@ fn test_call() {
 fn _start(arg: *const u8) -> ! {
   let arg = exported::parse(arg);
   if arg.len() == 0 {
+    println!("usage: test {{ null | call | sw | kp | kf | sp | sf }}");
     exported::exit();
   }
   println!("test user program t{}", microcall::get_tid());
-  if arg[0] == "null" {
-    test_null_syscall();
-  } else if arg[0] == "sw" {
-    test_thread_switch();
-  } else if arg[0] == "call" {
-    test_call();
+  match arg[0] {
+    "null" => { // test null call
+      test_null_syscall();
+    }
+    "call" => { // test IPC call
+      test_ipc_call();
+    }
+    "sw" => { // test switch thread
+      test_thread_switch();
+    }
+    "kp" => { // test kernel panic
+      microcall::null(1);
+    }
+    "kf" => { // test kernel page fault
+      microcall::null(2);
+    }
+    "sp" => { // test server panic
+      let mut msg = Message::default();
+      msg.a = 1;
+      let _ = msg.call(common::server::SERVER_TEST).unwrap();
+    }
+    "sf" => { // test server page fault
+      let mut msg = Message::default();
+      msg.a = 2;
+      let _ = msg.call(common::server::SERVER_TEST).unwrap();
+    }
+    _ => {
+      println!("usage: test {{ null | call | sw | kp | kf | sp | sf }}")
+    }
   }
   exported::exit();
 }
