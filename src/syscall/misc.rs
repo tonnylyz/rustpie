@@ -19,7 +19,8 @@ impl Drop for ResourceA {
 #[inline(never)]
 #[allow(dead_code)]
 fn make_page_fault() {
-  unsafe { (0xdeadbeef0000 as *mut usize).write(0); }
+  unsafe { (0xdeadbeef0000 as *mut usize).write(0); };
+  panic!()
 }
 
 #[inline(never)]
@@ -41,7 +42,6 @@ pub fn null(dummy: usize) -> Result {
       info!("null called - kernel page fault");
       let a = Box::new(ResourceA);
       make_page_fault();
-      panic!();
       let b = Box::new(ResourceB);
       Box::leak(a);
       Box::leak(b);

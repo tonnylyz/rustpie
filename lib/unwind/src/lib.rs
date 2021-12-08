@@ -162,11 +162,13 @@ extern "C" {
 }
 
 pub fn unwind_from_exception(registers: Registers) -> ! {
-  let ctx = Box::into_raw(Box::new(UnwindingContext {
+  let mut ctx = Box::new(UnwindingContext {
     skip: 0,
     reason: 0x1,
     stack_frame_iter: StackFrameIter::new(registers),
-  }));
+  });
+  ctx.stack_frame_iter.next();
+  let ctx = Box::into_raw(ctx);
   unwind(ctx);
   cleanup(ctx);
   error!("unwind failed!");

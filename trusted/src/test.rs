@@ -28,7 +28,7 @@ pub fn current_cycle() -> usize {
 #[inline(never)]
 fn make_page_fault() {
   unsafe { (0xdeadbeef0000 as *mut usize).write(0); }
-  // panic!();
+  panic!();
 }
 
 #[allow(dead_code)]
