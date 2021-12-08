@@ -28,14 +28,18 @@ endif
 
 KERNEL := target/${ARCH}${MACHINE}/${PROFILE}/rustpi
 
-.PHONY: all emu debug dependencies clean disk trusted_image user_image
+.PHONY: all emu debug dependencies clean disk trusted_image user_image ramdisk.img
 
 all: ${KERNEL} ${KERNEL}.bin ${KERNEL}.asm
 
 ${KERNEL}: trusted_image
 	cargo build --target src/target/${ARCH}${MACHINE}.json -Z build-std=core,alloc  ${CARGO_FLAGS}
 
-trusted_image: $(if eq(${MACHINE}, tx2), ramdisk.img)
+ifeq (${MACHINE}, tx2)
+trusted_image: ramdisk.img
+else
+trusted_image:
+endif
 	make ARCH=${ARCH} TRUSTED_PROFILE=${TRUSTED_PROFILE} MACHINE=${MACHINE} -C trusted
 
 user_image:
