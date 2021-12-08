@@ -11,7 +11,6 @@ extern crate exported;
 extern crate microcall;
 
 
-use spin::Once;
 use microcall::message::Message;
 use microcall::yield_to;
 
@@ -60,7 +59,7 @@ fn switch_back(test_thread: usize) {
 
 #[allow(dead_code)]
 fn test_thread_switch() {
-  exported::mm::page_alloc(0x10000000);
+  let _ = exported::mm::page_alloc(0x10000000);
   let child_thread = microcall::thread_alloc(0, switch_back as usize, 0x10001000, microcall::get_tid()).unwrap();
   let mut results = vec![];
   for _ in 0..1000 {

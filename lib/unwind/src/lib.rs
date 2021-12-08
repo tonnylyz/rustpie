@@ -167,7 +167,7 @@ pub fn unwind_from_exception(registers: Registers) -> ! {
     reason: 0x1,
     stack_frame_iter: StackFrameIter::new(registers),
   });
-  ctx.stack_frame_iter.next();
+  let _ = ctx.stack_frame_iter.next();
   let ctx = Box::into_raw(ctx);
   unwind(ctx);
   cleanup(ctx);

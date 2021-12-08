@@ -15,8 +15,6 @@
 //!       that allows senders and receivers to be cloned.
 //!       Note that currently only a single receiver and single sender is supported.
 
-#![no_std]
-
 use core::fmt;
 use core::ptr;
 use alloc::sync::Arc;
@@ -35,7 +33,6 @@ impl TaskRef {
 
 mod wait_queue {
   extern crate alloc;
-  use log;
   use alloc::collections::VecDeque;
   use spin::Mutex;
   use super::TaskRef;
@@ -712,7 +709,7 @@ impl <T: Send> Receiver<T> {
 
       if fault_id == 6 {
         set_fault_item(0);
-        core::mem::replace(&mut *exchange_state, ExchangeState::ReceiverFinishedFirst);
+        let _ = core::mem::replace(&mut *exchange_state, ExchangeState::ReceiverFinishedFirst);
       }
 
       // Temporarily take ownership of the channel's waiting state so we can modify it;

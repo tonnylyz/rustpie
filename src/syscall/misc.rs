@@ -24,6 +24,9 @@ fn make_page_fault() {
 }
 
 #[inline(never)]
+#[allow(dead_code)]
+#[allow(unreachable_code)]
+#[allow(unused_variables)]
 pub fn null(dummy: usize) -> Result {
   match dummy {
     0 => {

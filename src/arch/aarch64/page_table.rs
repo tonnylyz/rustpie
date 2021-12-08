@@ -235,13 +235,9 @@ impl PageTableTrait for Aarch64PageTable {
     )));
   }
 
-  fn install_user_page_table(base: usize, asid: AddressSpaceId) {
-    use tock_registers::interfaces::Readable;
+  fn install_user_page_table(base: usize, _asid: AddressSpaceId) {
     use cortex_a::registers::TTBR0_EL1;
-    use cortex_a::asm::barrier::*;
-    unsafe {
-      TTBR0_EL1.write(TTBR0_EL1::BADDR.val((base >> 1) as u64));
-      crate::arch::Arch::invalidate_tlb();
-    }
+    TTBR0_EL1.write(TTBR0_EL1::BADDR.val((base >> 1) as u64));
+    crate::arch::Arch::invalidate_tlb();
   }
 }

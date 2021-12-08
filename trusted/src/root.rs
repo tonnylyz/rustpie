@@ -2,7 +2,6 @@ use alloc::string::String;
 use libtrusted::{rendezvous, thread};
 use libtrusted::wrapper::server_wrapper;
 use microcall::{get_tid, thread_destroy};
-use microcall::message::Message;
 use unwind::catch::catch_unwind;
 
 #[allow(dead_code)]
@@ -37,7 +36,6 @@ fn test_thread_switch() {
 
   join_handlers.push(thread::spawn(|| {
     info!("t2: {}", get_tid());
-    let mut msg = Message::default();
     for _ in 0..1000 {
       let icntr = current_cycle();
       microcall::thread_yield();
@@ -50,6 +48,8 @@ fn test_thread_switch() {
 }
 
 
+#[allow(dead_code)]
+#[allow(unreachable_code)]
 fn ipc_send_task(sender: rendezvous::Sender<String>) -> Result<(), &'static str> {
   info!("send task started t{}", get_tid());
   let mut i = 0;
@@ -61,6 +61,8 @@ fn ipc_send_task(sender: rendezvous::Sender<String>) -> Result<(), &'static str>
   Ok(())
 }
 
+#[allow(dead_code)]
+#[allow(unreachable_code)]
 fn ipc_receive_task((receiver, test): (rendezvous::Receiver<String>, usize)) -> Result<(), &'static str> {
   info!("receive task started t{}", get_tid());
   loop {
@@ -74,6 +76,7 @@ fn ipc_receive_task((receiver, test): (rendezvous::Receiver<String>, usize)) -> 
   Ok(())
 }
 
+#[allow(dead_code)]
 fn spawn_ipc_fault_test() {
   // S1=> 1, Random page fault induced in sender routine
   // S2=> 12, Message pointer sent to null in sending routine

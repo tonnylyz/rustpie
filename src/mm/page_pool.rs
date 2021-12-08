@@ -1,11 +1,7 @@
 use alloc::collections::VecDeque;
-// use alloc::alloc::Global;
-use alloc::vec::Vec;
-// use core::alloc::{Allocator, AllocError, Layout};
 use core::ops::Range;
-// use core::ptr::NonNull;
 
-use common::syscall::error::{ERROR_INVARG, ERROR_OOM};
+use common::syscall::error::ERROR_OOM;
 use spin::{Mutex, Once};
 
 use crate::arch::*;

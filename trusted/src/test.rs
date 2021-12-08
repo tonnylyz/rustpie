@@ -44,7 +44,7 @@ impl Drop for ResourceA {
 }
 
 #[inline(never)]
-fn test(msg: Message, tid: usize) {
+fn test(msg: Message, _tid: usize) {
   let a = Box::new(ResourceA);
   if msg.a == 1 {
     info!("null called - server panic");
@@ -65,7 +65,7 @@ pub fn server() {
   loop {
     let mut result = Message::default();
     if msg.a == 1 || msg.a == 2 {
-      request_wrapper(test, msg, client_tid);
+      let _ = request_wrapper(test, msg, client_tid);
     } else {
       let end = current_cycle();
       result.a = end;

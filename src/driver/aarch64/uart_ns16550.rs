@@ -1,8 +1,3 @@
-use tock_registers::{
-  register_bitfields,
-  register_structs,
-  registers::*,
-};
 use tock_registers::interfaces::{Readable, Writeable};
 use common::driver::ns16550::*;
 

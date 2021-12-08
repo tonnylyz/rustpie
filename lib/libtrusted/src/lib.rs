@@ -30,4 +30,5 @@ pub mod loader;
 pub mod foreign_slice;
 pub mod wrapper;
 pub mod exception;
+#[allow(dead_code)]
 pub mod rendezvous;

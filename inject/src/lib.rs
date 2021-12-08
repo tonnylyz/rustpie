@@ -53,13 +53,13 @@ pub fn page_fault_inject(_args: TokenStream, input: TokenStream) -> TokenStream 
 #[proc_macro_attribute]
 pub fn count_stmts(_args: TokenStream, input: TokenStream) -> TokenStream {
   let item: syn::Item = syn::parse(input).unwrap();
-  let fn_item = match &item {
-    syn::Item::Fn(fn_item) => fn_item,
-    _ => panic!("This attribute only targets function"),
-  };
-  let statements = &fn_item.block.stmts;
-  let len = statements.len();
-  let ident = &fn_item.sig.ident;
-  println!("count_stmts of {}: {}", ident, len);
+  // let fn_item = match &item {
+  //   syn::Item::Fn(fn_item) => fn_item,
+  //   _ => panic!("This attribute only targets function"),
+  // };
+  // let statements = &fn_item.block.stmts;
+  // let len = statements.len();
+  // let ident = &fn_item.sig.ident;
+  // println!("count_stmts of {}: {}", ident, len);
   item.into_token_stream().into()
 }

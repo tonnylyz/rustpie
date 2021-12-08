@@ -76,6 +76,7 @@ fn rtc_time64_to_tm(time: u64) -> RtcTime {
   r
 }
 
+#[allow(dead_code)]
 pub fn server() {
   info!("server started t{}",  get_tid());
   microcall::server_register(common::server::SERVER_RTC).unwrap();

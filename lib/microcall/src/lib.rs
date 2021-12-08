@@ -216,7 +216,6 @@ pub fn itc_recv_reply(tid: usize, a: usize, b: usize, c: usize, d: usize) -> Res
 }
 
 pub mod message {
-  use crate::arch::Error;
 
   #[repr(C)]
   #[derive(Copy, Clone, Debug, Default)]

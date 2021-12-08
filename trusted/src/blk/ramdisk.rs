@@ -1,4 +1,4 @@
-use core::intrinsics::{volatile_set_memory, volatile_store};
+use core::intrinsics::volatile_store;
 macro_rules! include_bytes_align_as {
     ($align_ty:ty, $path:literal) => {{
         #[repr(C)]
@@ -48,7 +48,6 @@ pub fn server() {
         };
         // ramdisk[start..end].copy_from_slice(buf);
         for i in start..end {
-          let dst = ramdisk[i];
           unsafe { volatile_store((ramdisk_addr + i) as *mut u8, buf[i - start]); }
         }
       }

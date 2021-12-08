@@ -14,6 +14,7 @@ pub struct Device {
 }
 
 impl Device {
+  #[allow(dead_code)]
   pub fn new(
     name: &'static str, registers: Vec<Range<usize>>,
     interrupts: Vec<Interrupt>) -> Self {
