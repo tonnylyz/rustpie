@@ -5,7 +5,7 @@ use tock_registers::interfaces::{Readable, Writeable};
 use crate::arch::ContextFrame;
 use crate::lib::traits::ContextFrameTrait;
 
-global_asm!(include_str!("exception.S"));
+core::arch::global_asm!(include_str!("exception.S"));
 
 #[no_mangle]
 unsafe extern "C" fn current_el_sp0_synchronous(ctx: *mut ContextFrame) {

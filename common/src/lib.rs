@@ -1,4 +1,3 @@
-#![feature(global_asm)]
 #![no_std]
 
 cfg_if::cfg_if! {

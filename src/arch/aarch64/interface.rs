@@ -43,10 +43,10 @@ impl ArchTrait for Aarch64Arch {
 
   fn invalidate_tlb() {
     unsafe {
-      asm!("dsb ishst");
-      asm!("tlbi vmalle1is");
-      asm!("dsb ish");
-      asm!("isb");
+      core::arch::asm!("dsb ishst");
+      core::arch::asm!("tlbi vmalle1is");
+      core::arch::asm!("dsb ish");
+      core::arch::asm!("isb");
     }
   }
 

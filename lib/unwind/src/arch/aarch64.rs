@@ -74,7 +74,7 @@ pub unsafe fn land(regs: &Registers, landing_pad_address: u64) {
   unwind_lander(&lr);
 }
 
-global_asm! {
+core::arch::global_asm! {
 r#"
 .global unwind_trampoline
 unwind_trampoline:

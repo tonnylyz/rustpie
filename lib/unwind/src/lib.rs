@@ -1,5 +1,4 @@
 #![no_std]
-#![feature(global_asm)]
 #![feature(trait_alias)]
 #![feature(core_intrinsics)]
 

@@ -40,7 +40,7 @@ struct SbiReturn {
 pub fn sbi_call(eid: u32, fid: u32, arg0: usize, arg1: usize, arg2: usize) -> Result<isize, Error> {
   let mut ret: SbiReturn = SbiReturn { error: 0, value: 0 };
   unsafe {
-    asm!("ecall",
+    core::arch::asm!("ecall",
     inlateout("x10") arg0 => ret.error,
     inlateout("x11") arg1 => ret.value,
     in("x12") arg2, in("x16") fid, in("x17") eid);

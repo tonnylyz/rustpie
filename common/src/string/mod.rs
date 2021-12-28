@@ -2,12 +2,12 @@ use super::WORD_SIZE;
 
 cfg_if::cfg_if! {
   /*if #[cfg(all(target_arch = "aarch64", feature = "asm"))] {
-    global_asm!(include_str!("aarch64/memset.S"));
-    global_asm!(include_str!("aarch64/memcpy.S"));
+    core::arch::global_asm!(include_str!("aarch64/memset.S"));
+    core::arch::global_asm!(include_str!("aarch64/memcpy.S"));
 
   } else */if #[cfg(all(target_arch = "riscv64", feature = "asm"))] {
-    global_asm!(include_str!("riscv64/memset.S"));
-    global_asm!(include_str!("riscv64/memcpy.S"));
+    core::arch::global_asm!(include_str!("riscv64/memset.S"));
+    core::arch::global_asm!(include_str!("riscv64/memcpy.S"));
 
   } else {
     /// Memset

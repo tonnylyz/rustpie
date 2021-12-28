@@ -1,5 +1,4 @@
 #![no_std]
-#![feature(global_asm)]
 #![feature(panic_info_message)]
 #![feature(format_args_nl)]
 #![feature(alloc_error_handler)]

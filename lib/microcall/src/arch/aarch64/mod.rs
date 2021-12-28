@@ -15,7 +15,7 @@ macro_rules! syscall {
                 $(let $od: $td;
                 $(let $oe: $te;)?)?)?)?)?
                 unsafe {
-                asm!(
+                core::arch::asm!(
                     "svc #0",
                     in("x8") $a,
                     $(in("x0") $b,

@@ -2,7 +2,6 @@
 #![no_main]
 #![feature(format_args_nl)]
 #![feature(alloc_error_handler)]
-#![feature(asm)]
 
 #[macro_use]
 extern crate alloc;
@@ -19,7 +18,7 @@ use microcall::yield_to;
 pub fn current_cycle() -> usize {
   let r;
   unsafe {
-    asm!("mrs {}, pmccntr_el0", out(reg) r);
+    core::arch::asm!("mrs {}, pmccntr_el0", out(reg) r);
   }
   r
 }
@@ -29,7 +28,7 @@ pub fn current_cycle() -> usize {
 pub fn current_cycle() -> usize {
   let r;
   unsafe {
-    asm!("rdcycle {}", out(reg) r);
+    core::arch::asm!("rdcycle {}", out(reg) r);
   }
   r
 }

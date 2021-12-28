@@ -26,9 +26,9 @@ pub fn init_per_core() {
   let pmcntenset = 1u64 << 32;
   let pmuserenr = 1u64 << 2 | 1u64;
   unsafe {
-    asm!("msr pmcr_el0, {}", in(reg) pmcr);
-    asm!("msr pmcntenset_el0, {}", in(reg) pmcntenset);
-    asm!("msr pmuserenr_el0, {}", in(reg) pmuserenr);
+    core::arch::asm!("msr pmcr_el0, {}", in(reg) pmcr);
+    core::arch::asm!("msr pmcntenset_el0, {}", in(reg) pmcntenset);
+    core::arch::asm!("msr pmuserenr_el0, {}", in(reg) pmuserenr);
   }
 }
 

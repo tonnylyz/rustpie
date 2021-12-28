@@ -3,7 +3,6 @@
 #![feature(format_args_nl)]
 #![feature(const_btree_new)]
 #![feature(allocator_api)]
-#![feature(asm)]
 #![feature(core_intrinsics)]
 
 #[macro_use]

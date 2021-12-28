@@ -15,7 +15,7 @@ macro_rules! syscall {
                 $(let $od: $td;
                 $(let $oe: $te;)?)?)?)?)?
                 unsafe {
-                asm!(
+                core::arch::asm!(
                     "ecall #0",
                     in("x17") $a,
                     $(in("x10") $b,

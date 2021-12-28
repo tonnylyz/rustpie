@@ -9,7 +9,7 @@ use unwind::catch::catch_unwind;
 pub fn current_cycle() -> usize {
   let r;
   unsafe {
-    asm!("mrs {}, pmccntr_el0", out(reg) r);
+    core::arch::asm!("mrs {}, pmccntr_el0", out(reg) r);
   }
   r
 }
@@ -19,7 +19,7 @@ pub fn current_cycle() -> usize {
 pub fn current_cycle() -> usize {
   let r;
   unsafe {
-    asm!("rdcycle {}", out(reg) r);
+    core::arch::asm!("rdcycle {}", out(reg) r);
   }
   r
 }

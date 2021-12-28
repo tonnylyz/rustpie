@@ -1,6 +1,4 @@
 #![no_std]
-#![feature(asm)]
-#![feature(global_asm)]
 
 use common::syscall::*;
 

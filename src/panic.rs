@@ -21,8 +21,8 @@ impl Frame {
     let fp: u64;
     let pc: u64;
     unsafe {
-      asm!("mov {}, x29", out(reg) fp);
-      asm!("adr {}, #0", out(reg) pc);
+      core::arch::asm!("mov {}, x29", out(reg) fp);
+      core::arch::asm!("adr {}, #0", out(reg) pc);
     }
     Frame::new(fp, pc)
   }
@@ -32,8 +32,8 @@ impl Frame {
     let fp: u64;
     let pc: u64;
     unsafe {
-      asm!("mv {}, x8", out(reg) fp);
-      asm!("auipc {}, 0", out(reg) pc);
+      core::arch::asm!("mv {}, x8", out(reg) fp);
+      core::arch::asm!("auipc {}, 0", out(reg) pc);
     }
     Frame::new(fp, pc)
   }

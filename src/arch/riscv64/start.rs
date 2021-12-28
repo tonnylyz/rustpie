@@ -1,1 +1,1 @@
-global_asm!(include_str!("start.S"));
+core::arch::global_asm!(include_str!("start.S"));

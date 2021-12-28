@@ -5,7 +5,7 @@ use crate::arch::ContextFrame;
 use crate::lib::interrupt::InterruptController;
 use crate::lib::traits::*;
 
-global_asm!(include_str!("exception.S"));
+core::arch::global_asm!(include_str!("exception.S"));
 
 const INTERRUPT_SUPERVISOR_SOFTWARE: usize = 1;
 const INTERRUPT_SUPERVISOR_TIMER: usize = 5;

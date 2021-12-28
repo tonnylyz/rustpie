@@ -27,22 +27,22 @@ pub fn init_per_core() {
   let pmcntenset = 1u64 << 31;
   let pmuserenr = 1u64 << 2 | 1u64;
   unsafe {
-    asm!("msr pmcntenclr_el0, {}", in(reg) pmcntenclr);
+    core::arch::asm!("msr pmcntenclr_el0, {}", in(reg) pmcntenclr);
 
-    asm!("mrs {:x}, pmcr_el0", out(reg) pmcr);
+    core::arch::asm!("mrs {:x}, pmcr_el0", out(reg) pmcr);
     pmcr &= !(1u32 << 3);
-    asm!("msr pmcr_el0, {:x}", in(reg) pmcr);
+    core::arch::asm!("msr pmcr_el0, {:x}", in(reg) pmcr);
 
-    asm!("mrs {:x}, pmcr_el0", out(reg) pmcr);
+    core::arch::asm!("mrs {:x}, pmcr_el0", out(reg) pmcr);
     pmcr |= (1u32 << 1) | (1u32 << 2);
-    asm!("msr pmcr_el0, {:x}", in(reg) pmcr);
+    core::arch::asm!("msr pmcr_el0, {:x}", in(reg) pmcr);
 
-    asm!("mrs {:x}, pmcr_el0", out(reg) pmcr);
+    core::arch::asm!("mrs {:x}, pmcr_el0", out(reg) pmcr);
     pmcr |= 1;
-    asm!("msr pmcr_el0, {:x}", in(reg) pmcr);
+    core::arch::asm!("msr pmcr_el0, {:x}", in(reg) pmcr);
 
-    asm!("msr pmcntenset_el0, {}", in(reg) pmcntenset);
-    asm!("msr pmuserenr_el0, {}", in(reg) pmuserenr);
+    core::arch::asm!("msr pmcntenset_el0, {}", in(reg) pmcntenset);
+    core::arch::asm!("msr pmuserenr_el0, {}", in(reg) pmuserenr);
   }
 }
 
