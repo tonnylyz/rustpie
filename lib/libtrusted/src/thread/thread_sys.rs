@@ -22,7 +22,7 @@ const THREAD_STACK_PAGE_NUM: usize = 48;
 
 impl Thread {
   pub unsafe fn new(p: Box<dyn FnOnce()>) -> IoResult<Thread> {
-    let p = Box::into_raw(box p);
+    let p = Box::into_raw(Box::new(p));
 
     let stack = virtual_alloc(THREAD_STACK_PAGE_NUM, true).unwrap();
     let stack_top = stack + THREAD_STACK_PAGE_NUM * PAGE_SIZE;

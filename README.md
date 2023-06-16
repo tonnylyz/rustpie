@@ -39,7 +39,7 @@ K210 also require a SBI image. I suggest using [RustSBI](https://github.com/rust
 4. LLVM (`llvm-objcopy` and `llvm-objdump`, can be replaced with GNU ones)
 5. K210 `kflash` tool [kflash.py](https://github.com/kendryte/kflash.py).
 6. `mkimage` u-boot image tool
-7. RedoxFS utilities [link](https://gitlab.redox-os.org/redox-os/redoxfs) (`redoxfs` and `redoxfs-mkfs`)
+7. RedoxFS utilities [link](https://gitlab.redox-os.org/redox-os/redoxfs) (`redoxfs` and `redoxfs-mkfs`) Install with `cargo install redoxfs@0.4.4`
 
 ## Structure
 

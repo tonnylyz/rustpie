@@ -53,7 +53,7 @@ impl Header {
   }
 }
 
-impl fmt::Debug for Header {
+/* impl fmt::Debug for Header {
   fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
     #[allow(unused_unsafe)]
       unsafe {
@@ -68,7 +68,7 @@ impl fmt::Debug for Header {
         .finish()
     }
   }
-}
+} */
 
 impl Deref for Header {
   type Target = [u8];

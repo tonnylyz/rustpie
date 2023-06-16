@@ -155,7 +155,7 @@ impl Node {
   }
 }
 
-impl fmt::Debug for Node {
+/* impl fmt::Debug for Node {
   fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
     let extents: Vec<&Extent> = self
       .extents
@@ -179,7 +179,7 @@ impl fmt::Debug for Node {
         .finish()
     }
   }
-}
+} */
 
 impl ops::Deref for Node {
   type Target = [u8];

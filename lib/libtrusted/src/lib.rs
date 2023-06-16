@@ -3,7 +3,6 @@
 #![feature(format_args_nl)]
 #![feature(alloc_error_handler)]
 #![feature(lang_items)]
-#![feature(box_syntax)]
 
 extern crate alloc;
 #[macro_use]
