@@ -1,8 +1,6 @@
 use alloc::vec::Vec;
 use core::cmp::min;
 
-use fallible_collections::FallibleVec;
-
 use redox::*;
 
 use crate::fs::{BLOCK_SIZE, Disk, ExNode, Extent, Header, Node};
@@ -154,7 +152,8 @@ impl<D: Disk> FileSystem<D> {
     for extent in parent.1.extents.iter() {
       for (block, size) in extent.blocks() {
         if size >= BLOCK_SIZE {
-          children.try_push(self.node(block)?).map_err(|_| Error::new(ENOMEM))?;
+          children.push(self.node(block)?);
+          return Ok(());
         }
       }
     }

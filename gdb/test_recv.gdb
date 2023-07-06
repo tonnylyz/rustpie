@@ -4,7 +4,7 @@ set confirm off
 set pagination off
 set logging on
 set $last = 0
-break microcall::message::Message::receive
+break rpsyscall::message::Message::receive
 command
 set $last = $PMCCNTR_EL0
 end

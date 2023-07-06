@@ -38,10 +38,6 @@ name = "stat"
 path = "src/stat.rs"
 
 [[bin]]
-name = "test"
-path = "src/test.rs"
-
-[[bin]]
 name = "hello"
 path = "src/hello.rs"
 
@@ -54,9 +50,5 @@ name = "write"
 path = "src/write.rs"
 
 [dependencies]
-exported = { path = "../lib/exported" }
-fs = { path = "../lib/fs" }
-microcall = { path = "../lib/microcall" }
-common = { path = "../common" }
+rpstdlib = { path = "../rpstdlib" }
 getopts = { git = "https://github.com/tonnylyz/getopts" }
-spin = "0.9.2"

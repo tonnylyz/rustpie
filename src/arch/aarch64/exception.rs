@@ -1,5 +1,5 @@
 use core::mem::size_of;
-use cortex_a::registers::{ESR_EL1, VBAR_EL1};
+use aarch64_cpu::registers::{ESR_EL1, VBAR_EL1};
 use tock_registers::interfaces::{Readable, Writeable};
 
 use crate::arch::ContextFrame;
@@ -98,7 +98,7 @@ pub fn init() {
   unsafe {
     let addr: u64 = vectors as usize as u64;
     VBAR_EL1.set(addr);
-    use cortex_a::asm::barrier::*;
+    use aarch64_cpu::asm::barrier::*;
     isb(SY);
   }
 }

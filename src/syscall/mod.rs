@@ -1,6 +1,6 @@
 use core::fmt::{Display, Formatter};
 
-use common::syscall::error::*;
+use rpabi::syscall::error::*;
 
 use SyscallOutRegisters::*;
 

@@ -5,22 +5,22 @@
 
 extern crate alloc;
 #[macro_use]
-extern crate exported;
+extern crate rpstdlib;
 
 
 #[no_mangle]
 fn _start(arg: *const u8) {
-  let arg = exported::parse(arg);
+  let arg = rpstdlib::parse(arg);
   if arg.len() == 0 {
     println!("usage: rm FILE...");
-    exported::exit();
+    rpstdlib::exit();
   }
   let path = arg[0];
-  match fs::remove_file(path) {
+  match rpstdlib::fs::remove_file(path) {
     Ok(_) => {}
     Err(e) => {
       println!("{}", e);
     }
   }
-  exported::exit();
+  rpstdlib::exit();
 }

@@ -4,15 +4,6 @@ PROFILE ?= release
 USER_PROFILE ?= release
 TRUSTED_PROFILE ?= release
 
-# Panic Inject Function
-export PI
-# Page Fault Inject Function
-export FI
-
-# NOTE: this is to deal with `(signal: 11, SIGSEGV: invalid memory reference)`
-# https://github.com/rust-lang/rust/issues/73677
-RUSTFLAGS := -C llvm-args=-global-isel=false
-
 # NOTE: generate frame pointer for every function
 export RUSTFLAGS := ${RUSTFLAGS} -C force-frame-pointers=yes
 
@@ -90,7 +81,7 @@ disk: user_image
 	rm -rf disk
 	mkdir disk
 	redoxfs disk.img disk
-	cp user/target/${ARCH}/${USER_PROFILE}/{shell,cat,ls,mkdir,touch,rm,rd,stat,test,hello,ps,write} disk/
+	cp user/target/${ARCH}/${USER_PROFILE}/{shell,cat,ls,mkdir,touch,rm,rd,stat,hello,ps,write} disk/
 	sync
 	umount disk
 
@@ -99,7 +90,7 @@ sdcard: user_image
 	mkdir sdcard
 	sudo redoxfs-mkfs /dev/sda
 	sudo redoxfs /dev/sda sdcard
-	sudo cp user/target/${ARCH}/${USER_PROFILE}/{shell,cat,ls,mkdir,touch,rm,rd,stat,test,hello,ps,write} sdcard/
+	sudo cp user/target/${ARCH}/${USER_PROFILE}/{shell,cat,ls,mkdir,touch,rm,rd,stat,hello,ps,write} sdcard/
 	sync
 	sudo umount sdcard
 
@@ -109,7 +100,7 @@ ramdisk.img: user_image
 	dd if=/dev/zero of=ramdisk.img bs=1M count=4
 	redoxfs-mkfs ramdisk.img
 	redoxfs ramdisk.img ramdisk
-	cp user/target/${ARCH}/${USER_PROFILE}/{shell,cat,ls,mkdir,touch,rm,rd,stat,test,hello,ps,write} ramdisk/
+	cp user/target/${ARCH}/${USER_PROFILE}/{shell,cat,ls,mkdir,touch,rm,rd,stat,hello,ps,write} ramdisk/
 	sync
 	umount ramdisk
 

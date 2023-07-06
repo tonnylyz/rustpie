@@ -1,7 +1,7 @@
 use alloc::collections::BTreeMap;
 use alloc::vec::Vec;
-use common::mm::vm_descriptor::*;
-use common::syscall::error::ERROR_INVARG;
+use rpabi::mm::vm_descriptor::*;
+use rpabi::syscall::error::ERROR_INVARG;
 use riscv::regs::*;
 use spin::Mutex;
 use tock_registers::interfaces::Writeable;
@@ -172,8 +172,8 @@ impl PageTableTrait for Riscv64PageTable {
       let mut pages = self.pages.lock();
       pages.push(frame);
       drop(pages);
-      if va <= common::CONFIG_READ_ONLY_LEVEL_1_PAGE_TABLE_BTM {
-        self.map(common::CONFIG_READ_ONLY_LEVEL_2_PAGE_TABLE_BTM + va.l1x() * PAGE_SIZE, l1e.to_pa(), EntryAttribute::user_readonly())?;
+      if va <= rpabi::CONFIG_READ_ONLY_LEVEL_1_PAGE_TABLE_BTM {
+        self.map(rpabi::CONFIG_READ_ONLY_LEVEL_2_PAGE_TABLE_BTM + va.l1x() * PAGE_SIZE, l1e.to_pa(), EntryAttribute::user_readonly())?;
       }
       directory.set_entry(va.l1x(), l1e);
     }
@@ -185,8 +185,8 @@ impl PageTableTrait for Riscv64PageTable {
       let mut pages = self.pages.lock();
       pages.push(frame);
       drop(pages);
-      if va <= common::CONFIG_READ_ONLY_LEVEL_1_PAGE_TABLE_BTM {
-        self.map(common::CONFIG_READ_ONLY_LEVEL_3_PAGE_TABLE_BTM + va.l1x() * PAGE_SIZE * (PAGE_SIZE / MACHINE_SIZE) + va.l2x() * PAGE_SIZE, l2e.to_pa(), EntryAttribute::user_readonly())?;
+      if va <= rpabi::CONFIG_READ_ONLY_LEVEL_1_PAGE_TABLE_BTM {
+        self.map(rpabi::CONFIG_READ_ONLY_LEVEL_3_PAGE_TABLE_BTM + va.l1x() * PAGE_SIZE * (PAGE_SIZE / MACHINE_SIZE) + va.l2x() * PAGE_SIZE, l2e.to_pa(), EntryAttribute::user_readonly())?;
       }
       l1e.set_entry(va.l2x(), l2e);
     }
@@ -254,7 +254,7 @@ impl PageTableTrait for Riscv64PageTable {
   }
 
   fn recursive_map(&self, _va: usize) {
-    self.map(common::CONFIG_READ_ONLY_LEVEL_1_PAGE_TABLE_BTM, self.directory.pa(), EntryAttribute::user_readonly()).expect("page table recursive map failed");
+    self.map(rpabi::CONFIG_READ_ONLY_LEVEL_1_PAGE_TABLE_BTM, self.directory.pa(), EntryAttribute::user_readonly()).expect("page table recursive map failed");
   }
 
   fn install_user_page_table(base: usize, asid: AddressSpaceId) {

@@ -1,4 +1,4 @@
-use common::{CONFIG_USER_STACK_BTM, CONFIG_USER_STACK_TOP};
+use rpabi::{CONFIG_USER_STACK_BTM, CONFIG_USER_STACK_TOP};
 
 use crate::arch::PAGE_SIZE;
 use crate::lib::cpu::cpu;

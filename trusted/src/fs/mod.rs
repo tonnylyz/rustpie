@@ -7,6 +7,7 @@ pub use self::filesystem::FileSystem;
 pub use self::header::Header;
 pub use self::node::Node;
 
+pub mod client;
 mod ex_node;
 mod extent;
 mod filesystem;

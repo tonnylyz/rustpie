@@ -1,7 +1,7 @@
 use alloc::collections::VecDeque;
 use core::ops::Range;
 
-use common::syscall::error::ERROR_OOM;
+use rpabi::syscall::error::ERROR_OOM;
 use spin::{Mutex, Once};
 
 use crate::arch::*;

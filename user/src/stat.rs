@@ -5,21 +5,20 @@
 
 extern crate alloc;
 #[macro_use]
-extern crate exported;
+extern crate rpstdlib;
 
 
-use exported::rtc::rtc_time64_to_tm;
-use fs::File;
+use rpstdlib::rtc::rtc_time64_to_tm;
 
 #[no_mangle]
 fn _start(arg: *const u8) {
-  let arg = exported::parse(arg);
+  let arg = rpstdlib::parse(arg);
   if arg.len() == 0 {
     println!("usage: stat FILE...");
-    exported::exit();
+    rpstdlib::exit();
   }
   let path = arg[0];
-  let file = File::open(path).expect("open file failed");
+  let file = rpstdlib::fs::File::open(path).expect("open file failed");
 
   match file.stat() {
     Ok(stat) => {
@@ -49,5 +48,5 @@ Create: {}",
       println!("{}", e);
     }
   }
-  exported::exit();
+  rpstdlib::exit();
 }

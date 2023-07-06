@@ -1,4 +1,4 @@
-use common::syscall::error::{ERROR_INVARG, ERROR_OOM};
+use rpabi::syscall::error::{ERROR_INVARG, ERROR_OOM};
 use xmas_elf::*;
 
 use crate::arch::{PAGE_SIZE, PageTable};

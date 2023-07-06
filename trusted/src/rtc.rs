@@ -1,6 +1,6 @@
-use common::time::RtcTime;
+use rpabi::time::RtcTime;
 
-use microcall::get_tid;
+use rpsyscall::get_tid;
 
 #[cfg(target_arch = "aarch64")]
 #[cfg(not(feature = "tx2"))]
@@ -79,11 +79,11 @@ fn rtc_time64_to_tm(time: u64) -> RtcTime {
 #[allow(dead_code)]
 pub fn server() {
   info!("server started t{}",  get_tid());
-  microcall::server_register(common::server::SERVER_RTC).unwrap();
+  rpsyscall::server_register(rpabi::server::SERVER_RTC).unwrap();
   info!("start at {} {}", timestamp(), rtc_time64_to_tm(timestamp() as u64));
   loop {
-    let (client_tid, _msg) = microcall::message::Message::receive().unwrap();
-    let mut msg = microcall::message::Message::default();
+    let (client_tid, _msg) = rpsyscall::message::Message::receive().unwrap();
+    let mut msg = rpsyscall::message::Message::default();
     msg.a = timestamp() as usize;
     let _ = msg.send_to(client_tid);
   }

@@ -1,0 +1,7 @@
+[package]
+name = "rpservapi"
+version = "0.1.0"
+edition = "2021"
+description = "information shared between server and client"
+
+[dependencies]

@@ -1,8 +1,8 @@
 use alloc::collections::BTreeMap;
 use alloc::vec::Vec;
 
-use common::event::*;
-use common::syscall::error::{ERROR_HOLD_ON, ERROR_INVARG};
+use rpabi::event::*;
+use rpabi::syscall::error::{ERROR_HOLD_ON, ERROR_INVARG};
 use spin::Mutex;
 
 use crate::lib::interrupt::INT_SEM;
@@ -12,9 +12,6 @@ use crate::lib::thread::Tid;
 use super::{Result, SyscallOutRegisters::*};
 
 #[inline(never)]
-#[inject::count_stmts]
-#[inject::panic_inject]
-#[inject::page_fault_inject]
 pub fn event_wait(event_type: usize, event_num: usize) -> Result {
   let t = super::current_thread()?;
   if let Some(e) = Event::from(event_type, event_num) {

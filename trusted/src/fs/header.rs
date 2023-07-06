@@ -1,4 +1,4 @@
-use core::{fmt, mem, slice};
+use core::{mem, slice};
 use core::ops::{Deref, DerefMut};
 
 use crate::fs::{BLOCK_SIZE, SIGNATURE, VERSION};

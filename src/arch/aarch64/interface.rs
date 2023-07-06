@@ -1,6 +1,6 @@
 use core::mem::size_of;
 
-use cortex_a::registers::*;
+use aarch64_cpu::registers::*;
 use tock_registers::interfaces::Readable;
 
 use crate::board::BOARD_CORE_NUMBER;
@@ -51,11 +51,11 @@ impl ArchTrait for Aarch64Arch {
   }
 
   fn wait_for_interrupt() {
-    cortex_a::asm::wfi();
+    aarch64_cpu::asm::wfi();
   }
 
   fn nop() {
-    cortex_a::asm::nop();
+    aarch64_cpu::asm::nop();
   }
 
   fn fault_address() -> usize {

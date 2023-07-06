@@ -1,4 +1,4 @@
-use common::syscall::error::*;
+use rpabi::syscall::error::*;
 use crate::lib::cpu::cpu;
 
 use crate::lib::thread::{thread_sleep, thread_sleep_to, Tid};
@@ -8,9 +8,6 @@ use crate::lib::traits::ContextFrameTrait;
 use super::{Result, SyscallOutRegisters::*};
 
 #[inline(never)]
-#[inject::count_stmts]
-#[inject::panic_inject]
-#[inject::page_fault_inject]
 pub fn itc_receive() -> Result {
   let t = super::current_thread()?;
   thread_sleep(&t, ThreadStatus::WaitForRequest);
@@ -18,9 +15,6 @@ pub fn itc_receive() -> Result {
 }
 
 #[inline(never)]
-#[inject::count_stmts]
-#[inject::panic_inject]
-#[inject::page_fault_inject]
 pub fn itc_send(tid: Tid, a: usize, b: usize, c: usize, d: usize) -> Result {
   let current = super::current_thread()?;
   let target = crate::lib::thread::thread_lookup(tid).ok_or_else(|| ERROR_INVARG)?;
@@ -36,9 +30,6 @@ pub fn itc_send(tid: Tid, a: usize, b: usize, c: usize, d: usize) -> Result {
 }
 
 #[inline(never)]
-#[inject::count_stmts]
-#[inject::panic_inject]
-#[inject::page_fault_inject]
 pub fn itc_call(tid: Tid, a: usize, b: usize, c: usize, d: usize) -> Result {
   let current = super::current_thread()?;
   let target = crate::lib::thread::thread_lookup(tid).ok_or_else(|| ERROR_INVARG)?;

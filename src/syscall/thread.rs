@@ -1,21 +1,15 @@
-use common::syscall::error::{ERROR_DENIED, ERROR_INVARG};
+use rpabi::syscall::error::{ERROR_DENIED, ERROR_INVARG};
 
 use crate::lib::thread::{thread_sleep, thread_wake, Tid};
 
 use super::{Result, SyscallOutRegisters::*};
 
 #[inline(never)]
-#[inject::count_stmts]
-#[inject::panic_inject]
-#[inject::page_fault_inject]
 pub fn get_tid() -> Result {
   Ok(Single(super::current_thread()?.tid()))
 }
 
 #[inline(never)]
-#[inject::count_stmts]
-#[inject::panic_inject]
-#[inject::page_fault_inject]
 pub fn thread_yield() -> Result {
   // let icntr = crate::lib::timer::current_cycle();
   crate::lib::cpu::cpu().schedule();
@@ -25,9 +19,6 @@ pub fn thread_yield() -> Result {
 }
 
 #[inline(never)]
-#[inject::count_stmts]
-#[inject::panic_inject]
-#[inject::page_fault_inject]
 pub fn thread_destroy(tid: Tid) -> Result {
   let current_thread = super::current_thread()?;
   if tid == 0 {
@@ -49,9 +40,6 @@ pub fn thread_destroy(tid: Tid) -> Result {
 }
 
 #[inline(never)]
-#[inject::count_stmts]
-#[inject::panic_inject]
-#[inject::page_fault_inject]
 pub fn thread_alloc(asid: u16, entry: usize, sp: usize, arg: usize) -> Result {
   let t = super::current_thread()?;
   let a = super::lookup_as(asid)?;
@@ -60,11 +48,8 @@ pub fn thread_alloc(asid: u16, entry: usize, sp: usize, arg: usize) -> Result {
 }
 
 #[inline(never)]
-#[inject::count_stmts]
-#[inject::panic_inject]
-#[inject::page_fault_inject]
 pub fn thread_set_status(tid: usize, status: usize) -> Result {
-  use common::thread::*;
+  use rpabi::thread::*;
   let runnable = match status {
     THREAD_STATUS_NOT_RUNNABLE => false,
     THREAD_STATUS_RUNNABLE => true,

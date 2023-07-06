@@ -5,15 +5,15 @@
 
 extern crate alloc;
 #[macro_use]
-extern crate exported;
+extern crate rpstdlib;
 
 
 #[no_mangle]
 fn _start(arg: *const u8) {
-  let arg = exported::parse(arg);
+  let arg = rpstdlib::parse(arg);
   for file in arg {
     let path = file;
-    use fs::File;
+    use rpstdlib::fs::File;
     let mut file = File::open(path).expect("cannot open file");
     let mut buf = [0u8; 128];
     loop {
@@ -25,5 +25,5 @@ fn _start(arg: *const u8) {
       }
     }
   }
-  exported::exit();
+  rpstdlib::exit();
 }

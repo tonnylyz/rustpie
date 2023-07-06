@@ -121,7 +121,7 @@ fn test_create_thread() {
     let icntr = lib::timer::current_cycle();
     let t = lib::thread::new_user(
       0x40000,
-      common::CONFIG_USER_STACK_TOP,
+      rpabi::CONFIG_USER_STACK_TOP,
       0,
       a.clone(),
       None,
@@ -184,7 +184,7 @@ pub unsafe fn main(core_id: arch::CoreId) -> ! {
 
     let page_table = a.page_table();
     let stack_frame = mm::page_pool::page_alloc().expect("failed to allocate trusted stack");
-    page_table.insert_page(common::CONFIG_USER_STACK_TOP - arch::PAGE_SIZE,
+    page_table.insert_page(rpabi::CONFIG_USER_STACK_TOP - arch::PAGE_SIZE,
                            mm::Frame::from(stack_frame),
                            mm::page_table::EntryAttribute::user_default()).unwrap();
 
@@ -202,7 +202,7 @@ pub unsafe fn main(core_id: arch::CoreId) -> ! {
     info!("user stack ok");
     let t = crate::lib::thread::new_user(
       entry,
-      common::CONFIG_USER_STACK_TOP,
+      rpabi::CONFIG_USER_STACK_TOP,
       0,
       a.clone(),
       None,

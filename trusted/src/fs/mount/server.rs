@@ -2,18 +2,15 @@ use alloc::string::String;
 
 use spin::Once;
 
-use libtrusted::foreign_slice::ForeignSlice;
-use libtrusted::wrapper::request_wrapper;
-use microcall::{get_asid, get_tid};
-use microcall::message::Message;
+use crate::libtrusted::foreign_slice::ForeignSlice;
+use crate::libtrusted::wrapper::request_wrapper;
+use rpsyscall::{get_asid, get_tid};
+use rpsyscall::message::Message;
 use redox::*;
 
 use crate::fs::{FileSystem, VirtioClient};
 use crate::fs::mount::scheme::FileScheme;
 
-#[inject::count_stmts]
-#[inject::panic_inject]
-#[inject::page_fault_inject]
 fn redoxfs(msg: Message, client_tid: usize) -> usize {
   let mut packet = Packet::default();
   packet.a = msg.a;
@@ -72,7 +69,7 @@ static FILE_SCHEME: Once<FileScheme<VirtioClient>> = Once::new();
 
 pub fn server() {
   info!("server started t{}", get_tid());
-  microcall::server_register(common::server::SERVER_REDOX_FS).unwrap();
+  rpsyscall::server_register(rpabi::server::SERVER_REDOX_FS).unwrap();
   let disk = VirtioClient::new();
   match FileSystem::open(disk, Some(0)) {
     Ok(filesystem) => {

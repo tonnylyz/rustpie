@@ -4,7 +4,7 @@ use alloc::string::String;
 use alloc::vec::Vec;
 use core::cmp::{max, min};
 
-use libtrusted::mm::{virtual_alloc, virtual_free};
+use crate::libtrusted::mm::{virtual_alloc, virtual_free};
 use redox::*;
 
 use crate::alloc::string::ToString;

@@ -1,6 +1,6 @@
 use alloc::collections::BTreeMap;
 
-use common::syscall::error::ERROR_INVARG;
+use rpabi::syscall::error::ERROR_INVARG;
 use spin::Mutex;
 
 use crate::lib::thread::Tid;
@@ -8,9 +8,6 @@ use crate::lib::thread::Tid;
 use super::{Result, SyscallOutRegisters::*};
 
 #[inline(never)]
-#[inject::count_stmts]
-#[inject::panic_inject]
-#[inject::page_fault_inject]
 pub fn server_register(server_id: usize) -> Result {
   let t = super::current_thread()?;
   set(server_id, t.tid());
@@ -18,9 +15,6 @@ pub fn server_register(server_id: usize) -> Result {
 }
 
 #[inline(never)]
-#[inject::count_stmts]
-#[inject::panic_inject]
-#[inject::page_fault_inject]
 pub fn server_tid(server_id: usize) -> Result {
   match get(server_id) {
     None => {

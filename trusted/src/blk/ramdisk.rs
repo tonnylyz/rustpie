@@ -1,4 +1,4 @@
-use core::intrinsics::volatile_store;
+use core::intrinsirpservapi::volatile_store;
 macro_rules! include_bytes_align_as {
     ($align_ty:ty, $path:literal) => {{
         #[repr(C)]
@@ -23,19 +23,19 @@ static RAMDISK: &'static [u8] = include_bytes_align_as!(Align4096, "../../../ram
 pub fn server() {
   let ramdisk = unsafe { core::slice::from_raw_parts_mut(RAMDISK.as_ptr() as usize as *mut u8, RAMDISK.len()) };
   let ramdisk_addr = ramdisk.as_ptr() as usize;
-  info!("server started t{}",  microcall::get_tid());
-  microcall::server_register(common::server::SERVER_BLK).unwrap();
+  info!("server started t{}",  rpsyscall::get_tid());
+  rpsyscall::server_register(rpabi::server::SERVER_BLK).unwrap();
 
   loop {
-    let (client_tid, msg) = microcall::message::Message::receive().unwrap();
-    if msg.d == cs::blk::action::READ || msg.d == cs::blk::action::WRITE {
+    let (client_tid, msg) = rpsyscall::message::Message::receive().unwrap();
+    if msg.d == rpservapi::blk::action::READ || msg.d == rpservapi::blk::action::WRITE {
       let sector = msg.a;
       let count = msg.b;
       let buf = msg.c;
 
       let start = sector * 512;
       let end = (sector + count) * 512;
-      if msg.d == cs::blk::action::READ {
+      if msg.d == rpservapi::blk::action::READ {
         // Operation::Read
         let buf = unsafe {
           core::slice::from_raw_parts_mut(buf as *mut u8, count * 512)
@@ -52,15 +52,15 @@ pub fn server() {
         }
       }
 
-      let msg = microcall::message::Message::default();
+      let msg = rpsyscall::message::Message::default();
       let _ = msg.send_to(client_tid);
-    } else if msg.d == cs::blk::action::SIZE {
-      let mut msg = microcall::message::Message::default();
+    } else if msg.d == rpservapi::blk::action::SIZE {
+      let mut msg = rpsyscall::message::Message::default();
       msg.a = ramdisk.len();
       let _ = msg.send_to(client_tid);
     } else {
-      let mut msg = microcall::message::Message::default();
-      msg.a = cs::blk::result::ERR;
+      let mut msg = rpsyscall::message::Message::default();
+      msg.a = rpservapi::blk::result::ERR;
       let _ = msg.send_to(client_tid);
     }
   }

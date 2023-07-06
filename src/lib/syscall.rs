@@ -1,7 +1,7 @@
 use alloc::string::String;
 
-use common::syscall::*;
-use common::syscall::error::{ERROR_HOLD_ON, ERROR_INVARG};
+use rpabi::syscall::*;
+use rpabi::syscall::error::{ERROR_HOLD_ON, ERROR_INVARG};
 
 use unwind::catch::catch_unwind;
 
@@ -104,7 +104,7 @@ pub fn syscall() {
   if tid == cpu().running_thread().map(|x| { x.tid() }).unwrap_or_default() {
     match result {
       Ok(ref r) => { ctx.set_syscall_result(r); }
-      Err(_) => { ctx.set_syscall_result(&Err(common::syscall::error::ERROR_PANIC)) }
+      Err(_) => { ctx.set_syscall_result(&Err(rpabi::syscall::error::ERROR_PANIC)) }
     }
   }
 }

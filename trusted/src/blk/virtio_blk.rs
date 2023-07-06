@@ -7,8 +7,8 @@ use tock_registers::*;
 use tock_registers::interfaces::{Readable, Writeable};
 use tock_registers::registers::*;
 
-use libtrusted::mm::virt_to_phys;
-use microcall::get_tid;
+use crate::libtrusted::mm::virt_to_phys;
+use rpsyscall::get_tid;
 
 #[cfg(target_arch = "aarch64")]
 const VIRTIO_MMIO_BASE: usize = 0x8_0000_0000 + 0x0a000000;
@@ -402,7 +402,7 @@ fn irq() {
       match *req.status {
         VIRTIO_BLK_S_OK => {
           {
-            let msg = microcall::message::Message::default();
+            let msg = rpsyscall::message::Message::default();
             let _ = msg.send_to(req.src);
           }
         }
@@ -429,37 +429,37 @@ fn irq() {
 
 fn wait_for_irq() {
   #[cfg(target_arch = "aarch64")]
-    let _ = microcall::event_wait(common::event::EVENT_INTERRUPT, 0x10 + 32);
+    let _ = rpsyscall::event_wait(rpabi::event::EVENT_INTERRUPT, 0x10 + 32);
 
   #[cfg(target_arch = "riscv64")]
-    let _ = microcall::event_wait(common::event::EVENT_INTERRUPT, 0x01);
+    let _ = rpsyscall::event_wait(rpabi::event::EVENT_INTERRUPT, 0x01);
 }
 
 pub fn server() {
   init();
   info!("server started t{}",  get_tid());
-  microcall::server_register(common::server::SERVER_BLK).unwrap();
+  rpsyscall::server_register(rpabi::server::SERVER_BLK).unwrap();
 
   loop {
-    let (client_tid, msg) = microcall::message::Message::receive().unwrap();
-    if msg.d == cs::blk::action::READ || msg.d == cs::blk::action::WRITE {
+    let (client_tid, msg) = rpsyscall::message::Message::receive().unwrap();
+    if msg.d == rpservapi::blk::action::READ || msg.d == rpservapi::blk::action::WRITE {
       let sector = msg.a;
       let count = msg.b;
       let buf = msg.c;
-      let op = if msg.d == cs::blk::action::READ { Operation::Read } else { Operation::Write };
+      let op = if msg.d == rpservapi::blk::action::READ { Operation::Read } else { Operation::Write };
       io(sector, count, buf, op, client_tid);
       wait_for_irq();
       irq();
-    } else if msg.d == cs::blk::action::SIZE {
-      let mut msg = microcall::message::Message::default();
+    } else if msg.d == rpservapi::blk::action::SIZE {
+      let mut msg = rpsyscall::message::Message::default();
       msg.a = match VIRTIO_MMIO.disk_size.get() {
         None => 0,
         Some(s) => *s * 512,
       };
       let _ = msg.send_to(client_tid);
     } else {
-      let mut msg = microcall::message::Message::default();
-      msg.a = cs::blk::result::ERR;
+      let mut msg = rpsyscall::message::Message::default();
+      msg.a = rpservapi::blk::result::ERR;
       let _ = msg.send_to(client_tid);
     }
   }

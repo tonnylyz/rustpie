@@ -1,8 +1,8 @@
 use alloc::collections::BTreeMap;
 use alloc::vec::Vec;
 
-use common::mm::vm_descriptor::*;
-use common::syscall::error::ERROR_INVARG;
+use rpabi::mm::vm_descriptor::*;
+use rpabi::syscall::error::ERROR_INVARG;
 use spin::Mutex;
 use tock_registers::interfaces::Writeable;
 
@@ -236,7 +236,7 @@ impl PageTableTrait for Aarch64PageTable {
   }
 
   fn install_user_page_table(base: usize, _asid: AddressSpaceId) {
-    use cortex_a::registers::TTBR0_EL1;
+    use aarch64_cpu::registers::TTBR0_EL1;
     TTBR0_EL1.write(TTBR0_EL1::BADDR.val((base >> 1) as u64));
     crate::arch::Arch::invalidate_tlb();
   }

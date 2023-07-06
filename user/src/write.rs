@@ -5,18 +5,18 @@
 
 extern crate alloc;
 #[macro_use]
-extern crate exported;
+extern crate rpstdlib;
 
 
 #[no_mangle]
 fn _start(arg: *const u8) {
-  let arg = exported::parse(arg);
+  let arg = rpstdlib::parse(arg);
   if arg.len() != 2 {
     println!("usage: write FILE TEXT...");
-    exported::exit();
+    rpstdlib::exit();
   }
   let path = arg[0];
-  let file = fs::File::create(path);
+  let file = rpstdlib::fs::File::create(path);
   match file {
     Ok(mut file) => {
       file.write(arg[1].as_bytes()).expect("write file failed");
@@ -26,5 +26,5 @@ fn _start(arg: *const u8) {
       println!("{}", e);
     }
   }
-  exported::exit();
+  rpstdlib::exit();
 }

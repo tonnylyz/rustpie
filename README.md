@@ -33,61 +33,10 @@ K210 also require a SBI image. I suggest using [RustSBI](https://github.com/rust
 
 ## Toolchains
 
-1. Nightly Rust (`nightly-2021-06-15-x86_64-unknown-linux-gnu` tested)
+1. Nightly Rust (`rustc 1.72.0-nightly (114fb86ca 2023-06-15)` tested)
 2. `rust-src` component (use `make dependencies` to install)
-3. QEMU (`6.1.0` tested)
+3. QEMU (`8.0.2` tested)
 4. LLVM (`llvm-objcopy` and `llvm-objdump`, can be replaced with GNU ones)
 5. K210 `kflash` tool [kflash.py](https://github.com/kendryte/kflash.py).
 6. `mkimage` u-boot image tool
 7. RedoxFS utilities [link](https://gitlab.redox-os.org/redox-os/redoxfs) (`redoxfs` and `redoxfs-mkfs`) Install with `cargo install redoxfs@0.4.4`
-
-## Structure
-
-```
-├── Cargo.lock
-├── Cargo.toml                  
-├── common                      [crate] Information shared between kernel and user
-├── gdb                         GDB debug scripts
-├── inject                      [crate] Procedural macro for fault injecting
-├── lib
-│   ├── cs                      [crate] Information shared between client and servers
-│   ├── exported                [crate] User program library
-│   ├── fs                      [crate] File operation library
-│   ├── libtrusted              [crate] Trusted server programming library
-│   ├── microcall               [crate] System call library
-│   ├── redox                   [crate] Redox types library
-│   └── unwind                  [crate] Unwind library
-├── Makefile                    Top-level makefile
-├── src                         Kernel source
-│   ├── arch                    Architecture-related codes
-│   ├── board                   Board and platforms definition
-│   ├── driver                  Kernel drivers
-│   ├── lib                     Kernel library
-│   ├── logger.rs               Logger
-│   ├── main.rs                 Kernel main
-│   ├── misc.rs                 Misc
-│   ├── mm                      Memory management
-│   ├── panic.rs                Panic handling
-│   ├── syscall                 System call
-│   └── util.rs                 Utilities
-├── trusted                     [crate] Trusted server image
-│   ├── build.rs
-│   ├── Cargo.lock
-│   ├── Cargo.toml
-│   ├── Makefile
-│   └── src
-│       ├── blk                 Block server
-│       │   ├── k210_sdcard.rs  K210 SD-card server
-│       │   ├── ramdisk.rs      Ramdisk server
-│       │   └── virtio_blk.rs   VirtIO-blk server
-│       ├── fs                  Ported RedoxFs server
-│       ├── main.rs             Trusted main
-│       ├── mm.rs               Memory management server
-│       ├── panic.rs            Panic handling
-│       ├── pm.rs               Process management server
-│       ├── root.rs             Root task
-│       ├── rtc.rs              Realtime-Clock server
-│       ├── terminal.rs         STDIO server
-└── user                        [crate] User programs
-```
-

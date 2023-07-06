@@ -10,11 +10,11 @@ checksum = "cf1de2fe8c75bc145a2f577add951f8134889b4795d47466a54a5c846d691693"
 
 [[package]]
 name = "buddy_system_allocator"
-version = "0.8.0"
+version = "0.9.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "55703ac5f02c246ce6158eff6ae2dd9e9069917969682b6831f8a5123abb8a48"
+checksum = "43f9365b6b0c9e1663ca4ca9440c00eda46bc85a3407070be8b5e0d8d1f29629"
 dependencies = [
- "spin 0.7.1",
+ "spin",
 ]
 
 [[package]]
@@ -22,40 +22,6 @@ name = "cfg-if"
 version = "1.0.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "baf1de4339761588bc0619e3cbc0120ee582ebb74b53b4efbf79117bd2da40fd"
-
-[[package]]
-name = "common"
-version = "0.1.0"
-dependencies = [
- "cfg-if",
- "tock-registers",
-]
-
-[[package]]
-name = "cs"
-version = "0.1.0"
-
-[[package]]
-name = "exported"
-version = "0.1.0"
-dependencies = [
- "buddy_system_allocator",
- "common",
- "cs",
- "microcall",
- "redox",
- "spin 0.9.2",
-]
-
-[[package]]
-name = "fs"
-version = "0.1.0"
-dependencies = [
- "common",
- "log",
- "microcall",
- "redox",
-]
 
 [[package]]
 name = "getopts"
@@ -75,26 +41,41 @@ dependencies = [
 ]
 
 [[package]]
-name = "log"
-version = "0.4.14"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "51b9bbe6c47d51fc3e1a9b945965946b4c44142ab8792c50835a980d362c2710"
-dependencies = [
- "cfg-if",
-]
-
-[[package]]
-name = "microcall"
-version = "0.1.0"
-dependencies = [
- "common",
-]
-
-[[package]]
 name = "redox"
 version = "0.1.0"
 dependencies = [
  "bitflags",
+]
+
+[[package]]
+name = "rpabi"
+version = "0.1.0"
+dependencies = [
+ "cfg-if",
+ "tock-registers",
+]
+
+[[package]]
+name = "rpservapi"
+version = "0.1.0"
+
+[[package]]
+name = "rpstdlib"
+version = "0.1.0"
+dependencies = [
+ "buddy_system_allocator",
+ "redox",
+ "rpabi",
+ "rpservapi",
+ "rpsyscall",
+ "spin",
+]
+
+[[package]]
+name = "rpsyscall"
+version = "0.1.0"
+dependencies = [
+ "rpabi",
 ]
 
 [[package]]
@@ -105,24 +86,18 @@ checksum = "d29ab0c6d3fc0ee92fe66e2d99f700eab17a8d57d1c1d3b748380fb20baa78cd"
 
 [[package]]
 name = "spin"
-version = "0.7.1"
+version = "0.9.8"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "13287b4da9d1207a4f4929ac390916d64eacfe236a487e9a9f5b3be392be5162"
-
-[[package]]
-name = "spin"
-version = "0.9.2"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "511254be0c5bcf062b019a6c89c01a664aa359ded62f78aa72c6fc137c0590e5"
+checksum = "6980e8d7511241f8acf4aebddbb1ff938df5eebe98691418c4468d0b72a96a67"
 dependencies = [
  "lock_api",
 ]
 
 [[package]]
 name = "tock-registers"
-version = "0.7.0"
+version = "0.8.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "4ee8fba06c1f4d0b396ef61a54530bb6b28f0dc61c38bc8bc5a5a48161e6282e"
+checksum = "696941a0aee7e276a165a978b37918fd5d22c55c3d6bda197813070ca9c0f21c"
 
 [[package]]
 name = "unicode-width"
@@ -134,10 +109,6 @@ checksum = "3ed742d4ea2bd1176e236172c8429aaf54486e7ac098db29ffe6529e0ce50973"
 name = "user"
 version = "0.1.0"
 dependencies = [
- "common",
- "exported",
- "fs",
  "getopts",
- "microcall",
- "spin 0.9.2",
+ "rpstdlib",
 ]

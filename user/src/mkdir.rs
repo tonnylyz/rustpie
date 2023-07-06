@@ -5,22 +5,22 @@
 
 extern crate alloc;
 #[macro_use]
-extern crate exported;
+extern crate rpstdlib;
 
 
 #[no_mangle]
 fn _start(arg: *const u8) {
-  let arg = exported::parse(arg);
+  let arg = rpstdlib::parse(arg);
   if arg.len() != 1 {
     println!("usage: mkdir DIRECTORY...");
-    exported::exit();
+    rpstdlib::exit();
   }
   let path = arg[0];
-  match fs::create_dir(path) {
+  match rpstdlib::fs::create_dir(path) {
     Ok(_) => {}
     Err(e) => {
       println!("{}", e);
     }
   }
-  exported::exit();
+  rpstdlib::exit();
 }

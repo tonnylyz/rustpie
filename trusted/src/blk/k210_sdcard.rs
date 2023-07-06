@@ -6,7 +6,7 @@ use k210::board::sdcard;
 use k210::soc::dmac::{dma_channel, DMACExt};
 use k210::soc::fpioa;
 use k210::soc::spi::SPIExt;
-use microcall::get_tid;
+use rpsyscall::get_tid;
 
 #[path = "k210/mod.rs"]
 #[allow(non_camel_case_types)]
@@ -33,10 +33,10 @@ pub fn server() {
   info!("{:?}", info);
   let blk_size = info.CardCapacity as usize;
   info!("server started t{}", get_tid());
-  microcall::server_register(common::server::SERVER_BLK).unwrap();
+  rpsyscall::server_register(rpabi::server::SERVER_BLK).unwrap();
 
   loop {
-    let (client_tid, msg) = microcall::message::Message::receive().unwrap();
+    let (client_tid, msg) = rpsyscall::message::Message::receive().unwrap();
     // info!("recv {:x?}", (client_tid, msg));
     if msg.d == 0 || msg.d == 1 {
       let sector = msg.a;
@@ -49,7 +49,7 @@ pub fn server() {
         };
         let r = sd.read_sector(buf, sector as u32);
         if r.is_ok() {
-          let msg = microcall::message::Message::default();
+          let msg = rpsyscall::message::Message::default();
           let _ = msg.send_to(client_tid);
         } else {
           error!("read_sector error");
@@ -61,18 +61,18 @@ pub fn server() {
         };
         let r = sd.write_sector(buf, sector as u32);
         if r.is_ok() {
-          let msg = microcall::message::Message::default();
+          let msg = rpsyscall::message::Message::default();
           let _ = msg.send_to(client_tid);
         } else {
           error!("write_sector error");
         }
       }
     } else if msg.d == 2 {
-      let mut msg = microcall::message::Message::default();
+      let mut msg = rpsyscall::message::Message::default();
       msg.a = blk_size;
       let _ = msg.send_to(client_tid);
     } else {
-      let mut msg = microcall::message::Message::default();
+      let mut msg = rpsyscall::message::Message::default();
       msg.a = 1;
       let _ = msg.send_to(client_tid);
     }

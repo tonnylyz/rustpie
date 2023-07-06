@@ -1,6 +1,6 @@
 use alloc::boxed::Box;
 
-use common::syscall::error::ERROR_INVARG;
+use rpabi::syscall::error::ERROR_INVARG;
 
 use super::{Result, SyscallOutRegisters::*};
 
@@ -55,9 +55,6 @@ pub fn null(dummy: usize) -> Result {
 }
 
 #[inline(never)]
-#[inject::count_stmts]
-#[inject::panic_inject]
-#[inject::page_fault_inject]
 pub fn putc(c: char) -> Result {
   let mut c = c as u8;
   if c == 127 {
@@ -70,20 +67,14 @@ pub fn putc(c: char) -> Result {
 }
 
 #[inline(never)]
-#[inject::count_stmts]
-#[inject::panic_inject]
-#[inject::page_fault_inject]
 pub fn getc() -> Result {
   match crate::driver::uart::getc() {
-    None => Err(common::syscall::error::ERROR_HOLD_ON),
+    None => Err(rpabi::syscall::error::ERROR_HOLD_ON),
     Some(c) => Ok(Single(c as usize))
   }
 }
 
 #[inline(never)]
-#[inject::count_stmts]
-#[inject::panic_inject]
-#[inject::page_fault_inject]
 pub fn set_exception_handler(handler: usize) -> Result {
   let t = super::current_thread()?;
   match t.address_space() {

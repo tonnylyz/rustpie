@@ -1,0 +1,8 @@
+[package]
+name = "rpsyscall"
+version = "0.1.0"
+authors = ["tonnylyz <lyztonny@gmail.com>"]
+edition = "2021"
+
+[dependencies]
+rpabi = { path = "../rpabi" }

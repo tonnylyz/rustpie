@@ -1,29 +1,26 @@
-use libtrusted::mm::default_page_attribute;
-use libtrusted::wrapper::request_wrapper;
-use microcall::get_tid;
-use microcall::message::Message;
+use crate::libtrusted::mm::default_page_attribute;
+use crate::libtrusted::wrapper::request_wrapper;
+use rpsyscall::get_tid;
+use rpsyscall::message::Message;
 
-#[inject::count_stmts]
-#[inject::panic_inject]
-#[inject::page_fault_inject]
 fn mm(msg: Message, tid: usize) -> usize {
-  let asid = microcall::get_asid(tid).unwrap();
+  let asid = rpsyscall::get_asid(tid).unwrap();
   match msg.a {
-    cs::mm::action::ALLOC => {
-      match microcall::mem_alloc(asid, msg.b, default_page_attribute()) {
-        Ok(_) => cs::mm::result::OK,
-        Err(_) => cs::mm::result::ERR
+    rpservapi::mm::action::ALLOC => {
+      match rpsyscall::mem_alloc(asid, msg.b, default_page_attribute()) {
+        Ok(_) => rpservapi::mm::result::OK,
+        Err(_) => rpservapi::mm::result::ERR
       }
     }
     _ => {
-      cs::mm::result::UNKNOWN_ACTION
+      rpservapi::mm::result::UNKNOWN_ACTION
     }
   }
 }
 
 pub fn server() {
   info!("server started t{}",  get_tid());
-  microcall::server_register(common::server::SERVER_MM).unwrap();
+  rpsyscall::server_register(rpabi::server::SERVER_MM).unwrap();
   loop {
     let (client_tid, msg) = Message::receive().unwrap();
     let r = request_wrapper(mm, msg, client_tid).unwrap();

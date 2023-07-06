@@ -1,7 +1,7 @@
-use common::PAGE_SIZE;
+use rpabi::PAGE_SIZE;
 
-use libtrusted::mm::{virtual_alloc, virtual_free};
-use microcall::message::Message;
+use crate::libtrusted::mm::{virtual_alloc, virtual_free};
+use rpsyscall::message::Message;
 use redox::*;
 
 use crate::fs::{BLOCK_SIZE, Disk};
@@ -31,9 +31,9 @@ impl VirtioClient {
       a: (block as usize) * 8,
       b: 8,
       c: buffer.as_mut_ptr() as usize,
-      d: cs::blk::action::READ,
-    }.call(common::server::SERVER_BLK).map_err(|_| Error::new(EIO))?;
-    if msg.a == cs::blk::result::OK {
+      d: rpservapi::blk::action::READ,
+    }.call(rpabi::server::SERVER_BLK).map_err(|_| Error::new(EIO))?;
+    if msg.a == rpservapi::blk::result::OK {
       Ok(buffer.len())
     } else {
       Err(Error::new(EIO))
@@ -58,9 +58,9 @@ impl VirtioClient {
       a: (block as usize) * 8,
       b: 8,
       c: buffer.as_ptr() as usize,
-      d: cs::blk::action::WRITE,
-    }.call(common::server::SERVER_BLK).map_err(|_| Error::new(EIO))?;
-    if msg.a == cs::blk::result::OK {
+      d: rpservapi::blk::action::WRITE,
+    }.call(rpabi::server::SERVER_BLK).map_err(|_| Error::new(EIO))?;
+    if msg.a == rpservapi::blk::result::OK {
       Ok(buffer.len())
     } else {
       Err(Error::new(EIO))
@@ -103,10 +103,10 @@ impl Disk for VirtioClient {
       a: 0,
       b: 0,
       c: 0,
-      d: cs::blk::action::SIZE,
+      d: rpservapi::blk::action::SIZE,
     };
-    let msg = msg.call(common::server::SERVER_BLK).map_err(|_| Error::new(EIO))?;
-    if msg.a == cs::blk::result::OK {
+    let msg = msg.call(rpabi::server::SERVER_BLK).map_err(|_| Error::new(EIO))?;
+    if msg.a == rpservapi::blk::result::OK {
       Err(Error::new(EIO))
     } else {
       Ok(msg.a as u64)

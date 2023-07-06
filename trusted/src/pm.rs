@@ -5,10 +5,10 @@ use core::sync::atomic::Ordering::Relaxed;
 
 use spin::Mutex;
 
-use libtrusted::foreign_slice::ForeignSlice;
-use libtrusted::wrapper::request_wrapper;
-use microcall::{get_asid, get_tid};
-use microcall::message::Message;
+use crate::libtrusted::foreign_slice::ForeignSlice;
+use crate::libtrusted::wrapper::request_wrapper;
+use rpsyscall::{get_asid, get_tid};
+use rpsyscall::message::Message;
 
 #[derive(Debug, Copy, Clone, Ord, PartialOrd, Eq, PartialEq)]
 enum ProcessStatus {
@@ -59,9 +59,9 @@ impl ProcessManager {
       if p.status == ProcessStatus::Exited {
         return true;
       } else {
-        if let Ok(_) = microcall::event_wait(common::event::EVENT_THREAD_EXIT, p.main_tid) {
+        if let Ok(_) = rpsyscall::event_wait(rpabi::event::EVENT_THREAD_EXIT, p.main_tid) {
           p.status = ProcessStatus::Exited;
-          microcall::address_space_destroy(p.asid).expect("process address space destroy failed");
+          rpsyscall::address_space_destroy(p.asid).expect("process address space destroy failed");
           return true;
         } else {
           return false;
@@ -91,56 +91,53 @@ impl ProcessManager {
 
 static PROCESS_MANAGER: ProcessManager = ProcessManager::new();
 
-#[inject::count_stmts]
-#[inject::panic_inject]
-#[inject::page_fault_inject]
 fn pm(msg: Message, tid: usize) -> (usize, usize) {
   let asid = get_asid(tid).unwrap();
   match msg.a {
-    cs::pm::action::SPAWN => {
+    rpservapi::pm::action::SPAWN => {
       let length = msg.c;
       if length == 0 {
-        return (cs::pm::result::INVARG, 0);
+        return (rpservapi::pm::result::INVARG, 0);
       }
       if length >= 128 {
-        return (cs::pm::result::INVARG, 0);
+        return (rpservapi::pm::result::INVARG, 0);
       }
       let s = ForeignSlice::new(asid, msg.b, msg.c).unwrap();
       let cmd = s.local_slice();
       let cmd = core::str::from_utf8(cmd);
       if let Ok(cmd) = cmd {
-        if let Ok((child_asid, tid)) = libtrusted::loader::spawn(cmd) {
+        if let Ok((child_asid, tid)) = crate::libtrusted::loader::spawn(cmd) {
           let pid = PROCESS_MANAGER.register(child_asid, tid, Some(asid as usize), String::from(cmd));
-          microcall::thread_set_status(tid, common::thread::THREAD_STATUS_RUNNABLE).expect("pm start thread failed");
-          (cs::pm::result::OK, pid)
+          rpsyscall::thread_set_status(tid, rpabi::thread::THREAD_STATUS_RUNNABLE).expect("pm start thread failed");
+          (rpservapi::pm::result::OK, pid)
         } else {
-          (cs::pm::result::SPAWN_FAILED, 0)
+          (rpservapi::pm::result::SPAWN_FAILED, 0)
         }
       } else {
-        (cs::pm::result::INVARG, 0)
+        (rpservapi::pm::result::INVARG, 0)
       }
     }
-    cs::pm::action::WAIT => {
+    rpservapi::pm::action::WAIT => {
       let pid = msg.b;
       if PROCESS_MANAGER.poll_exit(pid) {
-        (cs::pm::result::OK, 0)
+        (rpservapi::pm::result::OK, 0)
       } else {
-        (cs::pm::result::HOLD_ON, 0)
+        (rpservapi::pm::result::HOLD_ON, 0)
       }
     }
-    cs::pm::action::PS => {
+    rpservapi::pm::action::PS => {
       PROCESS_MANAGER.ps();
-      (cs::pm::result::OK, 0)
+      (rpservapi::pm::result::OK, 0)
     }
     _ => {
-      (cs::pm::result::INVARG, 0)
+      (rpservapi::pm::result::INVARG, 0)
     }
   }
 }
 
 pub fn server() {
   info!("server started t{}", get_tid());
-  microcall::server_register(common::server::SERVER_PM).unwrap();
+  rpsyscall::server_register(rpabi::server::SERVER_PM).unwrap();
   loop {
     let (client_tid, msg) = Message::receive().unwrap();
     let (a, b) = request_wrapper(pm, msg, client_tid).unwrap();

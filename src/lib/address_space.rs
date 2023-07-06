@@ -2,8 +2,8 @@ use alloc::collections::BTreeMap;
 use alloc::sync::Arc;
 use core::sync::atomic::{AtomicU16, Ordering};
 
-use common::{CONFIG_ELF_IMAGE, PAGE_SIZE};
-use common::syscall::error::{ERROR_OOM, ERROR_OOR};
+use rpabi::{CONFIG_ELF_IMAGE, PAGE_SIZE};
+use rpabi::syscall::error::{ERROR_OOM, ERROR_OOR};
 use spin::Mutex;
 
 use crate::arch::PageTable;
@@ -71,7 +71,7 @@ pub fn address_space_alloc() -> Result<AddressSpace, Error> {
   let frame = crate::mm::page_pool::page_alloc().map_err(|_| ERROR_OOM)?;
   frame.zero();
   let page_table = PageTable::new(frame);
-  page_table.recursive_map(common::CONFIG_RECURSIVE_PAGE_TABLE_BTM);
+  page_table.recursive_map(rpabi::CONFIG_RECURSIVE_PAGE_TABLE_BTM);
   let a = AddressSpace(Arc::try_new(Inner {
     asid: id,
     page_table,

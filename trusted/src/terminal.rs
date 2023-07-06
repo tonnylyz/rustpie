@@ -2,16 +2,16 @@ use alloc::collections::VecDeque;
 
 use spin::{Mutex, Once};
 
-use microcall::get_tid;
-use microcall::message::Message;
+use rpsyscall::get_tid;
+use rpsyscall::message::Message;
 
 pub fn input_server() {
   loop {
-    if let Ok(c) = microcall::getc() {
+    if let Ok(c) = rpsyscall::getc() {
       let mut buf = buffer().lock();
       buf.push_back(c);
     }
-    microcall::thread_yield();
+    rpsyscall::thread_yield();
   }
 }
 
@@ -26,11 +26,11 @@ fn buffer() -> &'static Mutex<VecDeque<u8>> {
 
 pub fn server() {
   info!("server started t{}",  get_tid());
-  microcall::server_register(common::server::SERVER_TERMINAL).unwrap();
+  rpsyscall::server_register(rpabi::server::SERVER_TERMINAL).unwrap();
   let mut client_tid;
   client_tid = Message::receive().unwrap().0;
   loop {
-    let mut msg = microcall::message::Message::default();
+    let mut msg = rpsyscall::message::Message::default();
     let mut buf = buffer().lock();
     match buf.pop_front() {
       None => { msg.a = 0 }

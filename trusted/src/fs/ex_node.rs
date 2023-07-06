@@ -1,5 +1,4 @@
-use alloc::vec::Vec;
-use core::{fmt, mem, ops, slice};
+use core::{ mem, ops, slice};
 
 use crate::fs::{BLOCK_SIZE, Extent};
 

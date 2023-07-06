@@ -5,7 +5,7 @@ set confirm off
 set pagination off
 set logging on
 set $last = 0
-break microcall::thread_yield
+break rpsyscall::thread_yield
 command
 set $last = $PMCCNTR_EL0
 end

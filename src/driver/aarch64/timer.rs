@@ -1,4 +1,4 @@
-use cortex_a::registers::{CNTFRQ_EL0, CNTPCT_EL0, CNTV_CTL_EL0, CNTV_TVAL_EL0};
+use aarch64_cpu::registers::{CNTFRQ_EL0, CNTPCT_EL0, CNTV_CTL_EL0, CNTV_TVAL_EL0};
 use tock_registers::interfaces::{Readable, Writeable};
 
 const TIMER_TICK_MS: u64 = 100;

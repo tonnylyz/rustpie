@@ -5,7 +5,7 @@
 
 extern crate alloc;
 #[macro_use]
-extern crate exported;
+extern crate rpstdlib;
 
 
 use alloc::string::ToString;
@@ -15,9 +15,9 @@ use getopts::Options;
 
 #[no_mangle]
 fn _start(arg: *const u8) {
-  let args = exported::parse(arg);
+  let args = rpstdlib::parse(arg);
   main(args);
-  exported::exit();
+  rpstdlib::exit();
 }
 
 fn usage(opts: Options) {
@@ -42,7 +42,7 @@ fn main(args: Vec<&str>) {
     return;
   };
 
-  match fs::File::create(input) {
+  match rpstdlib::fs::File::create(input) {
     Ok(_) => {}
     Err(e) => {
       println!("{}", e);

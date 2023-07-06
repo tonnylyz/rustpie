@@ -16,7 +16,7 @@ pub fn init() {
 }
 
 pub fn init_per_core() {
-  use cortex_a::registers::*;
+  use aarch64_cpu::registers::*;
   use tock_registers::interfaces::Writeable;
   DAIF.write(DAIF::I::Masked);
   crate::driver::INTERRUPT_CONTROLLER.init();

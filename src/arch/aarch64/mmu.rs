@@ -1,4 +1,4 @@
-use common::mm::vm_descriptor::*;
+use rpabi::mm::vm_descriptor::*;
 use tock_registers::interfaces::{ReadWriteable, Writeable};
 
 use super::interface::PAGE_SHIFT;
@@ -53,7 +53,7 @@ pub unsafe extern "C" fn populate_page_table(pt: &mut PageDirectory) {
 
 #[no_mangle]
 pub unsafe extern "C" fn mmu_init(pt: &PageDirectory) {
-  use cortex_a::registers::*;
+  use aarch64_cpu::registers::*;
   MAIR_EL1.write(
     MAIR_EL1::Attr0_Normal_Outer::WriteBack_NonTransient_ReadWriteAlloc
       + MAIR_EL1::Attr0_Normal_Inner::WriteBack_NonTransient_ReadWriteAlloc
@@ -80,7 +80,7 @@ pub unsafe extern "C" fn mmu_init(pt: &PageDirectory) {
     + TCR_EL1::T0SZ.val(64 - 39)
     + TCR_EL1::T1SZ.val(64 - 39));
 
-  use cortex_a::asm::barrier::*;
+  use aarch64_cpu::asm::barrier::*;
   isb(SY);
   SCTLR_EL1.modify(SCTLR_EL1::M::Enable + SCTLR_EL1::C::Cacheable + SCTLR_EL1::I::Cacheable);
   isb(SY);

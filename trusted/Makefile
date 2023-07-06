@@ -1,11 +1,6 @@
 ARCH ?= aarch64
 TRUSTED_PROFILE ?= release
 
-# Panic Inject Function
-export PI
-# Page Fault Inject Function
-export FI
-
 ifeq (${TRUSTED_PROFILE}, release)
 CARGO_FLAGS = --release
 else
