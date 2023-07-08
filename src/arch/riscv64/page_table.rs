@@ -7,7 +7,7 @@ use spin::Mutex;
 use tock_registers::interfaces::Writeable;
 
 use crate::arch::*;
-use crate::lib::traits::*;
+use crate::kernel::traits::*;
 use crate::mm::{Frame, PhysicalFrame};
 use crate::mm::page_table::{Entry, EntryAttribute, Error, PageTableEntryAttrTrait, PageTableTrait};
 

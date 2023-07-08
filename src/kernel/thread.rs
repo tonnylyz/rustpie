@@ -6,10 +6,10 @@ use core::sync::atomic::Ordering::Relaxed;
 use spin::Mutex;
 
 use crate::arch::ContextFrame;
-use crate::lib::address_space::AddressSpace;
-use crate::lib::cpu::cpu;
-use crate::lib::scheduler::scheduler;
-use crate::lib::traits::*;
+use crate::kernel::address_space::AddressSpace;
+use crate::kernel::cpu::cpu;
+use crate::kernel::scheduler::scheduler;
+use crate::kernel::traits::*;
 use crate::syscall::event::thread_exit_signal;
 
 pub type Tid = usize;
@@ -177,9 +177,9 @@ pub fn thread_lookup(tid: Tid) -> Option<Thread> {
 
 pub fn thread_destroy(t: Thread) {
   trace!("Destroy t{}", t.tid());
-  if let Some(current_thread) = crate::lib::cpu::cpu().running_thread() {
+  if let Some(current_thread) = crate::kernel::cpu::cpu().running_thread() {
     if t.tid() == current_thread.tid() {
-      crate::lib::cpu::cpu().set_running_thread(None);
+      crate::kernel::cpu::cpu().set_running_thread(None);
     }
   }
   if let Some(parent) = t.parent() {

@@ -1,8 +1,8 @@
 use rpabi::{CONFIG_USER_STACK_BTM, CONFIG_USER_STACK_TOP};
 
 use crate::arch::PAGE_SIZE;
-use crate::lib::cpu::cpu;
-use crate::lib::traits::*;
+use crate::kernel::cpu::cpu;
+use crate::kernel::traits::*;
 use crate::mm::page_table::{PageTableEntryAttrTrait, PageTableTrait};
 use crate::util::*;
 
@@ -10,12 +10,12 @@ pub fn handle() {
   let t = cpu().running_thread();
   match t {
     None => {
-      crate::lib::cpu::cpu().schedule();
+      crate::kernel::cpu::cpu().schedule();
       return;
     }
     Some(t) => match t.address_space() {
       None => {
-        crate::lib::cpu::cpu().schedule();
+        crate::kernel::cpu::cpu().schedule();
         return;
       }
       Some(a) => {
@@ -51,7 +51,7 @@ pub fn handle() {
         info!("thread t{} core {} page fault va {:x} pte {:X?} fall through", t.tid(), crate::arch::Arch::core_id(), va, pt.lookup_page(va));
 
         // default to user exception handler
-        crate::lib::exception::handle_user();
+        crate::kernel::exception::handle_user();
       }
     }
   }

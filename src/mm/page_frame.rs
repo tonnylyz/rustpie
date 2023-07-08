@@ -1,7 +1,7 @@
 use alloc::sync::Arc;
 
 use crate::arch::PAGE_SIZE;
-use crate::lib::traits::*;
+use crate::kernel::traits::*;
 
 #[derive(Debug)]
 pub struct PhysicalFrame {

@@ -2,7 +2,7 @@ use rpabi::PAGE_SIZE;
 use rpabi::syscall::error::*;
 
 use crate::arch::ArchPageTableEntry;
-use crate::lib::traits::ArchPageTableEntryTrait;
+use crate::kernel::traits::ArchPageTableEntryTrait;
 use crate::mm::page_table::{Entry, PageTableEntryAttrTrait, PageTableTrait};
 use crate::util::round_down;
 

@@ -14,7 +14,7 @@ impl log::Log for SimpleLogger {
   fn log(&self, record: &Record) {
     let lock = LOCK.lock();
     if self.enabled(record.metadata()) {
-      let ms = crate::lib::timer::current_ms();
+      let ms = crate::kernel::timer::current_ms();
       let s = ms / 1000;
       let ms = ms % 1000;
       print!("[{:04}.{:03}]", s, ms);

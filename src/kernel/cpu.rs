@@ -2,10 +2,10 @@ use spin::Once;
 
 use crate::arch::{AddressSpaceId, ContextFrame, PAGE_SIZE};
 use crate::board::BOARD_CORE_NUMBER;
-use crate::lib::address_space::AddressSpace;
-use crate::lib::scheduler::scheduler;
-use crate::lib::thread::Thread;
-use crate::lib::traits::*;
+use crate::kernel::address_space::AddressSpace;
+use crate::kernel::scheduler::scheduler;
+use crate::kernel::thread::Thread;
+use crate::kernel::traits::*;
 use crate::mm::page_table::PageTableTrait;
 use crate::mm::PhysicalFrame;
 
@@ -66,7 +66,7 @@ impl Core {
     match self.idle_thread.get() {
       None => {
         let frame = crate::mm::page_pool::page_alloc().expect("fail to allocate idle thread stack");
-        let t = crate::lib::thread::new_kernel(
+        let t = crate::kernel::thread::new_kernel(
           idle_thread as usize,
           frame.kva() + PAGE_SIZE,
           crate::arch::Arch::core_id());

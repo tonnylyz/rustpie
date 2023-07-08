@@ -2,7 +2,7 @@ use alloc::collections::VecDeque;
 
 use spin::{Mutex, Once};
 
-use crate::lib::thread::Thread;
+use crate::kernel::thread::Thread;
 
 pub struct RoundRobinScheduler {
   inner: Mutex<VecDeque<Thread>>,

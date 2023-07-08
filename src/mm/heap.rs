@@ -3,7 +3,7 @@ use core::alloc::{GlobalAlloc, Layout};
 // rCore buddy system allocator
 use buddy_system_allocator::LockedHeap;
 
-use crate::lib::traits::*;
+use crate::kernel::traits::*;
 
 pub fn init() {
   let range = super::config::heap_range();

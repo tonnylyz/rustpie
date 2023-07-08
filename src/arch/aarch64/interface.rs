@@ -4,7 +4,7 @@ use aarch64_cpu::registers::*;
 use tock_registers::interfaces::Readable;
 
 use crate::board::BOARD_CORE_NUMBER;
-use crate::lib::traits::*;
+use crate::kernel::traits::*;
 
 pub const PAGE_SHIFT: usize = 12;
 pub const PAGE_SIZE: usize = 1 << PAGE_SHIFT;

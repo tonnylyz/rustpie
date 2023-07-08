@@ -3,8 +3,8 @@ use alloc::collections::BTreeMap;
 use spin::Mutex;
 
 use crate::driver::Interrupt;
-use crate::lib::semaphore::{Semaphore, SemaphoreWaitResult};
-use crate::lib::thread::Thread;
+use crate::kernel::semaphore::{Semaphore, SemaphoreWaitResult};
+use crate::kernel::thread::Thread;
 
 pub trait InterruptController {
   fn init(&self);

@@ -3,9 +3,9 @@ use core::ops::Range;
 use core::sync::atomic::{AtomicBool, Ordering};
 use spin::Mutex;
 
-use crate::lib::device::Device;
-use crate::lib::interrupt::InterruptController;
-use crate::lib::traits::*;
+use crate::kernel::device::Device;
+use crate::kernel::interrupt::InterruptController;
+use crate::kernel::traits::*;
 
 pub const BOARD_CORE_NUMBER: usize = 4;
 

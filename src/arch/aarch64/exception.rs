@@ -3,7 +3,7 @@ use aarch64_cpu::registers::{ESR_EL1, VBAR_EL1};
 use tock_registers::interfaces::{Readable, Writeable};
 
 use crate::arch::ContextFrame;
-use crate::lib::traits::ContextFrameTrait;
+use crate::kernel::traits::ContextFrameTrait;
 
 core::arch::global_asm!(include_str!("exception.S"));
 
@@ -25,7 +25,7 @@ unsafe extern "C" fn current_el_spx_synchronous(ctx: *mut ContextFrame) {
   let ctx_mut = ctx.as_mut().unwrap();
   ctx_mut.set_stack_pointer(ctx as usize + size_of::<ContextFrame>());
   let page_fault = ESR_EL1.matches_all(ESR_EL1::EC::InstrAbortCurrentEL) | ESR_EL1.matches_all(ESR_EL1::EC::DataAbortCurrentEL);
-  crate::lib::exception::handle_kernel(ctx.as_ref().unwrap(), page_fault);
+  crate::kernel::exception::handle_kernel(ctx.as_ref().unwrap(), page_fault);
   loop {}
 }
 
@@ -41,34 +41,34 @@ unsafe extern "C" fn current_el_spx_serror(ctx: *mut ContextFrame) {
 
 #[no_mangle]
 unsafe extern "C" fn lower_aarch64_synchronous(ctx: *mut ContextFrame) {
-  let core = crate::lib::cpu::cpu();
+  let core = crate::kernel::cpu::cpu();
   core.set_context(ctx);
   if ESR_EL1.matches_all(ESR_EL1::EC::SVC64) {
-    crate::lib::syscall::syscall();
+    crate::kernel::syscall::syscall();
   } else if ESR_EL1.matches_all(ESR_EL1::EC::InstrAbortLowerEL) | ESR_EL1.matches_all(ESR_EL1::EC::DataAbortLowerEL) {
     crate::mm::page_fault::handle();
   } else {
     let ec = ESR_EL1.read(ESR_EL1::EC);
     error!("lower_aarch64_synchronous: ec {:06b} \n{}", ec, ctx.read());
-    crate::lib::exception::handle_user();
+    crate::kernel::exception::handle_user();
   }
   core.clear_context();
 }
 
 #[no_mangle]
 unsafe extern "C" fn lower_aarch64_irq(ctx: *mut ContextFrame) {
-  use crate::lib::interrupt::*;
-  let core = crate::lib::cpu::cpu();
+  use crate::kernel::interrupt::*;
+  let core = crate::kernel::cpu::cpu();
   core.set_context(ctx);
   use crate::driver::{INTERRUPT_CONTROLLER, gic::INT_TIMER};
   let irq = INTERRUPT_CONTROLLER.fetch();
   match irq {
     Some(INT_TIMER) => {
-      crate::lib::timer::interrupt();
+      crate::kernel::timer::interrupt();
     }
     Some(i) => {
       if i >= 32 {
-        crate::lib::interrupt::interrupt(i);
+        crate::kernel::interrupt::interrupt(i);
       } else {
         panic!("GIC unhandled SGI PPI")
       }
@@ -85,9 +85,9 @@ unsafe extern "C" fn lower_aarch64_irq(ctx: *mut ContextFrame) {
 
 #[no_mangle]
 unsafe extern "C" fn lower_aarch64_serror(ctx: *mut ContextFrame) {
-  let core = crate::lib::cpu::cpu();
+  let core = crate::kernel::cpu::cpu();
   core.set_context(ctx);
-  crate::lib::exception::handle_user();
+  crate::kernel::exception::handle_user();
   core.clear_context();
 }
 

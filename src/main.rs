@@ -14,8 +14,8 @@ extern crate log;
 extern crate static_assertions;
 
 use arch::ContextFrame;
-use lib::interrupt::InterruptController;
-use lib::traits::*;
+use kernel::interrupt::InterruptController;
+use kernel::traits::*;
 use mm::page_table::PageTableEntryAttrTrait;
 use mm::page_table::PageTableTrait;
 
@@ -61,7 +61,7 @@ cfg_if::cfg_if! {
 }
 
 
-mod lib;
+mod kernel;
 mod mm;
 mod panic;
 mod util;
@@ -95,48 +95,6 @@ mod macros {
 
 #[repr(align(4096))]
 struct AlignPage;
-
-#[allow(dead_code)]
-fn test_create_as() {
-  let mut results = vec![];
-  for _ in 0..1000 {
-    let icntr = lib::timer::current_cycle();
-    let a = lib::address_space::address_space_alloc().unwrap();
-    let icntr2 = lib::timer::current_cycle();
-    lib::address_space::address_space_destroy(a);
-    results.push(icntr2 - icntr);
-  }
-  let mut sum = 0;
-  for result in results {
-    sum += result;
-  }
-  info!("[[TEST]] test_create_as {}/1000", sum);
-}
-
-#[allow(dead_code)]
-fn test_create_thread() {
-  let a = lib::address_space::address_space_alloc().unwrap();
-  let mut results = vec![];
-  for _ in 0..1000 {
-    let icntr = lib::timer::current_cycle();
-    let t = lib::thread::new_user(
-      0x40000,
-      rpabi::CONFIG_USER_STACK_TOP,
-      0,
-      a.clone(),
-      None,
-    );
-    let icntr2 = lib::timer::current_cycle();
-    lib::thread::thread_destroy(t);
-    lib::address_space::address_space_destroy(a.clone());
-    results.push(icntr2 - icntr);
-  }
-  let mut sum = 0;
-  for result in results {
-    sum += result;
-  }
-  info!("[[TEST]] test_create_thread {}/1000", sum);
-}
 
 #[no_mangle]
 pub unsafe fn main(core_id: arch::CoreId) -> ! {
@@ -179,7 +137,7 @@ pub unsafe fn main(core_id: arch::CoreId) -> ! {
       let bin = include_bytes_align_as!(AlignPage, "../trusted/target/riscv64/release/trusted");
 
     info!("embedded trusted {:x}", bin.as_ptr() as usize);
-    let (a, entry) = lib::address_space::load_image(bin);
+    let (a, entry) = kernel::address_space::load_image(bin);
     info!("load_image ok");
 
     let page_table = a.page_table();
@@ -200,14 +158,14 @@ pub unsafe fn main(core_id: arch::CoreId) -> ! {
       }
 
     info!("user stack ok");
-    let t = crate::lib::thread::new_user(
+    let t = crate::kernel::thread::new_user(
       entry,
       rpabi::CONFIG_USER_STACK_TOP,
       0,
       a.clone(),
       None,
     );
-    lib::thread::thread_wake(&t);
+    kernel::thread::thread_wake(&t);
 
     for device in board::devices() {
       for uf in device.to_user_frames().iter() {
@@ -225,12 +183,12 @@ pub unsafe fn main(core_id: arch::CoreId) -> ! {
   }
 
   util::barrier();
-  lib::cpu::cpu().schedule();
+  kernel::cpu::cpu().schedule();
 
   extern {
     fn pop_context_first(ctx: usize, core_id: usize) -> !;
   }
-  match lib::cpu::cpu().running_thread() {
+  match kernel::cpu::cpu().running_thread() {
     None => panic!("no running thread"),
     Some(t) => {
       let ctx = t.context();

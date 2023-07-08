@@ -3,9 +3,9 @@ use core::ops::Range;
 
 use crate::Address;
 use crate::driver::gic::INT_TIMER;
-use crate::lib::device::Device;
-use crate::lib::interrupt::InterruptController;
-use crate::lib::traits::ArchTrait;
+use crate::kernel::device::Device;
+use crate::kernel::interrupt::InterruptController;
+use crate::kernel::traits::ArchTrait;
 
 pub const BOARD_CORE_NUMBER: usize = 4;
 pub const BOARD_NORMAL_MEMORY_RANGE: Range<usize> = 0x8000_0000..0xf000_0000;

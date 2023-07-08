@@ -3,7 +3,7 @@ use alloc::collections::BTreeMap;
 use rpabi::syscall::error::ERROR_INVARG;
 use spin::Mutex;
 
-use crate::lib::thread::Tid;
+use crate::kernel::thread::Tid;
 
 use super::{Result, SyscallOutRegisters::*};
 

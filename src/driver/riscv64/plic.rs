@@ -1,8 +1,8 @@
 use tock_registers::{interfaces::{Readable, Writeable}, register_structs};
 use tock_registers::registers::*;
 
-use crate::lib::interrupt::InterruptController;
-use crate::lib::traits::ArchTrait;
+use crate::kernel::interrupt::InterruptController;
+use crate::kernel::traits::ArchTrait;
 
 // platform level interrupt controller
 // https://github.com/riscv/riscv-plic-spec/blob/master/riscv-plic.adoc

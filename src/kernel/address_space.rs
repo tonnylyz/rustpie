@@ -7,7 +7,7 @@ use rpabi::syscall::error::{ERROR_OOM, ERROR_OOR};
 use spin::Mutex;
 
 use crate::arch::PageTable;
-use crate::lib::traits::Address;
+use crate::kernel::traits::Address;
 use crate::mm::page_table::{EntryAttribute, PageTableEntryAttrTrait, PageTableTrait};
 use crate::util::round_up;
 
@@ -97,16 +97,13 @@ pub fn address_space_destroy(a: AddressSpace) {
 }
 
 pub fn load_image(elf: &'static [u8]) -> (AddressSpace, usize) {
-  // let icntr = crate::lib::timer::current_cycle();
   let a = address_space_alloc().unwrap();
-  // let icntr2 = crate::lib::timer::current_cycle();
-  // info!("as create cycle {}", icntr2 - icntr);
   let page_table = a.page_table();
   let len = round_up(elf.len(), PAGE_SIZE);
   for i in (0..len).step_by(PAGE_SIZE) {
     let pa = (elf.as_ptr() as usize + i).kva2pa();
     page_table.map(CONFIG_ELF_IMAGE + i, pa, EntryAttribute::user_readonly()).expect("page_table map error");
   }
-  let entry = crate::lib::elf::load(elf, page_table).expect("elf load error");
+  let entry = crate::kernel::elf::load(elf, page_table).expect("elf load error");
   (a, entry)
 }

@@ -1,6 +1,6 @@
 use core::panic::PanicInfo;
 
-use crate::lib::traits::*;
+use crate::kernel::traits::*;
 
 #[derive(Debug, Clone)]
 struct Frame {
@@ -80,7 +80,7 @@ fn trace(cb: &mut dyn FnMut(&Frame) -> bool) {
 
 #[allow(dead_code)]
 pub fn exception_trace() {
-  let ctx = crate::lib::cpu::cpu().context();
+  let ctx = crate::kernel::cpu::cpu().context();
   #[cfg(target_arch = "aarch64")]
     let frame_zero = Frame {
     pc: ctx.exception_pc() as u64,

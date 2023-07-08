@@ -5,9 +5,9 @@ use rpabi::event::*;
 use rpabi::syscall::error::{ERROR_HOLD_ON, ERROR_INVARG};
 use spin::Mutex;
 
-use crate::lib::interrupt::INT_SEM;
-use crate::lib::semaphore::SemaphoreWaitResult;
-use crate::lib::thread::Tid;
+use crate::kernel::interrupt::INT_SEM;
+use crate::kernel::semaphore::SemaphoreWaitResult;
+use crate::kernel::thread::Tid;
 
 use super::{Result, SyscallOutRegisters::*};
 

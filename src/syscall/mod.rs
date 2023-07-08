@@ -4,9 +4,9 @@ use rpabi::syscall::error::*;
 
 use SyscallOutRegisters::*;
 
-use crate::lib::address_space::AddressSpace;
-use crate::lib::cpu::cpu;
-use crate::lib::thread::Thread;
+use crate::kernel::address_space::AddressSpace;
+use crate::kernel::cpu::cpu;
+use crate::kernel::thread::Thread;
 
 pub mod misc;
 pub mod thread;
@@ -54,7 +54,7 @@ fn lookup_as(asid: u16) -> core::result::Result<AddressSpace, Error> {
   let a = if asid == 0 {
     current_thread()?.address_space()
   } else {
-    crate::lib::address_space::address_space_lookup(asid)
+    crate::kernel::address_space::address_space_lookup(asid)
   };
   a.ok_or(ERROR_INVARG)
 }

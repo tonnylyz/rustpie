@@ -1,9 +1,9 @@
 use rpabi::syscall::error::*;
-use crate::lib::cpu::cpu;
+use crate::kernel::cpu::cpu;
 
-use crate::lib::thread::{thread_sleep, thread_sleep_to, Tid};
-use crate::lib::thread::Status as ThreadStatus;
-use crate::lib::traits::ContextFrameTrait;
+use crate::kernel::thread::{thread_sleep, thread_sleep_to, Tid};
+use crate::kernel::thread::Status as ThreadStatus;
+use crate::kernel::traits::ContextFrameTrait;
 
 use super::{Result, SyscallOutRegisters::*};
 
@@ -17,7 +17,7 @@ pub fn itc_receive() -> Result {
 #[inline(never)]
 pub fn itc_send(tid: Tid, a: usize, b: usize, c: usize, d: usize) -> Result {
   let current = super::current_thread()?;
-  let target = crate::lib::thread::thread_lookup(tid).ok_or_else(|| ERROR_INVARG)?;
+  let target = crate::kernel::thread::thread_lookup(tid).ok_or_else(|| ERROR_INVARG)?;
   if target.wait_for_reply(|| {
     target.map_with_context(|ctx| {
       ctx.set_syscall_result(&Result::Ok(Pentad(current.tid() as usize, a, b, c, d)));
@@ -32,12 +32,12 @@ pub fn itc_send(tid: Tid, a: usize, b: usize, c: usize, d: usize) -> Result {
 #[inline(never)]
 pub fn itc_call(tid: Tid, a: usize, b: usize, c: usize, d: usize) -> Result {
   let current = super::current_thread()?;
-  let target = crate::lib::thread::thread_lookup(tid).ok_or_else(|| ERROR_INVARG)?;
+  let target = crate::kernel::thread::thread_lookup(tid).ok_or_else(|| ERROR_INVARG)?;
   if target.wait_for_request(|| {
     target.map_with_context(|ctx| {
       ctx.set_syscall_result(&Result::Ok(Pentad(current.tid() as usize, a, b, c, d)));
     });
-    thread_sleep_to(&current, crate::lib::thread::Status::WaitForReply, target.clone());
+    thread_sleep_to(&current, crate::kernel::thread::Status::WaitForReply, target.clone());
   }) {
     cpu().schedule();
     Ok(Unit)
@@ -49,7 +49,7 @@ pub fn itc_call(tid: Tid, a: usize, b: usize, c: usize, d: usize) -> Result {
 #[inline(never)]
 pub fn itc_reply_recv(tid: Tid, a: usize, b: usize, c: usize, d: usize) -> Result {
   let current = super::current_thread()?;
-  let target = crate::lib::thread::thread_lookup(tid).ok_or_else(|| ERROR_INVARG)?;
+  let target = crate::kernel::thread::thread_lookup(tid).ok_or_else(|| ERROR_INVARG)?;
   if target.wait_for_reply(|| {
     target.map_with_context(|ctx| {
       ctx.set_syscall_result(&Result::Ok(Pentad(current.tid() as usize, a, b, c, d)));

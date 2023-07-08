@@ -3,10 +3,10 @@ use core::mem::size_of;
 use unwind::unwind_from_exception;
 
 use crate::arch::{ContextFrame, PAGE_SIZE};
-use crate::lib::cpu::cpu;
-use crate::lib::thread::thread_destroy;
-use crate::lib::traits::ArchTrait;
-use crate::lib::traits::ContextFrameTrait;
+use crate::kernel::cpu::cpu;
+use crate::kernel::thread::thread_destroy;
+use crate::kernel::traits::ArchTrait;
+use crate::kernel::traits::ContextFrameTrait;
 use crate::mm::page_table::{PageTableEntryAttrTrait, PageTableTrait};
 use crate::util::{round_down, round_up};
 
@@ -19,7 +19,7 @@ enum HandleResult {
 }
 
 fn handle() -> HandleResult {
-  if let Some(t) = crate::lib::cpu::cpu().running_thread() {
+  if let Some(t) = crate::kernel::cpu::cpu().running_thread() {
     if let Some(a) = t.address_space() {
       if a.asid() == 1 {
         // trusted exception
@@ -69,7 +69,7 @@ pub fn handle_user() {
     HandleResult::Ok => {}
     HandleResult::Kill(e) => {
       warn!("handle user {}", e);
-      crate::lib::cpu::cpu().schedule();
+      crate::kernel::cpu::cpu().schedule();
     }
     HandleResult::Err(e) => panic!("handle user {}", e),
   }

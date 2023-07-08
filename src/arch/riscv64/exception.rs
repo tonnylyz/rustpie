@@ -2,8 +2,8 @@ use riscv::regs::*;
 use tock_registers::interfaces::{Readable, Writeable};
 
 use crate::arch::ContextFrame;
-use crate::lib::interrupt::InterruptController;
-use crate::lib::traits::*;
+use crate::kernel::interrupt::InterruptController;
+use crate::kernel::traits::*;
 
 core::arch::global_asm!(include_str!("exception.S"));
 
@@ -29,7 +29,7 @@ const EXCEPTION_STORE_PAGE_FAULT: usize = 15;
 #[no_mangle]
 unsafe extern "C" fn exception_entry(ctx: *mut ContextFrame) {
   let from_kernel = SSTATUS.is_set(SSTATUS::SPP);
-  let core = crate::lib::cpu::cpu();
+  let core = crate::kernel::cpu::cpu();
   core.set_context(ctx);
   let cause = SCAUSE.get();
   let irq = (cause >> 63) != 0;
@@ -46,21 +46,21 @@ unsafe extern "C" fn exception_entry(ctx: *mut ContextFrame) {
       | EXCEPTION_LOAD_ADDRESS_MISALIGNED
       | EXCEPTION_LOAD_ACCESS_FAULT
       | EXCEPTION_STORE_ADDRESS_MISALIGNED
-      | EXCEPTION_STORE_ACCESS_FAULT => crate::lib::exception::handle_kernel(ctx.as_ref().unwrap(), false),
+      | EXCEPTION_STORE_ACCESS_FAULT => crate::kernel::exception::handle_kernel(ctx.as_ref().unwrap(), false),
       EXCEPTION_INSTRUCTION_PAGE_FAULT
       | EXCEPTION_LOAD_PAGE_FAULT
-      | EXCEPTION_STORE_PAGE_FAULT => crate::lib::exception::handle_kernel(ctx.as_ref().unwrap(), true),
+      | EXCEPTION_STORE_PAGE_FAULT => crate::kernel::exception::handle_kernel(ctx.as_ref().unwrap(), true),
       _ => panic!("unhandled kernel exception"),
     }
   }
   if irq {
     match code {
       INTERRUPT_SUPERVISOR_SOFTWARE => panic!("Interrupt::SupervisorSoft"),
-      INTERRUPT_SUPERVISOR_TIMER => crate::lib::timer::interrupt(),
+      INTERRUPT_SUPERVISOR_TIMER => crate::kernel::timer::interrupt(),
       INTERRUPT_SUPERVISOR_EXTERNAL => {
         let plic = &crate::driver::INTERRUPT_CONTROLLER;
         if let Some(int) = plic.fetch() {
-          crate::lib::interrupt::interrupt(int);
+          crate::kernel::interrupt::interrupt(int);
           plic.finish(int);
         } else {
           warn!("PLIC report no irq");
@@ -79,14 +79,14 @@ unsafe extern "C" fn exception_entry(ctx: *mut ContextFrame) {
         info!("SCAUSE {:016x}", cause);
         info!("SEPC {:016x}", core.context().exception_pc());
         info!("FAR  {:016x}", crate::arch::Arch::fault_address());
-        crate::lib::exception::handle_user()
+        crate::kernel::exception::handle_user()
       }
       EXCEPTION_ENVIRONMENT_CALL_FROM_USER_MODE => {
         // Note: we need to set epc to next instruction before doing system call
         //       pay attention to yield and process_alloc
         let pc = core.context_mut().exception_pc();
         core.context_mut().set_exception_pc(pc + 4);
-        crate::lib::syscall::syscall();
+        crate::kernel::syscall::syscall();
       }
       EXCEPTION_INSTRUCTION_PAGE_FAULT
       | EXCEPTION_LOAD_ACCESS_FAULT

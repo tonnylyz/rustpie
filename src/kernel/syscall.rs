@@ -5,8 +5,8 @@ use rpabi::syscall::error::{ERROR_HOLD_ON, ERROR_INVARG};
 
 use unwind::catch::catch_unwind;
 
-use crate::lib::cpu::cpu;
-use crate::lib::traits::ContextFrameTrait;
+use crate::kernel::cpu::cpu;
+use crate::kernel::traits::ContextFrameTrait;
 
 static SYSCALL_NAMES: [&str; SYS_MAX] = [
   "null",
@@ -42,7 +42,7 @@ static SYSCALL_ARGC: [usize; SYS_MAX] = [
 pub fn syscall() {
   use crate::syscall::*;
 
-  let ctx = crate::lib::cpu::cpu().context_mut();
+  let ctx = crate::kernel::cpu::cpu().context_mut();
   let tid = cpu().running_thread().map(|x| { x.tid() }).unwrap_or_default();
   let arg = |i: usize| { ctx.syscall_argument(i) };
   let num = ctx.syscall_number();
