@@ -4,6 +4,8 @@ PROFILE ?= release
 USER_PROFILE ?= release
 TRUSTED_PROFILE ?= release
 
+PROGS := shell cat ls mkdir touch rm rd stat hello ps write
+
 # NOTE: generate frame pointer for every function
 export RUSTFLAGS := ${RUSTFLAGS} -C force-frame-pointers=yes
 
@@ -81,7 +83,7 @@ disk: user_image
 	rm -rf disk
 	mkdir disk
 	redoxfs disk.img disk
-	cp user/target/${ARCH}/${USER_PROFILE}/{shell,cat,ls,mkdir,touch,rm,rd,stat,hello,ps,write} disk/
+	$(foreach P,$(PROGS), cp user/target/${ARCH}/${USER_PROFILE}/${P} disk/ ; )
 	sync
 	umount disk
 
@@ -100,7 +102,7 @@ ramdisk.img: user_image
 	dd if=/dev/zero of=ramdisk.img bs=1M count=4
 	redoxfs-mkfs ramdisk.img
 	redoxfs ramdisk.img ramdisk
-	cp user/target/${ARCH}/${USER_PROFILE}/{shell,cat,ls,mkdir,touch,rm,rd,stat,hello,ps,write} ramdisk/
+	$(foreach P,$(PROGS), cp user/target/${ARCH}/${USER_PROFILE}/${P} ramdisk/ ; )
 	sync
 	umount ramdisk
 

@@ -2,3 +2,7 @@
 /ramdisk.img
 /disk.img
 target
+
+# skip ide files
+.idea/
+.vscode/
