@@ -65,9 +65,12 @@ impl ArchPageTableEntryTrait for Riscv64PageTableEntry {
   fn make_table(frame_pa: usize) -> Self {
     Riscv64PageTableEntry(
       (TABLE_DESCRIPTOR::NEXT_LEVEL_TABLE_PPN.val((frame_pa >> PAGE_SHIFT) as u64)
-        + TABLE_DESCRIPTOR::DIRTY::True
-        + TABLE_DESCRIPTOR::ACCESSED::True
-        + TABLE_DESCRIPTOR::USER::True
+      // NOTE from priv spec 1.12:
+      // For non-leaf PTEs, the D, A, and U bits are reserved for future standard use. Until their use is
+      // defined by a standard extension, they must be cleared by software for forward compatibility.
+      + TABLE_DESCRIPTOR::DIRTY::False
+      + TABLE_DESCRIPTOR::ACCESSED::False
+      + TABLE_DESCRIPTOR::USER::False
         + TABLE_DESCRIPTOR::VALID::True
       ).value as usize
     )
@@ -136,6 +139,7 @@ impl Riscv64PageTable {
         + PAGE_DESCRIPTOR::DIRTY::True
         + PAGE_DESCRIPTOR::ACCESSED::True
         + PAGE_DESCRIPTOR::USER::False
+        + PAGE_DESCRIPTOR::GLOBAL::True // Kernel is always global
         + PAGE_DESCRIPTOR::X::True
         + PAGE_DESCRIPTOR::W::True
         + PAGE_DESCRIPTOR::R::True

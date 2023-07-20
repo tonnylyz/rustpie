@@ -43,6 +43,7 @@ pub fn spawn<P: AsRef<str>>(cmd: P) -> Result<(u16, usize), &'static str> {
     let elf = xmas_elf::ElfFile::new(buf)?;
     let entry_point = elf.header.pt2.entry_point() as usize;
     let va_tmp = virtual_alloc(1, false).unwrap();
+    let mut va = 0;
     for ph in elf.program_iter() {
       if let Ok(xmas_elf::program::Type::Load) = ph.get_type() {} else {
         continue;
@@ -52,7 +53,7 @@ pub fn spawn<P: AsRef<str>>(cmd: P) -> Result<(u16, usize), &'static str> {
         continue;
       }
       let va_end = round_up(va_start + ph.mem_size() as usize, PAGE_SIZE);
-      let mut va = round_down(va_start, PAGE_SIZE);
+      va = round_down(va_start, PAGE_SIZE);
       while va < va_end {
         rpsyscall::mem_alloc(asid, va, crate::libtrusted::mm::default_page_attribute()).map_err(|_e| "out of memory")?;
         // println!("alloc @{:016x}", va);
@@ -74,6 +75,9 @@ pub fn spawn<P: AsRef<str>>(cmd: P) -> Result<(u16, usize), &'static str> {
         va += PAGE_SIZE;
       }
     }
+    // FIXME: program headers do not have BSS listed. Need to read section headers add allocate memory for bss.
+    info!("alloc bss {:x}", va);
+    rpsyscall::mem_alloc(asid, va, crate::libtrusted::mm::default_page_attribute()).map_err(|_e| "out of memory")?;
     virtual_free(buf.as_ptr() as usize, page_num);
     rpsyscall::mem_alloc(asid, rpabi::CONFIG_USER_STACK_TOP - PAGE_SIZE, crate::libtrusted::mm::default_page_attribute()).map_err(|_e| "mem_alloc failed")?;
     rpsyscall::mem_map(asid, rpabi::CONFIG_USER_STACK_TOP - PAGE_SIZE, 0, va_tmp, default_page_attribute()).map_err(|_e| "mem_map failed")?;
