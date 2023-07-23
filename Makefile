@@ -19,7 +19,7 @@ endif
 
 KERNEL := target/${ARCH}${MACHINE}/${PROFILE}/rustpi
 
-.PHONY: all emu debug dependencies clean disk trusted_image user_image ramdisk.img
+.PHONY: all emu debug dependencies clean disk trusted_image user_image ramdisk.img rplibc user_c_image
 
 all: ${KERNEL} ${KERNEL}.bin ${KERNEL}.asm
 
@@ -35,6 +35,12 @@ endif
 
 user_image:
 	make ARCH=${ARCH} USER_PROFILE=${USER_PROFILE} -C user
+
+rplibc:
+	make ARCH=${ARCH} -C rplibc
+
+user_c_image: rplibc
+	make ARCH=${ARCH} -C user-c
 
 ${KERNEL}.bin: ${KERNEL}
 	llvm-objcopy $< -O binary $@
@@ -77,11 +83,12 @@ clean:
 	make -C trusted clean
 	make -C user clean
 
-disk: user_image
+disk: user_image user_c_image
 	rm -rf disk
 	mkdir disk
 	redoxfs disk.img disk
 	cp user/target/${ARCH}/${USER_PROFILE}/{shell,cat,ls,mkdir,touch,rm,rd,stat,hello,ps,write} disk/
+	cp user-c/hello2 disk/
 	sync
 	umount disk
 
