@@ -3,8 +3,8 @@
 use rpabi::server::SERVER_REDOX_FS;
 
 use rpsyscall::message::Message;
-use redox::*;
-pub use redox::Stat;
+use syscall::*;
+
 
 pub struct File {
   handle: usize,

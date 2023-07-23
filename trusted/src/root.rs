@@ -14,7 +14,7 @@ pub fn main() {
   }));
 
   join_handlers.push(thread::spawn(|| {
-    server_wrapper(crate::fs::server);
+    server_wrapper(crate::fs::server::server);
   }));
 
   join_handlers.push(thread::spawn(|| {

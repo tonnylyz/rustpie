@@ -1,7 +1,6 @@
 use rpabi::PAGE_SIZE;
 
 use rpsyscall::mem_map;
-use redox::*;
 use crate::libtrusted::loader::round_up;
 use crate::libtrusted::loader::round_down;
 use crate::libtrusted::mm::{default_page_attribute, virtual_alloc, virtual_free};
@@ -16,7 +15,7 @@ pub struct ForeignSlice {
 }
 
 impl ForeignSlice {
-  pub fn new(asid: u16, slice_start: usize, slice_len: usize) -> Result<Self> {
+  pub fn new(asid: u16, slice_start: usize, slice_len: usize) -> Result<Self, isize> {
     let page_num = (round_up(slice_start + slice_len, PAGE_SIZE)
       - round_down(slice_start, PAGE_SIZE)) / PAGE_SIZE;
     let local_buf = virtual_alloc(page_num, false).unwrap() as usize;
@@ -25,7 +24,7 @@ impl ForeignSlice {
     for i in 0..page_num {
       let src_va = round_down(slice_start, PAGE_SIZE) + i * PAGE_SIZE;
       let dst_va = local_buf + i * PAGE_SIZE;
-      mem_map(asid, src_va, 0, dst_va, default_page_attribute()).map_err(|_e| Error::new(EINVAL))?;
+      mem_map(asid, src_va, 0, dst_va, default_page_attribute()).map_err(|_e| -1isize)?;
     }
 
     Ok(ForeignSlice {

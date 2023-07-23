@@ -25,7 +25,7 @@ fn enlarge(heap: &mut buddy_system_allocator::Heap<32>, _layout: &Layout) {
 }
 
 pub fn init() {
-  const HEAP_INIT_SIZE: usize = 16;
+  const HEAP_INIT_SIZE: usize = 64;
   for i in 0..HEAP_INIT_SIZE {
     mem_alloc(0, rpabi::CONFIG_HEAP_BTM + i * PAGE_SIZE, default_page_attribute()).expect("heap init allocate mem failed");
   }

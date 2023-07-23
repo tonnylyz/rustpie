@@ -95,6 +95,12 @@ dependencies = [
 ]
 
 [[package]]
+name = "libc"
+version = "0.2.147"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "b4668fb0ea861c1df094127ac5f1da3409a82116a4ba74fca2e58ef927159bb3"
+
+[[package]]
 name = "lock_api"
 version = "0.4.5"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -125,10 +131,22 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "72ef4a56884ca558e5ddb05a1d1e7e1bfd9a68d9ed024c21704cc98872dae1bb"
 
 [[package]]
-name = "redox"
-version = "0.1.0"
+name = "redox_syscall"
+version = "0.2.16"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "fb5a58c1855b4b6819d59012155603f0b22ad30cad752600aadfcb695265519a"
 dependencies = [
  "bitflags",
+]
+
+[[package]]
+name = "redoxfs"
+version = "0.4.4"
+source = "git+https://github.com/tonnylyz/redoxfs?branch=rustpi#07b270eed1c598444cfb6804e906ffda242af1aa"
+dependencies = [
+ "libc",
+ "redox_syscall",
+ "uuid",
 ]
 
 [[package]]
@@ -208,7 +226,8 @@ dependencies = [
  "buddy_system_allocator",
  "k210-hal",
  "log",
- "redox",
+ "redox_syscall",
+ "redoxfs",
  "rpabi",
  "rpservapi",
  "rpsyscall",
@@ -228,6 +247,12 @@ dependencies = [
  "spin",
  "xmas-elf 0.8.0",
 ]
+
+[[package]]
+name = "uuid"
+version = "0.5.1"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "bcc7e3b898aa6f6c08e5295b6c89258d1331e9ac578cc992fb818759951bdc22"
 
 [[package]]
 name = "vcell"

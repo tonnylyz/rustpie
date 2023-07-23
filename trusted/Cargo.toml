@@ -15,13 +15,15 @@ rpsyscall = { path = "../rpsyscall" }
 rpabi = { path = "../rpabi", features = ["asm"] }
 rpservapi = { path = "../rpservapi" }
 
-redox = { path = "../3rdparty/redox" }
 unwind = { path = "../3rdparty/unwind" }
 
 xmas-elf = "0.9.0"
 k210-hal = { git = "https://github.com/tonnylyz/k210-hal", optional = true }
 
 tock-registers = "0.8.1"
+
+redoxfs = { git = "https://github.com/tonnylyz/redoxfs", branch = "rustpi", default-features = false, features = ["rustpi"] }
+redox_syscall = "0.2.9"
 
 
 [features]

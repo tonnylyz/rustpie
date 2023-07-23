@@ -2,10 +2,8 @@ use rpabi::PAGE_SIZE;
 
 use crate::libtrusted::mm::{virtual_alloc, virtual_free};
 use rpsyscall::message::Message;
-use redox::*;
-
-use crate::fs::{BLOCK_SIZE, Disk};
-
+use syscall::{Result, Error, EIO};
+use redoxfs::{BLOCK_SIZE, Disk};
 pub struct VirtioClient;
 
 impl VirtioClient {
