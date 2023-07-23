@@ -75,9 +75,6 @@ pub fn spawn<P: AsRef<str>>(cmd: P) -> Result<(u16, usize), &'static str> {
         va += PAGE_SIZE;
       }
     }
-    // FIXME: program headers do not have BSS listed. Need to read section headers add allocate memory for bss.
-    info!("alloc bss {:x}", va);
-    rpsyscall::mem_alloc(asid, va, crate::libtrusted::mm::default_page_attribute()).map_err(|_e| "out of memory")?;
     virtual_free(buf.as_ptr() as usize, page_num);
     rpsyscall::mem_alloc(asid, rpabi::CONFIG_USER_STACK_TOP - PAGE_SIZE, crate::libtrusted::mm::default_page_attribute()).map_err(|_e| "mem_alloc failed")?;
     rpsyscall::mem_map(asid, rpabi::CONFIG_USER_STACK_TOP - PAGE_SIZE, 0, va_tmp, default_page_attribute()).map_err(|_e| "mem_map failed")?;
