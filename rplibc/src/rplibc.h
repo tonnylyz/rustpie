@@ -9,3 +9,12 @@ static inline void puts(char *str) {
         c++;
     }
 }
+
+static inline int atoi(char* str)
+{
+    int i;
+    int r = 0;
+    for (i = 0; str[i] != '\0'; ++i)
+        r = r * 10 + str[i] - '0';
+    return r;
+}

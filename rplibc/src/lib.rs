@@ -1,5 +1,12 @@
 #![no_std]
 #![feature(lang_items)]
+#![feature(format_args_nl)]
+
+use alloc::vec::Vec;
+
+extern crate alloc;
+#[macro_use]
+extern crate rpstdlib;
 
 #[lang = "eh_personality"]
 #[no_mangle]
@@ -13,14 +20,33 @@ extern "C" fn _Unwind_Resume(_arg: usize) -> ! {
 }
 
 extern "C" {
-    fn main(arg: *const u8) -> i32;
+    fn main(args: i32, argv: *const u8) -> i32;
+}
+
+#[inline(always)]
+fn round_up(addr: usize, n: usize) -> usize {
+  (addr + n - 1) & !(n - 1)
 }
 
 #[no_mangle]
 extern "C" fn _start(arg: *const u8) {
     rpstdlib::heap::init();
+    let mut arguments = Vec::new();
     unsafe {
-        main(arg);
+      let cmd = core::slice::from_raw_parts(arg, round_up(arg as usize, 4096) - arg as usize - 1);
+      let cmd = core::str::from_utf8(cmd).unwrap();
+      let mut iter = cmd.split_ascii_whitespace();
+      loop {
+        if let Some(arg) = iter.next() {
+          let cstr = alloc::ffi::CString::new(arg).expect("arg to cstring failed");
+          arguments.push(cstr.into_raw());
+        } else {
+          break;
+        }
+      }
+    }
+    unsafe {
+        main(arguments.len() as i32, arguments.as_ptr() as *const u8);
     }
     rpstdlib::exit();
 }
