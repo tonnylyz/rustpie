@@ -7,15 +7,14 @@ extern crate alloc;
 #[macro_use]
 extern crate rpstdlib;
 
-
+use alloc::vec::Vec;
 use rpstdlib::rtc::rtc_time64_to_tm;
 
 #[no_mangle]
-fn _start(arg: *const u8) {
-  let arg = rpstdlib::parse(arg);
+fn main(arg: Vec<&'static str>) -> i32 {
   if arg.len() == 0 {
     println!("usage: stat FILE...");
-    rpstdlib::exit();
+    return 0;
   }
   let path = arg[0];
   let file = rpstdlib::fs::File::open(path).expect("open file failed");
@@ -48,5 +47,5 @@ Create: {}",
       println!("{}", e);
     }
   }
-  rpstdlib::exit();
+  0
 }

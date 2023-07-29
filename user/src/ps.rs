@@ -6,9 +6,9 @@
 extern crate alloc;
 extern crate rpstdlib;
 
-
+use alloc::vec::Vec;
 #[no_mangle]
-fn _start(_arg: *const u8) {
+fn main(_arg: Vec<&'static str>) -> i32 {
   rpstdlib::pm::ps();
-  rpstdlib::exit()
+  0
 }

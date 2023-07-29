@@ -13,3 +13,8 @@ rpsyscall = { path = "../rpsyscall" }
 rpservapi = { path = "../rpservapi" }
 
 redox = { path = "../3rdparty/redox" }
+
+
+[features]
+default = []
+libc = []

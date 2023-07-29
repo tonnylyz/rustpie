@@ -36,16 +36,20 @@ fn round_up(addr: usize, n: usize) -> usize {
   (addr + n - 1) & !(n - 1)
 }
 
-pub fn parse(arg: *const u8) -> Vec<&'static str> {
+fn parse(arg: *const u8) -> Vec<&'static str> {
   heap::init();
   let mut arguments = Vec::new();
+  let mut first = true;
   unsafe {
     let cmd = core::slice::from_raw_parts(arg, round_up(arg as usize, 4096) - arg as usize - 1);
     let cmd = core::str::from_utf8(cmd).unwrap();
     let mut iter = cmd.split_ascii_whitespace();
     loop {
       if let Some(arg) = iter.next() {
-        arguments.push(arg);
+        if !first {
+          arguments.push(arg);
+        }
+        first = false;
       } else {
         break;
       }
@@ -57,6 +61,21 @@ pub fn parse(arg: *const u8) -> Vec<&'static str> {
 pub fn exit() -> ! {
   let _ = rpsyscall::thread_destroy(0);
   loop {}
+}
+
+#[cfg(not(feature = "libc"))]
+extern {
+  fn main(arg: Vec<&'static str>) -> i32;
+}
+
+#[no_mangle]
+#[cfg(not(feature = "libc"))]
+extern "C" fn _start(arg: *const u8) {
+  let arg = parse(arg);
+  unsafe {
+    main(arg);
+  }
+  exit();
 }
 
 #[panic_handler]

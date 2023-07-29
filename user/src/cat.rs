@@ -7,10 +7,10 @@ extern crate alloc;
 #[macro_use]
 extern crate rpstdlib;
 
+use alloc::vec::Vec;
 
 #[no_mangle]
-fn _start(arg: *const u8) {
-  let arg = rpstdlib::parse(arg);
+fn main(arg: Vec<&'static str>) -> i32 {
   for file in arg {
     let path = file;
     use rpstdlib::fs::File;
@@ -25,5 +25,5 @@ fn _start(arg: *const u8) {
       }
     }
   }
-  rpstdlib::exit();
+  0
 }

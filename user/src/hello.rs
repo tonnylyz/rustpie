@@ -3,10 +3,14 @@
 #![feature(format_args_nl)]
 #![feature(alloc_error_handler)]
 
+extern crate alloc;
+
 use rpstdlib::println;
 
+use alloc::vec::Vec;
+
 #[no_mangle]
-fn _start(_arg: *const u8) {
+fn main(arg: Vec<&'static str>) -> i32 {
   println!("hello world!");
-  rpstdlib::exit();
+  0
 }

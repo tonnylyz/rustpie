@@ -7,13 +7,13 @@ extern crate alloc;
 #[macro_use]
 extern crate rpstdlib;
 
+use alloc::vec::Vec;
 
 #[no_mangle]
-fn _start(arg: *const u8) {
-  let arg = rpstdlib::parse(arg);
+fn main(arg: Vec<&'static str>) -> i32 {
   if arg.len() != 2 {
     println!("usage: write FILE TEXT...");
-    rpstdlib::exit();
+    return 0;
   }
   let path = arg[0];
   let file = rpstdlib::fs::File::create(path);

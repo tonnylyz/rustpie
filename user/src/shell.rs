@@ -8,13 +8,12 @@ extern crate alloc;
 #[macro_use]
 extern crate rpstdlib;
 
-
+use alloc::vec::Vec;
 #[no_mangle]
-fn _start() -> ! {
-  rpstdlib::heap::init();
+fn main(_arg: Vec<&'static str>) -> i32 {
   println!("Welcome to rustpi shell!");
   let auto_command = vec![
-    // "ls",
+    "hello2 0 12 345 678",
     // "mkdir thisadir",
     // "rd thisadir",
     // "touch thisafile",
@@ -51,5 +50,6 @@ fn _start() -> ! {
       }
     }
   }
+  0
 }
 

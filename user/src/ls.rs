@@ -7,10 +7,10 @@ extern crate alloc;
 #[macro_use]
 extern crate rpstdlib;
 
+use alloc::vec::Vec;
 
 #[no_mangle]
-fn _start(arg: *const u8) {
-  let arg = rpstdlib::parse(arg);
+fn main(arg: Vec<&'static str>) -> i32 {
   let path = if arg.len() == 0 {
     "/"
   } else {
@@ -28,5 +28,5 @@ fn _start(arg: *const u8) {
     }
   }
   println!();
-  rpstdlib::exit();
+  0
 }

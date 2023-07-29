@@ -7,5 +7,5 @@ edition = "2021"
 crate-type = ["staticlib"]
 
 [dependencies]
-rpstdlib = { path = "../rpstdlib" }
+rpstdlib = { path = "../rpstdlib", features = ["libc"] }
 rpsyscall = { path = "../rpsyscall" }

@@ -13,33 +13,27 @@ use alloc::vec::Vec;
 
 use getopts::Options;
 
-#[no_mangle]
-fn _start(arg: *const u8) {
-  let args = rpstdlib::parse(arg);
-  main(args);
-  rpstdlib::exit();
-}
-
 fn usage(opts: Options) {
   print!("{}", opts.usage("Usage: touch FILE [options]"));
 }
 
-fn main(args: Vec<&str>) {
+#[no_mangle]
+fn main(arg: Vec<&'static str>) -> i32 {
   let mut opts = Options::new();
   opts.optflag("h", "help", "display this help and exit");
-  let matches = match opts.parse(args) {
+  let matches = match opts.parse(arg) {
     Ok(m) => { m }
     Err(f) => { panic!("{}", f.to_string()); }
   };
   if matches.opt_present("h") {
     usage(opts);
-    return;
+    return 0;
   }
   let input = if !matches.free.is_empty() {
     matches.free[0].clone()
   } else {
     usage(opts);
-    return;
+    return 0;
   };
 
   match rpstdlib::fs::File::create(input) {
@@ -48,4 +42,5 @@ fn main(args: Vec<&str>) {
       println!("{}", e);
     }
   }
+  0
 }

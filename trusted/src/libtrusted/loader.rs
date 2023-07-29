@@ -80,6 +80,12 @@ pub fn spawn<P: AsRef<str>>(cmd: P) -> Result<(u16, usize), &'static str> {
     rpsyscall::mem_map(asid, rpabi::CONFIG_USER_STACK_TOP - PAGE_SIZE, 0, va_tmp, default_page_attribute()).map_err(|_e| "mem_map failed")?;
     let va_slice = unsafe { core::slice::from_raw_parts_mut(va_tmp as *mut u8, PAGE_SIZE) };
     let mut index = 0;
+    for i in 0..bin.len() {
+      va_slice[index] = bin.as_bytes()[i];
+      index += 1;
+    }
+    va_slice[index] = b' ';
+    index += 1;
     loop {
       if let Some(arg) = iter.next() {
         for i in 0..arg.len() {
