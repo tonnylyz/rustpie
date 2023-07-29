@@ -1,4 +1,8 @@
-/rustsbi-k210.bin
-/ramdisk.img
-/disk.img
+rustsbi-k210.bin
+ramdisk.img
+disk.img
 target
+user-c/hello.o
+user-c/hello2
+.vscode
+
