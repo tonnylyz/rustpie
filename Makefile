@@ -4,8 +4,12 @@ PROFILE ?= release
 USER_PROFILE ?= release
 TRUSTED_PROFILE ?= release
 
-# NOTE: generate frame pointer for every function
-export RUSTFLAGS := ${RUSTFLAGS} -C force-frame-pointers=yes
+ifeq (${ARCH}, aarch64)
+# enable cfi for aarch64 target experimentally
+export RUSTFLAGS := -Cforce-frame-pointers=yes -Cforce-frame-pointers=yes -Cembed-bitcode=yes -Clinker-plugin-lto -Zsanitizer=cfi -Ccodegen-units=1
+else
+export RUSTFLAGS := -Cforce-frame-pointers=yes
+endif
 
 CARGO_FLAGS := ${CARGO_FLAGS} --features ${MACHINE}
 

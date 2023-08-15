@@ -13,6 +13,9 @@
   "panic-strategy": "unwind",
   "relocation-model": "static",
   "target-pointer-width": "64",
+  "supported-sanitizers": [
+    "cfi"
+  ],
   "pre-link-args": {
     "ld.lld": [
       "-Tsrc/arch/aarch64/linker.ld"
