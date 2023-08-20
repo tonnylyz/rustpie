@@ -22,7 +22,7 @@ unwind = { path = "3rdparty/unwind" }
 aarch64-cpu = "9.3.1"
 
 [target.'cfg(target_arch = "riscv64")'.dependencies]
-riscv = { path = "../riscv" }
+riscv = { git = "https://github.com/tonnylyz/riscv", branch = "rustpi" }
 
 [features]
 default = ["user_release"]
