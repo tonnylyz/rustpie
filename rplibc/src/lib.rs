@@ -1,6 +1,7 @@
 #![no_std]
 #![feature(lang_items)]
-#![feature(format_args_nl)]
+#![allow(internal_features)]
+// #![feature(format_args_nl)]
 
 use alloc::vec::Vec;
 

@@ -36,7 +36,13 @@ K210 also require a SBI image. I suggest using [RustSBI](https://github.com/rust
 1. Nightly Rust (`rustc 1.72.0-nightly (114fb86ca 2023-06-15)` tested)
 2. `rust-src` component (use `make dependencies` to install)
 3. QEMU (`8.0.2` tested)
-4. LLVM (`llvm-objcopy` and `llvm-objdump`, can be replaced with GNU ones)
+4. LLVM tools (`llvm-objcopy` and `llvm-objdump`, can be replaced with GNU ones)
+4. LLVM lds (`ld.lld` for C compatibility)
 5. K210 `kflash` tool [kflash.py](https://github.com/kendryte/kflash.py).
 6. `mkimage` u-boot image tool
-7. RedoxFS utilities [link](https://gitlab.redox-os.org/redox-os/redoxfs) (`redoxfs` and `redoxfs-mkfs`) Install with `cargo install redoxfs@0.4.4`
+7. RedoxFS utilities [link](https://gitlab.redox-os.org/redox-os/redoxfs) (`redoxfs` and `redoxfs-mkfs`) Install with `cargo install redoxfs@0.4.4`, `libfuse-dev`` is required.
+
+For Ubuntu:
+```
+sudo apt install llvm lld libfuse-dev
+```

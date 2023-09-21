@@ -21,7 +21,7 @@ pub fn spawn<P: AsRef<str>>(cmd: P) -> Result<(u16, usize), &'static str> {
   if let Some(bin) = iter.next() {
     let asid = rpsyscall::address_space_alloc().map_err(|_e| "address_space_alloc failed")?;
     let mut f = File::open(bin).map_err(|e| {
-      error!("spawn open file failed");
+      error!("spawn open file \"{bin}\" failed");
       e.text()
     })?;
     let file_size = f.seek(SeekFrom::End(0)).map_err(|e| {
