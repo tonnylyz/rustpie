@@ -1,6 +1,6 @@
 #![no_std]
 #![feature(panic_info_message)]
-#![feature(format_args_nl)]
+// #![feature(format_args_nl)]
 #![feature(alloc_error_handler)]
 
 extern crate alloc;
@@ -16,7 +16,7 @@ macro_rules! print {
 macro_rules! println {
     () => (print!("\n"));
     ($($arg:tt)*) => ({
-        $crate::stdio::print_arg(format_args_nl!($($arg)*));
+        $crate::stdio::print_arg(format_args!("{}\n", format_args!($($arg)*)));
     })
 }
 

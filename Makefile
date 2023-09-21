@@ -84,10 +84,13 @@ clean:
 	make -C user clean
 
 disk: user_image user_c_image
+	dd if=/dev/zero of=disk.img bs=1M count=1024
+	redoxfs-mkfs disk.img
 	rm -rf disk
 	mkdir disk
 	redoxfs disk.img disk
-	cp user/target/${ARCH}/${USER_PROFILE}/{shell,cat,ls,mkdir,touch,rm,rd,stat,hello,ps,write} disk/
+	# @trap 'umount disk' EXIT
+	for f in shell cat ls mkdir touch rm rd stat hello ps write; do cp user/target/${ARCH}/${USER_PROFILE}/$$f disk/; done
 	cp user-c/hello2 disk/
 	sync
 	umount disk

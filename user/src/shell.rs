@@ -1,6 +1,6 @@
 #![no_std]
 #![no_main]
-#![feature(format_args_nl)]
+// #![feature(format_args_nl)]
 #![feature(alloc_error_handler)]
 
 #[macro_use]

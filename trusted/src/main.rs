@@ -1,11 +1,12 @@
 #![no_std]
 #![no_main]
-#![feature(format_args_nl)]
+// #![feature(format_args_nl)]
 #![feature(allocator_api)]
 #![feature(core_intrinsics)]
 #![feature(alloc_error_handler)]
 #![feature(panic_info_message)]
 #![feature(lang_items)]
+#![allow(internal_features)]
 
 #[macro_use]
 extern crate alloc;
