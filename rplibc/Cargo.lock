@@ -40,8 +40,9 @@ dependencies = [
 ]
 
 [[package]]
-name = "redox"
-version = "0.1.0"
+name = "redox_syscall"
+version = "0.2.9"
+source = "git+https://github.com/tonnylyz/redox_syscall?branch=rustpi#de15dc4c21779ed5daa75e76800823c70c606d92"
 dependencies = [
  "bitflags",
 ]
@@ -71,7 +72,7 @@ name = "rpstdlib"
 version = "0.1.0"
 dependencies = [
  "buddy_system_allocator",
- "redox",
+ "redox_syscall",
  "rpabi",
  "rpservapi",
  "rpsyscall",

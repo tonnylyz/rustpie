@@ -132,9 +132,8 @@ checksum = "72ef4a56884ca558e5ddb05a1d1e7e1bfd9a68d9ed024c21704cc98872dae1bb"
 
 [[package]]
 name = "redox_syscall"
-version = "0.2.16"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "fb5a58c1855b4b6819d59012155603f0b22ad30cad752600aadfcb695265519a"
+version = "0.2.9"
+source = "git+https://github.com/tonnylyz/redox_syscall?branch=rustpi#de15dc4c21779ed5daa75e76800823c70c606d92"
 dependencies = [
  "bitflags",
 ]
@@ -142,7 +141,7 @@ dependencies = [
 [[package]]
 name = "redoxfs"
 version = "0.4.4"
-source = "git+https://github.com/tonnylyz/redoxfs?branch=rustpi#07b270eed1c598444cfb6804e906ffda242af1aa"
+source = "git+https://github.com/tonnylyz/redoxfs?branch=rustpi#ad7a70a514e2c9a0ea4786a8c0499db298e6a1cf"
 dependencies = [
  "libc",
  "redox_syscall",

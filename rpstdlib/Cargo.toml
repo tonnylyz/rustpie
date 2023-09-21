@@ -12,7 +12,7 @@ rpabi = { path = "../rpabi" }
 rpsyscall = { path = "../rpsyscall" }
 rpservapi = { path = "../rpservapi" }
 
-redox = { path = "../3rdparty/redox" }
+redox_syscall = { git = "https://github.com/tonnylyz/redox_syscall", branch = "rustpi" }
 
 
 [features]

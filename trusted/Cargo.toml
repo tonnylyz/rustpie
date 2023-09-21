@@ -23,8 +23,7 @@ k210-hal = { git = "https://github.com/tonnylyz/k210-hal", optional = true }
 tock-registers = "0.8.1"
 
 redoxfs = { git = "https://github.com/tonnylyz/redoxfs", branch = "rustpi", default-features = false, features = ["rustpi"] }
-redox_syscall = "0.2.9"
-
+redox_syscall = { git = "https://github.com/tonnylyz/redox_syscall", branch = "rustpi" }
 
 [features]
 default = []
