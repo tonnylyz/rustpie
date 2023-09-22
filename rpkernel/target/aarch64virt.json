@@ -15,7 +15,7 @@
   "target-pointer-width": "64",
   "pre-link-args": {
     "ld.lld": [
-      "-Tsrc/arch/aarch64/linker-tx2.ld"
+      "-Trpkernel/arch/aarch64/linker.ld"
     ]
   }
 }

@@ -34,3 +34,7 @@ tx2 = []
 
 [profile.release]
 debug = true
+
+[[bin]]
+name = "rustpi"
+path = "rpkernel/main.rs"

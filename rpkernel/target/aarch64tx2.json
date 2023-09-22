@@ -1,23 +1,21 @@
 {
-  "arch": "riscv64",
-  "cpu": "generic-rv64",
-  "data-layout": "e-m:e-p:64:64-i64:64-i128:128-n64-S128",
+  "arch": "aarch64",
+  "data-layout": "e-m:e-i8:8:32-i16:16:32-i64:64-i128:128-n32:64-S128",
   "disable-redzone": true,
   "executables": true,
-  "features": "+m,+a,+c",
+  "features": "+strict-align,-neon,-fp-armv8",
   "is-builtin": false,
-  "code-model": "medium",
   "linker": "rust-lld",
   "linker-flavor": "ld.lld",
   "linker-is-gnu": true,
-  "llvm-target": "riscv64",
-  "max-atomic-width": 64,
+  "llvm-target": "aarch64-unknown-none",
+  "max-atomic-width": 128,
   "panic-strategy": "unwind",
   "relocation-model": "static",
   "target-pointer-width": "64",
   "pre-link-args": {
     "ld.lld": [
-      "-Tsrc/arch/riscv64/linker-k210.ld"
+      "-Trpkernel/arch/aarch64/linker-tx2.ld"
     ]
   }
 }
