@@ -1,3 +1,5 @@
+// This file comes from https://raw.githubusercontent.com/theseus-os/Theseus/theseus_main/kernel/unwind/src/lsda.rs
+
 //! Routines for parsing the gcc-style LSDA (Language-Specific Data Area) in an ELF object file,
 //! which corresponds to an area within the `.gcc_except_table` section.
 

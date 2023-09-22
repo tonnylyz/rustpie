@@ -1,5 +1,6 @@
 #![no_std]
-#![feature(trait_alias)]
+
+// for core::intrinsics::r#try
 #![feature(core_intrinsics)]
 
 extern crate alloc;
