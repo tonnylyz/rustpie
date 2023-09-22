@@ -1,7 +1,5 @@
 #![no_std]
 #![feature(panic_info_message)]
-// #![feature(format_args_nl)]
-#![feature(alloc_error_handler)]
 
 extern crate alloc;
 
@@ -36,6 +34,7 @@ fn round_up(addr: usize, n: usize) -> usize {
   (addr + n - 1) & !(n - 1)
 }
 
+#[allow(dead_code)]
 fn parse(arg: *const u8) -> Vec<&'static str> {
   heap::init();
   let mut arguments = Vec::new();
@@ -65,6 +64,7 @@ pub fn exit() -> ! {
 
 #[cfg(not(feature = "libc"))]
 extern {
+  #[allow(improper_ctypes)]
   fn main(arg: Vec<&'static str>) -> i32;
 }
 

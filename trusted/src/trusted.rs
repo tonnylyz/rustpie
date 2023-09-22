@@ -1,12 +1,10 @@
 #![no_std]
 #![no_main]
-// #![feature(format_args_nl)]
-#![feature(allocator_api)]
-#![feature(core_intrinsics)]
-#![feature(alloc_error_handler)]
 #![feature(panic_info_message)]
-#![feature(lang_items)]
+
+// for unwind feature: eh_personality and so on
 #![allow(internal_features)]
+#![feature(lang_items)]
 
 #[macro_use]
 extern crate alloc;

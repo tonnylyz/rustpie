@@ -15,7 +15,7 @@ rpsyscall = { path = "../rpsyscall" }
 rpabi = { path = "../rpabi", features = ["asm"] }
 rpservapi = { path = "../rpservapi" }
 
-unwind = { path = "../3rdparty/unwind" }
+unwind = { path = "../unwind" }
 
 xmas-elf = "0.9.0"
 k210-hal = { git = "https://github.com/tonnylyz/k210-hal", optional = true }
@@ -31,6 +31,7 @@ k210 = ["k210-hal"]
 tx2 = []
 shyper = []
 virt = []
-#
-#[profile.release]
-#debug = true
+
+[[bin]]
+name = "trusted"
+path = "src/trusted.rs"

@@ -12,6 +12,7 @@ pub struct File {
 
 pub struct Permissions(u16);
 
+#[allow(dead_code)]
 #[derive(Copy, Clone, Debug, Eq, PartialEq)]
 pub enum SeekFrom {
   Start(u64),
@@ -19,6 +20,7 @@ pub enum SeekFrom {
   Current(i64),
 }
 
+#[allow(dead_code)]
 impl File {
   pub fn open<P: AsRef<str>>(path: P) -> Result<File> {
     let msg = Message {
@@ -130,6 +132,7 @@ impl Drop for File {
   }
 }
 
+#[allow(dead_code)]
 pub fn create_dir<P: AsRef<str>>(path: P) -> Result<()> {
   let msg = Message {
     a: SYS_OPEN,
@@ -143,6 +146,7 @@ pub fn create_dir<P: AsRef<str>>(path: P) -> Result<()> {
   Ok(())
 }
 
+#[allow(dead_code)]
 pub fn remove_file<P: AsRef<str>>(path: P) -> Result<()> {
   let msg = Message {
     a: SYS_UNLINK,
@@ -154,6 +158,7 @@ pub fn remove_file<P: AsRef<str>>(path: P) -> Result<()> {
   Error::demux(msg.a).map(|_| ())
 }
 
+#[allow(dead_code)]
 pub fn remove_directory<P: AsRef<str>>(path: P) -> Result<()> {
   let msg = Message {
     a: SYS_RMDIR,

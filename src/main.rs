@@ -1,11 +1,13 @@
 #![no_std]
 #![no_main]
-#![feature(alloc_error_handler)]
 #![feature(panic_info_message)]
-// #![feature(format_args_nl)]
-#![feature(lang_items)]
+
+// for ::try_new allocation
 #![feature(allocator_api)]
+
+// for unwind feature: eh_personality and so on
 #![allow(internal_features)]
+#![feature(lang_items)]
 
 #[macro_use]
 extern crate alloc;

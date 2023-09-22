@@ -43,7 +43,7 @@ pub fn spawn<P: AsRef<str>>(cmd: P) -> Result<(u16, usize), &'static str> {
     let elf = xmas_elf::ElfFile::new(buf)?;
     let entry_point = elf.header.pt2.entry_point() as usize;
     let va_tmp = virtual_alloc(1, false).unwrap();
-    let mut va = 0;
+    let mut va;
     for ph in elf.program_iter() {
       if let Ok(xmas_elf::program::Type::Load) = ph.get_type() {} else {
         continue;

@@ -164,6 +164,7 @@ pub fn query(va: usize) -> Option<Entry> {
   }
 }
 
+#[allow(dead_code)]
 pub fn traverse<F>(limit: usize, f: F) where F: Fn(usize, Entry) -> () {
   for l1x in 0..(PAGE_SIZE / core::mem::size_of::<usize>()) {
     let l1e = read_directory_entry(l1x);

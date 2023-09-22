@@ -95,10 +95,8 @@ pub fn init() {
   extern "C" {
     fn vectors();
   }
-  unsafe {
-    let addr: u64 = vectors as usize as u64;
-    VBAR_EL1.set(addr);
-    use aarch64_cpu::asm::barrier::*;
-    isb(SY);
-  }
+  let addr: u64 = vectors as usize as u64;
+  VBAR_EL1.set(addr);
+  use aarch64_cpu::asm::barrier::*;
+  isb(SY);
 }

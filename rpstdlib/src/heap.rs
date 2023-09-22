@@ -14,8 +14,3 @@ pub fn init() {
     HEAP_ALLOCATOR.lock().init(rpabi::CONFIG_HEAP_BTM, HEAP_SIZE * PAGE_SIZE)
   }
 }
-
-#[alloc_error_handler]
-fn alloc_error_handler(_: core::alloc::Layout) -> ! {
-  panic!("alloc_error_handler: heap panic");
-}

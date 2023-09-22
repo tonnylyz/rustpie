@@ -1,24 +1,8 @@
 #![no_std]
-#![feature(lang_items)]
-#![allow(internal_features)]
-// #![feature(format_args_nl)]
 
 use alloc::vec::Vec;
 
 extern crate alloc;
-#[macro_use]
-extern crate rpstdlib;
-
-#[lang = "eh_personality"]
-#[no_mangle]
-pub extern fn rust_eh_personality() {
-  loop {}
-}
-
-#[no_mangle]
-extern "C" fn _Unwind_Resume(_arg: usize) -> ! {
-  loop {}
-}
 
 extern "C" {
     fn main(args: i32, argv: *const u8) -> i32;

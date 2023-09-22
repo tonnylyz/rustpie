@@ -43,6 +43,7 @@ impl ForeignSlice {
     }
   }
 
+  #[allow(dead_code)]
   pub fn local_slice_mut(&self) -> &[u8] {
     unsafe {
       core::slice::from_raw_parts_mut(self.local_start as *mut u8, self.slice_len)

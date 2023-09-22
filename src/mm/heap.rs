@@ -1,6 +1,3 @@
-use core::alloc::{GlobalAlloc, Layout};
-
-// rCore buddy system allocator
 use buddy_system_allocator::LockedHeap;
 
 use crate::kernel::traits::*;
@@ -12,26 +9,5 @@ pub fn init() {
   }
 }
 
-struct Failure;
-
-unsafe impl GlobalAlloc for Failure {
-  #[inline(never)]
-  unsafe fn alloc(&self, layout: Layout) -> *mut u8 {
-    info!("{:?}", layout);
-    core::ptr::null_mut()
-  }
-
-  unsafe fn dealloc(&self, _: *mut u8, _: Layout) {}
-}
-
 #[global_allocator]
 static HEAP_ALLOCATOR: LockedHeap<32> = LockedHeap::empty();
-
-// #[global_allocator]
-// static HEAP_ALLOCATOR: Failure = Failure;
-
-
-#[alloc_error_handler]
-fn alloc_error_handler(_: Layout) -> ! {
-  panic!("alloc_error_handler: heap panic");
-}

@@ -19,7 +19,7 @@ pub extern "C" fn memalign(_align: usize, size: usize) -> *mut u8 {
 }
 
 #[no_mangle]
-pub extern "C" fn free(ptr: *mut u8) {
+pub extern "C" fn free(_ptr: *mut u8) {
   // TODO: implement free
 }
 

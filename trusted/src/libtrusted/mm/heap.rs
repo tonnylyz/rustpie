@@ -58,8 +58,3 @@ pub fn virtual_free(va: usize, num_of_page: usize) {
     let _ = rpsyscall::mem_unmap(0, va + i * PAGE_SIZE);
   }
 }
-
-#[alloc_error_handler]
-fn alloc_error_handler(layout: core::alloc::Layout) -> ! {
-  panic!("alloc_error_handler: heap panic {:?}", layout);
-}
