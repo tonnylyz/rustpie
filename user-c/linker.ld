@@ -12,10 +12,12 @@ SECTIONS
     }
     . = ALIGN(4096);
     .data : {
+        *(.sdata*)
         *(.data*)
     }
     . = ALIGN(4096);
     .bss : {
+        *(.sbss*)
         *(.bss*)
     }
     /DISCARD/ : {

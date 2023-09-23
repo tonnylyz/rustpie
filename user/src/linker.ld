@@ -2,32 +2,26 @@ ENTRY(_start)
 
 SECTIONS
 {
-    . = 4096;
+    . = 0x40000;
     .text : {
         *(.text*)
     }
-
     . = ALIGN(4096);
     .rodata : {
         *(.rodata*)
     }
-
     . = ALIGN(4096);
     .data : {
+        *(.sdata*)
         *(.data*)
     }
-    .sdata : {
-        *(.sdata*)
-    }
-
     . = ALIGN(4096);
     .bss : {
+        *(.sbss*)
         *(.bss*)
-        *(.sbss*)
     }
-    .sbss : {
-        *(.sbss*)
+    /DISCARD/ : {
+        *(.eh_frame*)
+        *(.gcc_except_table*)
     }
-
-    ELF_IMAGE = 0x80000000;
 }

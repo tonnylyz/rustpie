@@ -24,6 +24,7 @@ SECTIONS
 
     . = ALIGN(4096);
     .bss : {
+        *(.sbss*)
         *(.bss*)
     }
 
