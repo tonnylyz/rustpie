@@ -10,7 +10,7 @@ endif
 .PHONY: all clean
 
 all:
-	cargo build --bins --target src/target/${ARCH}.json -Z build-std=core,alloc ${CARGO_FLAGS}
+	cargo build --bins --target src/cargo_target/${ARCH}.json -Z build-std=core,alloc ${CARGO_FLAGS}
 
 clean:
 	-cargo clean
