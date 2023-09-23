@@ -1,6 +1,6 @@
 use rpabi::PAGE_SIZE;
 
-use crate::libtrusted::mm::{virtual_alloc, virtual_free};
+use crate::common::mm::{virtual_alloc, virtual_free};
 use rpsyscall::message::Message;
 use syscall::{Result, Error, EIO};
 use redoxfs::{BLOCK_SIZE, Disk};

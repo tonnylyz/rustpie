@@ -1,13 +1,13 @@
 #[macro_export]
 macro_rules! print {
-    ($($arg:tt)*) => ($crate::libtrusted::print::print_arg(format_args!($($arg)*)));
+    ($($arg:tt)*) => ($crate::common::print::print_arg(format_args!($($arg)*)));
 }
 
 #[macro_export]
 macro_rules! println {
     () => (print!("\n"));
     ($($arg:tt)*) => ({
-        $crate::libtrusted::print::print_arg(format_args!("{}\n", format_args!($($arg)*)));
+        $crate::common::print::print_arg(format_args!("{}\n", format_args!($($arg)*)));
     })
 }
 

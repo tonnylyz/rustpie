@@ -66,6 +66,13 @@ dependencies = [
 ]
 
 [[package]]
+name = "hardware"
+version = "0.1.0"
+dependencies = [
+ "tock-registers",
+]
+
+[[package]]
 name = "lock_api"
 version = "0.4.10"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -100,7 +107,6 @@ name = "rpabi"
 version = "0.1.0"
 dependencies = [
  "cfg-if",
- "tock-registers",
 ]
 
 [[package]]
@@ -110,6 +116,7 @@ dependencies = [
  "aarch64-cpu",
  "buddy_system_allocator",
  "cfg-if",
+ "hardware",
  "log",
  "riscv",
  "rpabi",

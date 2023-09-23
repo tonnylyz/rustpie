@@ -2,10 +2,10 @@ use rpabi::{PAGE_SIZE, PAGE_TABLE_L1_SHIFT, PAGE_TABLE_L2_SHIFT, PAGE_TABLE_L3_S
 use rpabi::CONFIG_READ_ONLY_LEVEL_1_PAGE_TABLE_BTM;
 use rpabi::CONFIG_READ_ONLY_LEVEL_2_PAGE_TABLE_BTM;
 use rpabi::CONFIG_READ_ONLY_LEVEL_3_PAGE_TABLE_BTM;
-use rpabi::mm::vm_descriptor::*;
+use hardware::mmu::riscv64_mmu::vm_descriptor::*;
 use tock_registers::LocalRegisterCopy;
 
-use crate::libtrusted::mm::PageAttribute;
+use crate::common::mm::PageAttribute;
 
 fn read_directory_entry(l1_index: usize) -> usize {
   let ppte = CONFIG_READ_ONLY_LEVEL_1_PAGE_TABLE_BTM + l1_index * 8;

@@ -1,5 +1,5 @@
-use crate::libtrusted::thread;
-use crate::libtrusted::wrapper::server_wrapper;
+use crate::common::thread;
+use crate::common::wrapper::server_wrapper;
 
 pub fn main() {
   let mut join_handlers = vec![];
@@ -34,7 +34,7 @@ pub fn main() {
   }));
 
   join_handlers.push(thread::spawn(|| {
-    match crate::libtrusted::loader::spawn("shell") {
+    match crate::common::loader::spawn("shell") {
       Ok((_asid, tid)) => {
         rpsyscall::thread_set_status(tid, rpabi::thread::THREAD_STATUS_RUNNABLE).expect("root start shell failed");
       }

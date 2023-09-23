@@ -24,7 +24,7 @@ KERNEL := target/${ARCH}${MACHINE}/${PROFILE}/rustpi
 all: ${KERNEL} ${KERNEL}.bin ${KERNEL}.asm
 
 ${KERNEL}: trusted_image
-	cargo build --target rpkernel/target/${ARCH}${MACHINE}.json -Z build-std=core,alloc  ${CARGO_FLAGS}
+	cargo build --target rpkernel/cargo_target/${ARCH}${MACHINE}.json -Z build-std=core,alloc  ${CARGO_FLAGS}
 
 ifeq (${MACHINE}, tx2)
 trusted_image: ramdisk.img

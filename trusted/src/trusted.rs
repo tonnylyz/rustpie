@@ -27,7 +27,7 @@ mod blk;
 mod blk;
 
 #[macro_use]
-mod libtrusted;
+mod common;
 
 mod fs;
 mod root;
@@ -38,9 +38,9 @@ mod logger;
 mod rtc;
 
 #[no_mangle]
-fn _start(_arg: usize) -> ! {
-  rpsyscall::set_exception_handler(libtrusted::exception::handler as usize).expect("set exception handler failed");
-  libtrusted::mm::heap_init();
+extern "C" fn _start() -> ! {
+  rpsyscall::set_exception_handler(common::exception::handler as usize).expect("set exception handler failed");
+  common::mm::heap_init();
   logger::init().expect("logger init failed");
   info!("trusted root start");
   let r = catch_unwind(|| {

@@ -1,7 +1,6 @@
 use alloc::vec::Vec;
 use core::ops::Range;
 use core::sync::atomic::{AtomicBool, Ordering};
-use spin::Mutex;
 
 use crate::kernel::device::Device;
 use crate::kernel::interrupt::InterruptController;
@@ -24,35 +23,34 @@ pub fn init_per_core() {
 }
 
 pub fn launch_other_cores() {
+  unsafe {
+    info!("boot hard is {}", HART_BOOT);
+  }
   HART_SPIN.store(true, Ordering::Relaxed);
 }
 
 
 static HART_SPIN: AtomicBool = AtomicBool::new(false);
-static HART_BOOT: Mutex<Option<usize>> = Mutex::new(None);
+static mut HART_BOOT: usize = 0xffff_ffff;
 
 #[no_mangle]
 pub unsafe extern "C" fn hart_spin(core_id: usize) {
   extern "C" {
     fn KERNEL_ENTRY();
   }
-  let mut hart_boot = HART_BOOT.lock();
-  if hart_boot.is_none() {
-    *hart_boot = Some(core_id);
-    drop(hart_boot);
+  if HART_BOOT == 0xffff_ffff {
+    HART_BOOT = core_id;
     for i in 0..BOARD_CORE_NUMBER {
       if i != core_id {
         let _ = crate::driver::hsm::hart_start(i, (KERNEL_ENTRY as usize).kva2pa(), 0);
       }
     }
-  } else {
-    drop(hart_boot);
   }
 
   if core_id == 0 {
     crate::main(core_id);
   }
-  while !HART_SPIN.load(Ordering::Relaxed) {}
+  while !HART_SPIN.load(Ordering::Acquire) {}
   crate::main(core_id);
 }
 

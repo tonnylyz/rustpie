@@ -1,4 +1,4 @@
-use rpabi::mm::vm_descriptor::*;
+use hardware::mmu::aarch64_mmu::vm_descriptor::*;
 use tock_registers::interfaces::{ReadWriteable, Writeable};
 
 use super::interface::PAGE_SHIFT;

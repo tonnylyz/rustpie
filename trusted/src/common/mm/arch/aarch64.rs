@@ -1,8 +1,8 @@
 use rpabi::{*, CONFIG_RECURSIVE_PAGE_TABLE_BTM as RECURSIVE_PAGE_TABLE_BTM};
-use rpabi::mm::vm_descriptor::*;
+use hardware::mmu::aarch64_mmu::vm_descriptor::*;
 use tock_registers::LocalRegisterCopy;
 
-use crate::libtrusted::mm::PageAttribute;
+use crate::common::mm::PageAttribute;
 
 const PTE_ADDR_MASK: usize = 0x0000_FFFF_FFFF_F000;
 const PTE_ATTR_MASK: usize = !PTE_ADDR_MASK;

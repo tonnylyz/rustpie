@@ -7,7 +7,7 @@ use spin::Mutex;
 
 use rpsyscall::mem_alloc;
 
-use crate::libtrusted::mm::default_page_attribute;
+use crate::common::mm::default_page_attribute;
 
 #[global_allocator]
 static HEAP_ALLOCATOR: LockedHeapWithRescue<32> = LockedHeapWithRescue::new(enlarge);

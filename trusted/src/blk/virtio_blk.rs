@@ -7,7 +7,7 @@ use tock_registers::*;
 use tock_registers::interfaces::{Readable, Writeable};
 use tock_registers::registers::*;
 
-use crate::libtrusted::mm::virt_to_phys;
+use crate::common::mm::virt_to_phys;
 use rpsyscall::get_tid;
 
 #[cfg(target_arch = "aarch64")]

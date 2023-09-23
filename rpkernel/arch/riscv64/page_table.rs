@@ -1,6 +1,6 @@
 use alloc::collections::BTreeMap;
 use alloc::vec::Vec;
-use rpabi::mm::vm_descriptor::*;
+use hardware::mmu::riscv64_mmu::vm_descriptor::*;
 use rpabi::syscall::error::ERROR_INVARG;
 use riscv::regs::*;
 use spin::Mutex;

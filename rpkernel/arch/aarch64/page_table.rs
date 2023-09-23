@@ -1,7 +1,7 @@
 use alloc::collections::BTreeMap;
 use alloc::vec::Vec;
 
-use rpabi::mm::vm_descriptor::*;
+use hardware::mmu::aarch64_mmu::vm_descriptor::*;
 use rpabi::syscall::error::ERROR_INVARG;
 use spin::Mutex;
 use tock_registers::interfaces::Writeable;

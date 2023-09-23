@@ -14,7 +14,7 @@ TRUSTED_IMAGE := target/${ARCH}/${TRUSTED_PROFILE}/trusted
 .PHONY: all clean
 
 all:
-	cargo build --target src/target/${ARCH}.json -Z build-std=core,alloc ${CARGO_FLAGS}
+	cargo build --target cargo_target/${ARCH}.json -Z build-std=core,alloc ${CARGO_FLAGS}
 	llvm-objdump -d ${TRUSTED_IMAGE} > ${TRUSTED_IMAGE}.asm
 
 clean:

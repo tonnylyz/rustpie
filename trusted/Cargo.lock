@@ -75,6 +75,13 @@ dependencies = [
 ]
 
 [[package]]
+name = "hardware"
+version = "0.1.0"
+dependencies = [
+ "tock-registers",
+]
+
+[[package]]
 name = "k210-hal"
 version = "0.2.0"
 source = "git+https://github.com/tonnylyz/k210-hal#47f96a4c41ce0d1f5c337d06228d6be47254ba6e"
@@ -153,7 +160,6 @@ name = "rpabi"
 version = "0.1.0"
 dependencies = [
  "cfg-if",
- "tock-registers",
 ]
 
 [[package]]
@@ -223,6 +229,7 @@ name = "trusted"
 version = "0.1.0"
 dependencies = [
  "buddy_system_allocator",
+ "hardware",
  "k210-hal",
  "log",
  "redox_syscall",

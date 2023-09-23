@@ -1,4 +1,4 @@
-use rpabi::driver::pl011::Pl011Mmio;
+use hardware::pl011::Pl011Mmio;
 use tock_registers::interfaces::{Readable, Writeable};
 
 pub fn init() {}

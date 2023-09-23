@@ -6,3 +6,9 @@ user-c/hello.o
 user-c/hello2
 .vscode
 
+hardware/Cargo.lock
+rpabi/Cargo.lock
+rplibc/Cargo.lock
+rpservapi/Cargo.lock
+rpstdlib/Cargo.lock
+rpsyscall/Cargo.lock

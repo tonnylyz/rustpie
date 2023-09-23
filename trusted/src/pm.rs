@@ -5,8 +5,8 @@ use core::sync::atomic::Ordering::Relaxed;
 
 use spin::Mutex;
 
-use crate::libtrusted::foreign_slice::ForeignSlice;
-use crate::libtrusted::wrapper::request_wrapper;
+use crate::common::foreign_slice::ForeignSlice;
+use crate::common::wrapper::request_wrapper;
 use rpsyscall::{get_asid, get_tid};
 use rpsyscall::message::Message;
 
@@ -106,7 +106,7 @@ fn pm(msg: Message, tid: usize) -> (usize, usize) {
       let cmd = s.local_slice();
       let cmd = core::str::from_utf8(cmd);
       if let Ok(cmd) = cmd {
-        if let Ok((child_asid, tid)) = crate::libtrusted::loader::spawn(cmd) {
+        if let Ok((child_asid, tid)) = crate::common::loader::spawn(cmd) {
           let pid = PROCESS_MANAGER.register(child_asid, tid, Some(asid as usize), String::from(cmd));
           rpsyscall::thread_set_status(tid, rpabi::thread::THREAD_STATUS_RUNNABLE).expect("pm start thread failed");
           (rpservapi::pm::result::OK, pid)

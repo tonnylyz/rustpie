@@ -1,5 +1,5 @@
 use tock_registers::interfaces::{Readable, Writeable};
-use rpabi::driver::ns16550::*;
+use hardware::ns16550::*;
 
 const NS16550_MMIO_BASE: usize = 0xffff_ffff_0000_0000 + 0x1000_0000;
 

@@ -1,5 +1,5 @@
-use crate::libtrusted::mm::default_page_attribute;
-use crate::libtrusted::wrapper::request_wrapper;
+use crate::common::mm::default_page_attribute;
+use crate::common::wrapper::request_wrapper;
 use rpsyscall::get_tid;
 use rpsyscall::message::Message;
 

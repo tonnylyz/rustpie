@@ -4,7 +4,7 @@ use rpabi::PAGE_SIZE;
 
 use rpsyscall::{thread_alloc, thread_set_status};
 
-use crate::libtrusted::mm::{virtual_alloc, virtual_free};
+use crate::common::mm::{virtual_alloc, virtual_free};
 
 pub struct Thread {
   id: usize,

@@ -1,9 +1,9 @@
 use rpabi::PAGE_SIZE;
 
 use rpsyscall::mem_map;
-use crate::libtrusted::loader::round_up;
-use crate::libtrusted::loader::round_down;
-use crate::libtrusted::mm::{default_page_attribute, virtual_alloc, virtual_free};
+use crate::common::loader::round_up;
+use crate::common::loader::round_down;
+use crate::common::mm::{default_page_attribute, virtual_alloc, virtual_free};
 
 pub struct ForeignSlice {
   pub asid: u16,

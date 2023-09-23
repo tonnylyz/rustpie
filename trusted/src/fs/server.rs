@@ -3,9 +3,9 @@ use alloc::string::String;
 use rpabi::PAGE_SIZE;
 use spin::Once;
 
-use crate::libtrusted::foreign_slice::ForeignSlice;
-use crate::libtrusted::mm::virtual_alloc;
-use crate::libtrusted::wrapper::request_wrapper;
+use crate::common::foreign_slice::ForeignSlice;
+use crate::common::mm::virtual_alloc;
+use crate::common::wrapper::request_wrapper;
 use rpsyscall::{get_asid, get_tid};
 use rpsyscall::message::Message;
 use syscall::{Packet, Scheme};

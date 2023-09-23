@@ -13,18 +13,8 @@ cfg_if::cfg_if! {
   }
 }
 
-#[cfg(target_arch = "aarch64")]
-#[path = "mm/aarch64.rs"]
-pub mod mm;
-
-#[cfg(target_arch = "riscv64")]
-#[path = "mm/riscv64.rs"]
-pub mod mm;
-
 // functions in `string.h`
 pub mod string;
-
-pub mod driver;
 
 pub const CONFIG_USER_LIMIT: usize = 0x3f_a000_0000;
 pub const CONFIG_USER_STACK_TOP: usize = 0x3f_8000_0000;

@@ -4,7 +4,7 @@ use crate::fs::client::SeekFrom;
 
 // use rpstdlib::fs::{File, SeekFrom};
 
-use crate::libtrusted::mm::{default_page_attribute, virtual_alloc, virtual_free};
+use crate::common::mm::{default_page_attribute, virtual_alloc, virtual_free};
 
 #[inline(always)]
 pub fn round_up(addr: usize, n: usize) -> usize {
@@ -55,11 +55,11 @@ pub fn spawn<P: AsRef<str>>(cmd: P) -> Result<(u16, usize), &'static str> {
       let va_end = round_up(va_start + ph.mem_size() as usize, PAGE_SIZE);
       va = round_down(va_start, PAGE_SIZE);
       while va < va_end {
-        rpsyscall::mem_alloc(asid, va, crate::libtrusted::mm::default_page_attribute()).map_err(|_e| "out of memory")?;
+        rpsyscall::mem_alloc(asid, va, crate::common::mm::default_page_attribute()).map_err(|_e| "out of memory")?;
         // println!("alloc @{:016x}", va);
         unsafe {
           if va < va_start + ph.file_size() as usize {
-            rpsyscall::mem_map(asid, va, 0, va_tmp, crate::libtrusted::mm::default_page_attribute())
+            rpsyscall::mem_map(asid, va, 0, va_tmp, crate::common::mm::default_page_attribute())
               .map_err(|_e| "mem_map failed")?;
             let va_slice = core::slice::from_raw_parts_mut(va_tmp as *mut u8, PAGE_SIZE);
             let offset = ph.offset() as usize + (va - va_start);
@@ -76,7 +76,7 @@ pub fn spawn<P: AsRef<str>>(cmd: P) -> Result<(u16, usize), &'static str> {
       }
     }
     virtual_free(buf.as_ptr() as usize, page_num);
-    rpsyscall::mem_alloc(asid, rpabi::CONFIG_USER_STACK_TOP - PAGE_SIZE, crate::libtrusted::mm::default_page_attribute()).map_err(|_e| "mem_alloc failed")?;
+    rpsyscall::mem_alloc(asid, rpabi::CONFIG_USER_STACK_TOP - PAGE_SIZE, crate::common::mm::default_page_attribute()).map_err(|_e| "mem_alloc failed")?;
     rpsyscall::mem_map(asid, rpabi::CONFIG_USER_STACK_TOP - PAGE_SIZE, 0, va_tmp, default_page_attribute()).map_err(|_e| "mem_map failed")?;
     let va_slice = unsafe { core::slice::from_raw_parts_mut(va_tmp as *mut u8, PAGE_SIZE) };
     let mut index = 0;

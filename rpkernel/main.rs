@@ -116,6 +116,7 @@ pub unsafe fn main(core_id: arch::CoreId) -> ! {
   board::init_per_core();
   info!("init core {}", core_id);
 
+  util::barrier();
   if core_id == 0 {
     // {
     //   test_create_thread();
