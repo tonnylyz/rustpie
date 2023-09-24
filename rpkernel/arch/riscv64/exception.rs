@@ -60,8 +60,8 @@ unsafe extern "C" fn exception_entry(ctx: *mut ContextFrame) {
       INTERRUPT_SUPERVISOR_EXTERNAL => {
         let plic = &crate::driver::INTERRUPT_CONTROLLER;
         if let Some(int) = plic.fetch() {
-          crate::kernel::interrupt::interrupt(int);
-          plic.finish(int);
+          crate::kernel::interrupt::interrupt(int.0);
+          plic.finish(int.0);
         } else {
           warn!("PLIC report no irq");
         }

@@ -63,14 +63,16 @@ unsafe extern "C" fn lower_aarch64_irq(ctx: *mut ContextFrame) {
   use crate::driver::{INTERRUPT_CONTROLLER, gic::INT_TIMER};
   let irq = INTERRUPT_CONTROLLER.fetch();
   match irq {
-    Some(INT_TIMER) => {
+    Some((INT_TIMER, 0)) => {
       crate::kernel::timer::interrupt();
     }
-    Some(i) => {
-      if i >= 32 {
-        crate::kernel::interrupt::interrupt(i);
+    Some((int_id, src_cpu)) => {
+      if int_id >= 32 {
+        crate::kernel::interrupt::interrupt(int_id);
+      } else if int_id < 16 {
+        crate::kernel::interrupt::ipi_interrupt(int_id.into(), src_cpu);
       } else {
-        panic!("GIC unhandled SGI PPI")
+        panic!("GIC unhandled PPI")
       }
     }
     None => {
@@ -78,7 +80,7 @@ unsafe extern "C" fn lower_aarch64_irq(ctx: *mut ContextFrame) {
     }
   }
   if irq.is_some() {
-    INTERRUPT_CONTROLLER.finish(irq.unwrap());
+    INTERRUPT_CONTROLLER.finish(irq.unwrap().0);
   }
   core.clear_context();
 }

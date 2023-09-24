@@ -1,8 +1,8 @@
-use tock_registers::*;
 use tock_registers::interfaces::{Readable, Writeable};
 use tock_registers::registers::*;
+use tock_registers::*;
 
-use crate::kernel::interrupt::InterruptController;
+use crate::kernel::interrupt::{InterProcessorInterruptController, InterruptController};
 use crate::kernel::traits::ArchTrait;
 
 const GIC_INTERRUPT_NUM: usize = 1024;
@@ -21,6 +21,24 @@ const GICC_BASE: usize = 0x08010000;
 const GICD_BASE: usize = 0x3881000;
 #[cfg(feature = "tx2")]
 const GICC_BASE: usize = 0x3882000;
+
+register_bitfields! {
+  u32,
+  pub GICD_SGIR [
+    TargetListFilter OFFSET(24) NUMBITS(2) [
+      ForwardInList        = 0b00,
+      ForwardAllExceptSelf = 0b01,
+      ForwardSelf          = 0b10,
+    ],
+    CpuTargetList OFFSET(16) NUMBITS(8) [],
+    NSATT OFFSET(15) NUMBITS(1) [],
+    SGIIntId OFFSET(0) NUMBITS(4) [],
+  ],
+  pub GICC_IAR [
+    CPUID OFFSET(10) NUMBITS(3) [],
+    INTID OFFSET(0) NUMBITS(10) [],
+  ],
+}
 
 register_structs! {
   #[allow(non_snake_case)]
@@ -41,7 +59,7 @@ register_structs! {
     (0x0c00 => ICFGR: [ReadWrite<u32>; GIC_2_BIT_NUM]),
     (0x0d00 => _reserved_1),
     (0x0e00 => NSACR: [ReadWrite<u32>; GIC_2_BIT_NUM]),
-    (0x0f00 => SGIR: WriteOnly<u32>),
+    (0x0f00 => SGIR: WriteOnly<u32, GICD_SGIR::Register>),
     (0x0f04 => _reserved_2),
     (0x0f10 => CPENDSGIR: [ReadWrite<u32>; GIC_SGI_NUM * 8 / 32]),
     (0x0f20 => SPENDSGIR: [ReadWrite<u32>; GIC_SGI_NUM * 8 / 32]),
@@ -52,6 +70,7 @@ register_structs! {
 
 struct GicDistributor {
   base_addr: usize,
+  cpu_if_id: spin::Mutex<[u8; crate::board::BOARD_CORE_NUMBER]>,
 }
 
 impl core::ops::Deref for GicDistributor {
@@ -68,7 +87,7 @@ register_structs! {
     (0x0000 => CTLR: ReadWrite<u32>),   // CPU Interface Control Register
     (0x0004 => PMR: ReadWrite<u32>),    // Interrupt Priority Mask Register
     (0x0008 => BPR: ReadWrite<u32>),    // Binary Point Register
-    (0x000c => IAR: ReadOnly<u32>),     // Interrupt Acknowledge Register
+    (0x000c => IAR: ReadOnly<u32, GICC_IAR::Register>),     // Interrupt Acknowledge Register
     (0x0010 => EOIR: WriteOnly<u32>),   // End of Interrupt Register
     (0x0014 => RPR: ReadOnly<u32>),     // Running Priority Register
     (0x0018 => HPPIR: ReadOnly<u32>),   // Highest Priority Pending Interrupt Register
@@ -117,7 +136,7 @@ impl GicCpuInterface {
 
 impl GicDistributor {
   const fn new(base_addr: usize) -> Self {
-    GicDistributor { base_addr }
+    GicDistributor { base_addr, cpu_if_id: spin::Mutex::new([0; crate::board::BOARD_CORE_NUMBER]) }
   }
 
   fn ptr(&self) -> *const GicDistributorBlock {
@@ -148,9 +167,14 @@ impl GicDistributor {
     for i in 0..8 {
       self.IPRIORITYR[i].set(u32::MAX);
     }
+    let cpu_if_id = (self.ITARGETSR[0].get() & 0xff) as u8;
+    info!("cpu_if_id {}", cpu_if_id);
+    let mut ids = self.cpu_if_id.lock();
+    ids[crate::arch::Arch::core_id()] = cpu_if_id;
   }
 
   fn set_enable(&self, int: usize) {
+    // SGIs may be always enabled and thus don't need enabling
     let idx = int / 32;
     let bit = 1u32 << (int % 32);
     self.ISENABLER[idx].set(bit);
@@ -163,6 +187,10 @@ impl GicDistributor {
   }
 
   fn set_target(&self, int: usize, target: u8) {
+    if int < 32 {
+      // GICD_ITARGETSR0 to GICD_ITARGETSR7 are read-only
+      return;
+    }
     let idx = (int * 8) / 32;
     let offset = (int * 8) % 32;
     let mask: u32 = 0b11111111 << offset;
@@ -210,10 +238,14 @@ impl InterruptController for Gic {
     let gicd = &GICD;
     gicd.set_enable(int);
     gicd.set_priority(int, 0x7f);
-    if int >= 32 {
-      gicd.set_config(int, true);
+    if int < 16 {
+      return;
     }
-    gicd.set_target(int, (1 << core_id) as u8);
+    if int >= 32 {
+      // when enabling SPIs, set it to be edge triggered and targeting current CPU
+      gicd.set_config(int, true);
+      gicd.set_target(int, (1 << core_id) as u8);
+    }
   }
 
   fn disable(&self, int: Interrupt) {
@@ -221,13 +253,15 @@ impl InterruptController for Gic {
     gicd.clear_enable(int);
   }
 
-  fn fetch(&self) -> Option<Interrupt> {
+  fn fetch(&self) -> Option<(Interrupt, usize)> {
     let gicc = &GICC;
-    let i = gicc.IAR.get();
-    if i >= 1022 {
+    let iar = gicc.IAR.extract();
+    let int_id = iar.read(GICC_IAR::INTID);
+    let src_cpu_id = iar.read(GICC_IAR::CPUID);
+    if int_id >= 1022 {
       None
     } else {
-      Some(i as Interrupt)
+      Some((int_id as Interrupt, src_cpu_id as usize))
     }
   }
 
@@ -242,3 +276,49 @@ pub const INT_TIMER: Interrupt = 27; // virtual timer
 pub static INTERRUPT_CONTROLLER: Gic = Gic {};
 
 pub type Interrupt = usize;
+
+use crate::kernel::interrupt::InterProcessInterrupt as IPI;
+
+impl InterProcessorInterruptController for Gic {
+  fn send_to_one(&self, irq: IPI, target: usize) {
+    assert!(target != crate::arch::Arch::core_id());
+    self.send_to_multiple(irq, 1usize << target);
+  }
+
+  fn send_to_multiple(&self, irq: IPI, target_mask: usize) {
+    let gicd = &GICD;
+    let sgi_int_id: Interrupt = irq.into();
+    assert!(sgi_int_id < 16); // SGI INT id range is 0-15
+    assert!(target_mask != 0);
+    assert!(target_mask <= 0b1111_1111); // GICv2 supports at most 8 CPU interfaces
+    let mut if_mask = 0u8;
+    let if_ids = gicd.cpu_if_id.lock();
+    for i in 0..8 {
+      if target_mask & (1 << i) != 0 {
+        assert!(if_ids[i] != 0);
+        if_mask |= if_ids[i];
+      }
+    }
+    gicd.SGIR.write(
+      GICD_SGIR::CpuTargetList.val(if_mask as u8 as u32) + GICD_SGIR::SGIIntId.val(sgi_int_id as u32),
+    );
+  }
+}
+
+// should move to arch
+impl From<IPI> for Interrupt {
+  fn from(value: IPI) -> Self {
+    match value {
+      IPI::IPI0 => 0,
+    }
+  }
+}
+
+impl From<Interrupt> for IPI {
+  fn from(value: Interrupt) -> Self {
+    match value {
+      0 => IPI::IPI0,
+      _ => panic!(),
+    }
+  }
+}

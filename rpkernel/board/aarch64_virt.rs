@@ -21,6 +21,9 @@ pub fn init_per_core() {
   DAIF.write(DAIF::I::Masked);
   crate::driver::INTERRUPT_CONTROLLER.init();
   crate::driver::INTERRUPT_CONTROLLER.enable(INT_TIMER);
+  for i in 0..16 {
+    crate::driver::INTERRUPT_CONTROLLER.enable(i);
+  }
   crate::driver::timer::init();
   let pmcr = 1u64;
   let pmcntenset = 1u64 << 32;

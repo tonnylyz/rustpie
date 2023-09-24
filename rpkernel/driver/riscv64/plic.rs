@@ -118,7 +118,7 @@ impl InterruptController for Plic {
     }
   }
 
-  fn fetch(&self) -> Option<Interrupt> {
+  fn fetch(&self) -> Option<(Interrupt, usize)> {
     let plic = &PLIC_MMIO;
     let core_id = crate::arch::Arch::core_id();
     let int =
@@ -132,7 +132,7 @@ impl InterruptController for Plic {
     if int == 0 {
       None
     } else {
-      Some(int)
+      Some((int, 0)) // plic is only for external interrupt, thus no source cpu
     }
   }
 
