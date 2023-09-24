@@ -118,12 +118,6 @@ pub unsafe fn main(core_id: arch::CoreId) -> ! {
 
   util::barrier();
   if core_id == 0 {
-    // {
-    //   test_create_thread();
-    //   test_create_as();
-    //   loop {}
-    // }
-
     #[cfg(target_arch = "aarch64")]
       #[cfg(not(feature = "user_release"))]
       let bin = include_bytes_align_as!(AlignPage, "../trusted/target/aarch64/debug/trusted");
