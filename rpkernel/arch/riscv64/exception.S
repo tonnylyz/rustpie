@@ -1,3 +1,5 @@
+// Because low 2 bits of STVEC are used, it requires vector entry to be properly aligned.
+.align 4
 .global push_context
 push_context:
     csrrw sp, sscratch, sp // (sp, sscratch) -> (kernel sp, thread sp)
