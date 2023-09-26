@@ -16,7 +16,7 @@ use pac::spi0::spi_ctrlr0;
 /** Borrow aitm from pac */
 pub use spi_ctrlr0::AITM_A as aitm;
 
-use crate::libtrusted::mm::virt_to_phys;
+use crate::common::mm::virt_to_phys;
 
 use super::dmac::{address_increment, burst_length, DMAC, transfer_width};
 use super::sysctl::{self, dma_channel};
