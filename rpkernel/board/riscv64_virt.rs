@@ -1,6 +1,7 @@
 use alloc::vec::Vec;
 use core::ops::Range;
 use core::sync::atomic::{AtomicBool, Ordering};
+use tock_registers::interfaces::{Readable, Writeable};
 
 use crate::kernel::device::Device;
 use crate::kernel::interrupt::InterruptController;
@@ -18,8 +19,18 @@ pub fn init() {
 
 pub fn init_per_core() {
   crate::driver::timer::init();
-  crate::arch::Arch::exception_init();
   crate::driver::INTERRUPT_CONTROLLER.init();
+  use riscv::regs::SIE;
+  // enable
+  //    * timer interrupt
+  //    * external interrupt (from PLIC)
+  //    * software interrupt (IPI)
+  SIE.write(
+    SIE::STIE::SET
+   + SIE::SEIE::SET
+   + SIE::SSIE::SET
+  );
+  info!("SIE val {:b}", SIE.get());
 }
 
 pub fn launch_other_cores() {

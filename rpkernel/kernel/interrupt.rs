@@ -16,13 +16,14 @@ pub trait InterruptController {
   fn finish(&self, int: Interrupt);
 }
 
+#[derive(Debug, Copy, Clone)]
 pub enum InterProcessInterrupt {
   IPI0,
 }
 
 pub trait InterProcessorInterruptController {
-  fn send_to_one(&self, irq :InterProcessInterrupt, target: usize);
-  fn send_to_multiple(&self, irq :InterProcessInterrupt, target_mask: usize);
+  fn send_to_one(&self, irq: InterProcessInterrupt, target: usize);
+  fn send_to_multiple(&self, irq: InterProcessInterrupt, target_mask: usize);
 }
 
 pub struct InterruptSemaphore(Mutex<BTreeMap<Interrupt, Semaphore>>);
@@ -56,7 +57,7 @@ impl InterruptSemaphore {
 
 // Routine that exception handler calls to handle external interrupt (SPI interrupts in AArch64 or PLIC interrupts in Riscv64)
 pub fn interrupt(int: Interrupt) {
-  // info!("external {}", int);
+  trace!("external {}", int);
   INT_SEM.signal(int);
 }
 
@@ -65,6 +66,6 @@ pub fn ipi_interrupt(ipi: InterProcessInterrupt, _src_cpu: usize) {
   match ipi {
     InterProcessInterrupt::IPI0 => {
       // crate::kernel::cpu::cpu().schedule()
-    },
+    }
   }
 }

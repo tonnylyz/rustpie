@@ -1,14 +1,22 @@
-use tock_registers::{interfaces::{Readable, Writeable}, register_structs};
+use spin::Mutex;
 use tock_registers::registers::*;
+use tock_registers::{
+  interfaces::{Readable, Writeable},
+  register_structs,
+};
 
-use crate::kernel::interrupt::InterruptController;
+use crate::kernel::interrupt::{
+  InterProcessInterrupt as IPI, InterProcessorInterruptController, InterruptController,
+};
 use crate::kernel::traits::ArchTrait;
 
 // platform level interrupt controller
 // https://github.com/riscv/riscv-plic-spec/blob/master/riscv-plic.adoc
 const PLIC_BASE_ADDR: usize = 0xffff_ffff_0000_0000 + 0x0c00_0000;
 
-pub struct Plic;
+pub struct Rv64InterruptController {
+  ipi_mailboxes: Mutex<[Option<(IPI, usize)>; crate::board::BOARD_CORE_NUMBER]>,
+}
 
 register_structs! {
   #[allow(non_snake_case)]
@@ -68,12 +76,14 @@ impl PlicMmio {
   const fn new(base_addr: usize) -> Self {
     PlicMmio { base_addr }
   }
-  fn ptr(&self) -> *const PlicBlock { self.base_addr as *const _ }
+  fn ptr(&self) -> *const PlicBlock {
+    self.base_addr as *const _
+  }
 }
 
 static PLIC_MMIO: PlicMmio = PlicMmio::new(PLIC_BASE_ADDR);
 
-impl InterruptController for Plic {
+impl InterruptController for Rv64InterruptController {
   fn init(&self) {
     let plic = &PLIC_MMIO;
     let core_id = crate::arch::Arch::core_id();
@@ -94,10 +104,18 @@ impl InterruptController for Plic {
     let bit_mask: u32 = 1 << bit_idx;
 
     match core_id {
-      0 => plic.InterruptEnableCtx1[reg_idx].set(plic.InterruptEnableCtx1[reg_idx].get() | bit_mask),
-      1 => plic.InterruptEnableCtx3[reg_idx].set(plic.InterruptEnableCtx3[reg_idx].get() | bit_mask),
-      2 => plic.InterruptEnableCtx5[reg_idx].set(plic.InterruptEnableCtx5[reg_idx].get() | bit_mask),
-      3 => plic.InterruptEnableCtx7[reg_idx].set(plic.InterruptEnableCtx7[reg_idx].get() | bit_mask),
+      0 => {
+        plic.InterruptEnableCtx1[reg_idx].set(plic.InterruptEnableCtx1[reg_idx].get() | bit_mask)
+      }
+      1 => {
+        plic.InterruptEnableCtx3[reg_idx].set(plic.InterruptEnableCtx3[reg_idx].get() | bit_mask)
+      }
+      2 => {
+        plic.InterruptEnableCtx5[reg_idx].set(plic.InterruptEnableCtx5[reg_idx].get() | bit_mask)
+      }
+      3 => {
+        plic.InterruptEnableCtx7[reg_idx].set(plic.InterruptEnableCtx7[reg_idx].get() | bit_mask)
+      }
       _ => panic!(),
     }
     plic.InterruptPriority[i].set(1);
@@ -110,10 +128,18 @@ impl InterruptController for Plic {
     let bit_idx = i % 32;
     let bit_mask: u32 = 1 << bit_idx;
     match core_id {
-      0 => plic.InterruptEnableCtx1[reg_idx].set(plic.InterruptEnableCtx1[reg_idx].get() & !bit_mask),
-      1 => plic.InterruptEnableCtx3[reg_idx].set(plic.InterruptEnableCtx3[reg_idx].get() & !bit_mask),
-      2 => plic.InterruptEnableCtx5[reg_idx].set(plic.InterruptEnableCtx5[reg_idx].get() & !bit_mask),
-      3 => plic.InterruptEnableCtx7[reg_idx].set(plic.InterruptEnableCtx7[reg_idx].get() & !bit_mask),
+      0 => {
+        plic.InterruptEnableCtx1[reg_idx].set(plic.InterruptEnableCtx1[reg_idx].get() & !bit_mask)
+      }
+      1 => {
+        plic.InterruptEnableCtx3[reg_idx].set(plic.InterruptEnableCtx3[reg_idx].get() & !bit_mask)
+      }
+      2 => {
+        plic.InterruptEnableCtx5[reg_idx].set(plic.InterruptEnableCtx5[reg_idx].get() & !bit_mask)
+      }
+      3 => {
+        plic.InterruptEnableCtx7[reg_idx].set(plic.InterruptEnableCtx7[reg_idx].get() & !bit_mask)
+      }
       _ => panic!(),
     }
   }
@@ -121,14 +147,13 @@ impl InterruptController for Plic {
   fn fetch(&self) -> Option<(Interrupt, usize)> {
     let plic = &PLIC_MMIO;
     let core_id = crate::arch::Arch::core_id();
-    let int =
-      match core_id {
-        0 => plic.InterruptClaimCompletionCtx1.get(),
-        1 => plic.InterruptClaimCompletionCtx3.get(),
-        2 => plic.InterruptClaimCompletionCtx5.get(),
-        3 => plic.InterruptClaimCompletionCtx7.get(),
-        _ => panic!(),
-      } as usize;
+    let int = match core_id {
+      0 => plic.InterruptClaimCompletionCtx1.get(),
+      1 => plic.InterruptClaimCompletionCtx3.get(),
+      2 => plic.InterruptClaimCompletionCtx5.get(),
+      3 => plic.InterruptClaimCompletionCtx7.get(),
+      _ => panic!(),
+    } as usize;
     if int == 0 {
       None
     } else {
@@ -149,6 +174,39 @@ impl InterruptController for Plic {
   }
 }
 
-pub static INTERRUPT_CONTROLLER: Plic = Plic {};
+pub static INTERRUPT_CONTROLLER: Rv64InterruptController = Rv64InterruptController {
+  ipi_mailboxes: Mutex::new([None; crate::board::BOARD_CORE_NUMBER]),
+};
 
 pub type Interrupt = usize;
+
+impl InterProcessorInterruptController for Rv64InterruptController {
+  fn send_to_one(&self, irq: IPI, target: usize) {
+    assert!(target != crate::arch::Arch::core_id());
+    self.send_to_multiple(irq, 1usize << target);
+  }
+
+  fn send_to_multiple(&self, irq: IPI, target_mask: usize) {
+    use super::sbi::*;
+    let mut mailboxes = self.ipi_mailboxes.lock();
+    for i in 0..crate::board::BOARD_CORE_NUMBER {
+      if target_mask & (1usize << i) != 0 {
+        let old = mailboxes[i].take();
+        if let Some((ipi, core)) = old {
+          trace!("dropping ipi {:?} from cpu {}", ipi, core);
+        }
+        mailboxes[i] = Some((irq, crate::arch::Arch::core_id()));
+      }
+    }
+    drop(mailboxes);
+    // we don't need hart_mask_base as we have far less than 64 harts
+    let _ = sbi_call(SBI_EID_IPI, SBI_FID_IPI_SEND, target_mask, 0, 0);
+  }
+}
+
+impl Rv64InterruptController {
+  pub fn read_ipi_event(&self) -> Option<(IPI, usize)> {
+    let mut mailbox = self.ipi_mailboxes.lock()[crate::arch::Arch::core_id()];
+    mailbox.take()
+  }
+}

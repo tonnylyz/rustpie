@@ -6,6 +6,9 @@ pub const SBI_FID_HART_START: u32 = 0x00;
 //pub const SBI_FID_HART_STOP: u32 = 0x01;
 //pub const SBI_FID_HART_GET_STATUS: u32 = 0x02;
 
+pub const SBI_EID_IPI: u32 = 0x735049; // s-mode IPI
+pub const SBI_FID_IPI_SEND: u32 = 0;
+
 pub enum Error {
   Failed = 1,
   NotSupported = 2,

@@ -44,7 +44,6 @@ impl RoundRobinScheduler {
     // inform CPU to run
     let target = self.least_busy_cpu();
     if target != crate::arch::Arch::core_id() {
-      #[cfg(target_arch = "aarch64")]
       crate::driver::INTERRUPT_CONTROLLER.send_to_one(super::interrupt::InterProcessInterrupt::IPI0, target);
     }
   }

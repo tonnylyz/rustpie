@@ -55,13 +55,21 @@ unsafe extern "C" fn exception_entry(ctx: *mut ContextFrame) {
   }
   if irq {
     match code {
-      INTERRUPT_SUPERVISOR_SOFTWARE => panic!("Interrupt::SupervisorSoft"),
+      INTERRUPT_SUPERVISOR_SOFTWARE => {
+        let rvic = &crate::driver::INTERRUPT_CONTROLLER;
+        if let Some((ipi, src_cpu)) = rvic.read_ipi_event() {
+          crate::kernel::interrupt::ipi_interrupt(ipi, src_cpu);
+          SIP.write(SIP::SSIE::CLEAR);
+        } else {
+          panic!("unknown software interrupt");
+        }
+      },
       INTERRUPT_SUPERVISOR_TIMER => crate::kernel::timer::interrupt(),
       INTERRUPT_SUPERVISOR_EXTERNAL => {
-        let plic = &crate::driver::INTERRUPT_CONTROLLER;
-        if let Some(int) = plic.fetch() {
+        let rvic = &crate::driver::INTERRUPT_CONTROLLER;
+        if let Some(int) = rvic.fetch() {
           crate::kernel::interrupt::interrupt(int.0);
-          plic.finish(int.0);
+          rvic.finish(int.0);
         } else {
           warn!("PLIC report no irq");
         }
@@ -108,5 +116,4 @@ pub fn init() {
   STVEC.write(STVEC::BASE.val(push_context as usize as u64 >> 2) + STVEC::MODE::Direct);
   // Note: riscv vector only 4 byte per cause
   //       direct mode make it distributed later in `exception_entry`
-  SIE.write(SIE::SEIE::SET);
 }

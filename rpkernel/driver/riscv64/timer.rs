@@ -1,5 +1,5 @@
 use riscv::regs::*;
-use tock_registers::interfaces::{Readable, Writeable};
+use tock_registers::interfaces::Readable;
 
 use super::sbi::{sbi_call, SBI_EID_TIMER, SBI_FID_SET_TIMER};
 
@@ -30,5 +30,4 @@ pub fn counter() -> usize {
 
 pub fn init() {
   next();
-  SIE.write(SIE::STIE::SET);
 }
