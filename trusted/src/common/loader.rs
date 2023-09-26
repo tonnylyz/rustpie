@@ -29,7 +29,7 @@ pub fn spawn<P: AsRef<str>>(cmd: P) -> Result<(u16, usize), &'static str> {
       e.text()
     })? as usize;
     let page_num = round_up(file_size, PAGE_SIZE) / PAGE_SIZE;
-    // info!("spawn elf size {} pages", page_num);
+    trace!("spawn elf size {} pages", page_num);
     f.seek(SeekFrom::Start(0)).map_err(|e| {
       error!("spawn seek start file failed");
       e.text()
@@ -56,18 +56,18 @@ pub fn spawn<P: AsRef<str>>(cmd: P) -> Result<(u16, usize), &'static str> {
       va = round_down(va_start, PAGE_SIZE);
       while va < va_end {
         rpsyscall::mem_alloc(asid, va, crate::common::mm::default_page_attribute()).map_err(|_e| "out of memory")?;
-        // println!("alloc @{:016x}", va);
+        trace!("alloc @{:016x}", va);
         unsafe {
           if va < va_start + ph.file_size() as usize {
             rpsyscall::mem_map(asid, va, 0, va_tmp, crate::common::mm::default_page_attribute())
               .map_err(|_e| "mem_map failed")?;
             let va_slice = core::slice::from_raw_parts_mut(va_tmp as *mut u8, PAGE_SIZE);
             let offset = ph.offset() as usize + (va - va_start);
-            // println!("offset {:x}", offset);
+            trace!("offset {:x}", offset);
             for i in 0..PAGE_SIZE {
               va_slice[i] = buf[offset + i];
             }
-            // println!("copy into {:016x}", va);
+            trace!("copy into {:016x}", va);
             rpsyscall::mem_unmap(0, va_tmp).map_err(|_e| "mem_unmap failed")?;
           }
         }
@@ -106,7 +106,7 @@ pub fn spawn<P: AsRef<str>>(cmd: P) -> Result<(u16, usize), &'static str> {
     virtual_free(va_tmp, 1);
 
     let tid = rpsyscall::thread_alloc(asid, entry_point, rpabi::CONFIG_USER_STACK_TOP - round_up(index, 16), rpabi::CONFIG_USER_STACK_TOP - index).map_err(|_e| "thread alloc failed")?;
-    // println!("[LOADER] spawn asid {} tid {}", asid, tid);
+    trace!("spawn asid {} tid {}", asid, tid);
 
     Ok((asid, tid))
   } else {

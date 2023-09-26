@@ -80,8 +80,11 @@ pub fn syscall() {
   match result {
     Ok(ref r) => match r {
       Ok(ref regs) => {
-        if num != 1 {
-          trace!("#{} {} t{} Ok {}", num, SYSCALL_NAMES[num], tid, regs);
+        match num {
+          SYS_PUTC | SYS_THREAD_YIELD | SYS_MEM_ALLOC => {},
+          _ => {
+            trace!("{} t{} Ok {}", SYSCALL_NAMES[num], tid, regs);
+          }
         }
       }
       Err(err) => {
@@ -91,12 +94,12 @@ pub fn syscall() {
             arg_str += format!("{:x},", arg(i)).as_str();
           }
           arg_str += ")";
-          info!("#{} {} t{} arg{} Err {:x?}", num, SYSCALL_NAMES[num], tid, arg_str, err);
+          info!("{} t{} arg{} Err {:x?}", SYSCALL_NAMES[num], tid, arg_str, err);
         }
       }
     }
     Err(_) => {
-      trace!("#{} {} t{} Panic", num, SYSCALL_NAMES[num], tid);
+      trace!("{} t{} Panic", SYSCALL_NAMES[num], tid);
     }
   }
 

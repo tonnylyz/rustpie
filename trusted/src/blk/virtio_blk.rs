@@ -210,7 +210,7 @@ pub fn init() {
   mmio.Status.set(status);
 
   setup_queue(0);
-  // info!("probe disk size {} / {} sectors", mmio.CapacityLow.get(), mmio.CapacityHigh.get());
+  trace!("probe disk size lo{} / hi{} sectors", mmio.CapacityLow.get(), mmio.CapacityHigh.get());
   let size = ((mmio.CapacityHigh.get() as usize) << 32) | mmio.CapacityLow.get() as usize;
   mmio.disk_size.call_once(|| size);
 }
@@ -281,6 +281,7 @@ struct VirtioRingDevice {
   ring: [VirtioRingDeviceElement; QUEUE_SIZE],
 }
 
+#[derive(Debug, Copy, Clone)]
 pub enum Operation {
   Read,
   Write,
@@ -447,8 +448,10 @@ pub fn server() {
       let count = msg.b;
       let buf = msg.c;
       let op = if msg.d == rpservapi::blk::action::READ { Operation::Read } else { Operation::Write };
+      trace!("{:?} sector {} count {}", op, sector, count);
       io(sector, count, buf, op, client_tid);
       wait_for_irq();
+      trace!("irq");
       irq();
     } else if msg.d == rpservapi::blk::action::SIZE {
       let mut msg = rpsyscall::message::Message::default();
