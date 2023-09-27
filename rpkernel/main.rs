@@ -120,19 +120,19 @@ pub unsafe fn main(core_id: arch::CoreId) -> ! {
   if core_id == 0 {
     #[cfg(target_arch = "aarch64")]
       #[cfg(not(feature = "user_release"))]
-      let bin = include_bytes_align_as!(AlignPage, "../trusted/target/aarch64/debug/trusted");
+      let bin = include_bytes_align_as!(AlignPage, "../trusted/target/aarch64/debug/trusted.bin");
 
     #[cfg(target_arch = "aarch64")]
       #[cfg(feature = "user_release")]
-      let bin = include_bytes_align_as!(AlignPage, "../trusted/target/aarch64/release/trusted");
+      let bin = include_bytes_align_as!(AlignPage, "../trusted/target/aarch64/release/trusted.bin");
 
     #[cfg(target_arch = "riscv64")]
       #[cfg(not(feature = "user_release"))]
-      let bin = include_bytes_align_as!(AlignPage, "../trusted/target/riscv64/debug/trusted");
+      let bin = include_bytes_align_as!(AlignPage, "../trusted/target/riscv64/debug/trusted.bin");
 
     #[cfg(target_arch = "riscv64")]
       #[cfg(feature = "user_release")]
-      let bin = include_bytes_align_as!(AlignPage, "../trusted/target/riscv64/release/trusted");
+      let bin = include_bytes_align_as!(AlignPage, "../trusted/target/riscv64/release/trusted.bin");
 
     info!("embedded trusted {:x}", bin.as_ptr() as usize);
     let (a, entry) = kernel::address_space::load_image(bin);

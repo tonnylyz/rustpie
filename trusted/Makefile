@@ -15,6 +15,7 @@ TRUSTED_IMAGE := target/${ARCH}/${TRUSTED_PROFILE}/trusted
 
 all:
 	cargo build --target cargo_target/${ARCH}.json -Z build-std=core,alloc ${CARGO_FLAGS}
+	llvm-objcopy --strip-all ${TRUSTED_IMAGE} ${TRUSTED_IMAGE}.bin
 	llvm-objdump -d ${TRUSTED_IMAGE} > ${TRUSTED_IMAGE}.asm
 
 clean:

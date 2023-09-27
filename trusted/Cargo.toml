@@ -31,6 +31,9 @@ tx2 = []
 shyper = []
 virt = []
 
+[profile.release]
+debug = true
+
 [[bin]]
 name = "trusted"
 path = "src/trusted.rs"
