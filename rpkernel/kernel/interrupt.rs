@@ -65,7 +65,10 @@ pub fn interrupt(int: Interrupt) {
 pub fn ipi_interrupt(ipi: InterProcessInterrupt, _src_cpu: usize) {
   match ipi {
     InterProcessInterrupt::IPI0 => {
-      // crate::kernel::cpu::cpu().schedule()
+      let this = crate::kernel::cpu::cpu();
+      if this.running_idle() {
+        this.tick();
+      }
     }
   }
 }

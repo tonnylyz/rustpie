@@ -1,27 +1,18 @@
-use alloc::collections::VecDeque;
-
 use spin::{Mutex, Once};
 
 use crate::kernel::thread::Thread;
 
-use super::{traits::ArchTrait, interrupt::InterProcessorInterruptController};
+use super::{traits::ArchTrait, interrupt::InterProcessorInterruptController, cpu::{cpu_nth, cpu}};
 
-pub struct RoundRobinScheduler {
-  run_queue: Mutex<VecDeque<Thread>>,
+pub struct SmpScheduler {
   run_counts: Mutex<[usize; crate::board::BOARD_CORE_NUMBER]>,
 }
 
-impl RoundRobinScheduler {
+impl SmpScheduler {
   fn new() -> Self {
-    RoundRobinScheduler {
-      run_queue: Mutex::new(VecDeque::new()),
+    SmpScheduler {
       run_counts: Mutex::new([0; crate::board::BOARD_CORE_NUMBER])
     }
-  }
-
-  pub fn add_front(&self, thread: Thread) {
-    let mut inner = self.run_queue.lock();
-    inner.push_front(thread);
   }
 
   fn least_busy_cpu(&self) -> usize {
@@ -38,30 +29,27 @@ impl RoundRobinScheduler {
   }
 
   pub fn add(&self, thread: Thread) {
-    let mut inner = self.run_queue.lock();
-    inner.push_back(thread);
-    drop(inner);
     // inform CPU to run
     let target = self.least_busy_cpu();
-    if target != crate::arch::Arch::core_id() {
-      crate::driver::INTERRUPT_CONTROLLER.send_to_one(super::interrupt::InterProcessInterrupt::IPI0, target);
-    }
-  }
-
-  pub fn pop(&self) -> Option<Thread> {
     let mut counts = self.run_counts.lock();
-    counts[crate::arch::Arch::core_id()] += 1;
-    let mut inner = self.run_queue.lock();
-    inner.pop_front()
+    counts[target] += 1;
+    if target != crate::arch::Arch::core_id() {
+      let cpu = cpu_nth(target);
+      cpu.enqueue_task(thread, false);
+      crate::driver::INTERRUPT_CONTROLLER.send_to_one(super::interrupt::InterProcessInterrupt::IPI0, target);
+    } else {
+      let cpu = cpu();
+      cpu.enqueue_task(thread, false);
+    }
   }
 }
 
-static SCHEDULER: Once<RoundRobinScheduler> = Once::new();
+static SCHEDULER: Once<SmpScheduler> = Once::new();
 
-pub fn scheduler() -> &'static RoundRobinScheduler {
+pub fn scheduler() -> &'static SmpScheduler {
   if let Some(s) = SCHEDULER.get() {
     s
   } else {
-    SCHEDULER.call_once(|| RoundRobinScheduler::new())
+    SCHEDULER.call_once(|| SmpScheduler::new())
   }
 }

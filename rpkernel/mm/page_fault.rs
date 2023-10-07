@@ -10,12 +10,12 @@ pub fn handle() {
   let t = cpu().running_thread();
   match t {
     None => {
-      crate::kernel::cpu::cpu().schedule();
+      crate::kernel::cpu::cpu().tick();
       return;
     }
     Some(t) => match t.address_space() {
       None => {
-        crate::kernel::cpu::cpu().schedule();
+        crate::kernel::cpu::cpu().tick();
         return;
       }
       Some(a) => {

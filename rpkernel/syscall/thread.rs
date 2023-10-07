@@ -11,7 +11,7 @@ pub fn get_tid() -> Result {
 
 #[inline(never)]
 pub fn thread_yield() -> Result {
-  crate::kernel::cpu::cpu().schedule();
+  crate::kernel::cpu::cpu().tick();
   Ok(Unit)
 }
 
@@ -66,11 +66,6 @@ pub fn thread_set_status(tid: usize, status: usize) -> Result {
 }
 
 #[inline(never)]
-pub fn yield_to(tid: usize) -> Result {
-  if let Some(t) = crate::kernel::thread::thread_lookup(tid) {
-    crate::kernel::cpu::cpu().schedule_to(t);
-    Ok(Unit)
-  } else {
-    Err(ERROR_INVARG)
-  }
+pub fn yield_to(_tid: usize) -> Result {
+  panic!("yield to syscall is deprecated")
 }

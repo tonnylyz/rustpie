@@ -47,7 +47,6 @@ impl Semaphore {
     } else {
       if let Some(t) = inner.queue.pop_front() {
         thread_wake(&t);
-        crate::kernel::cpu::cpu().schedule();
       }
     }
   }

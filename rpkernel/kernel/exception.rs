@@ -69,7 +69,7 @@ pub fn handle_user() {
     HandleResult::Ok => {}
     HandleResult::Kill(e) => {
       warn!("handle user {}", e);
-      crate::kernel::cpu::cpu().schedule();
+      crate::kernel::cpu::cpu().tick();
     }
     HandleResult::Err(e) => panic!("handle user {}", e),
   }

@@ -41,6 +41,7 @@ struct Inner {
 struct InnerMut {
   status: Mutex<Status>,
   context_frame: Mutex<ContextFrame>,
+  // running_cpu: Mutex<Option<usize>>,
 }
 
 struct ControlBlock {
@@ -80,12 +81,17 @@ impl Thread {
     *lock == Status::Runnable
   }
 
+  pub fn status(&self) -> Status {
+    let lock = self.0.inner_mut.status.lock();
+    lock.clone()
+  }
+
   pub fn wait_for_reply<F>(&self, f: F) -> bool where F: FnOnce() {
     let mut status = self.0.inner_mut.status.lock();
     if *status == Status::WaitForReply {
       f();
       *status = Status::Runnable;
-      scheduler().add_front(self.clone());
+      scheduler().add(self.clone());
       true
     } else {
       false
@@ -97,7 +103,7 @@ impl Thread {
     if *status == Status::WaitForRequest {
       f();
       *status = Status::Runnable;
-      scheduler().add_front(self.clone());
+      scheduler().add(self.clone());
       true
     } else {
       false
@@ -144,6 +150,7 @@ pub fn new_user(pc: usize, sp: usize, arg: usize, a: AddressSpace, parent: Optio
     inner_mut: InnerMut {
       status: Mutex::new(Status::Sleep),
       context_frame: Mutex::new(ContextFrame::new(pc, sp, arg, false)),
+      // running_cpu: Mutex::new(None),
     },
   }));
   let mut map = THREAD_MAP.lock();
@@ -163,6 +170,7 @@ pub fn new_kernel(pc: usize, sp: usize, arg: usize) -> Thread {
     inner_mut: InnerMut {
       status: Mutex::new(Status::Sleep),
       context_frame: Mutex::new(ContextFrame::new(pc, sp, arg, true)),
+      // running_cpu: Mutex::new(None),
     },
   }));
   let mut map = THREAD_MAP.lock();
@@ -202,7 +210,7 @@ pub fn thread_sleep(t: &Thread, reason: Status) {
   drop(status);
   if let Some(current) = cpu().running_thread() {
     if current.tid() == t.tid() {
-      cpu().schedule();
+      cpu().tick();
     }
   }
 }

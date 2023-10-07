@@ -1,4 +1,6 @@
 use spin::Once;
+use spin::Mutex;
+use alloc::collections::VecDeque as RunQueue;
 
 use crate::arch::{AddressSpaceId, ContextFrame, PAGE_SIZE};
 use crate::board::BOARD_CORE_NUMBER;
@@ -13,6 +15,8 @@ pub struct Core {
   context: Option<*mut ContextFrame>,
   // pointer points at stack
   running_thread: Option<Thread>,
+  running_idle: bool,
+  run_queue: Mutex<RunQueue<Thread>>,
   idle_thread: Once<Thread>,
   idle_stack: Once<PhysicalFrame>,
   address_space: Option<AddressSpace>,
@@ -26,6 +30,8 @@ unsafe impl core::marker::Sync for Core {}
 const CORE: Core = Core {
   context: None,
   running_thread: None,
+  running_idle: false,
+  run_queue: Mutex::new(RunQueue::new()),
   idle_thread: Once::new(),
   idle_stack: Once::new(),
   address_space: None,
@@ -77,16 +83,33 @@ impl Core {
     }
   }
 
-  pub fn schedule(&mut self) {
-    if let Some(t) = scheduler().pop() {
-      self.run(t);
-    } else {
-      self.run(self.idle_thread());
-    }
+  pub fn running_idle(&self) -> bool {
+    self.running_idle
   }
 
-  pub fn schedule_to(&mut self, t: Thread) {
-    self.run(t);
+  pub fn enqueue_task(&self, t: Thread, to_front: bool) -> bool {
+    let mut run_queue = self.run_queue.lock();
+    let r = run_queue.is_empty();
+    if to_front {
+      run_queue.push_front(t);
+    } else {
+      run_queue.push_back(t);
+    }
+    r
+  }
+
+  pub fn tick(&mut self) {
+    let mut run_queue = self.run_queue.lock();
+    if let Some(next) = run_queue.pop_front() {
+      self.running_idle = false;
+      drop(run_queue);
+      self.run(next);
+    } else {
+      self.running_idle = true;
+      drop(run_queue);
+      self.run(self.idle_thread());
+    }
+    crate::driver::timer::next();
   }
 
   fn run(&mut self, t: Thread) {
@@ -133,6 +156,10 @@ impl Core {
 pub fn cpu() -> &'static mut Core {
   let core_id = crate::arch::Arch::core_id();
   unsafe { &mut CORES[core_id] }
+}
+
+pub fn cpu_nth(core_id: usize) -> &'static Core {
+  unsafe { &CORES[core_id] }
 }
 
 #[no_mangle]

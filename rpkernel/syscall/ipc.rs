@@ -39,7 +39,7 @@ pub fn itc_call(tid: Tid, a: usize, b: usize, c: usize, d: usize) -> Result {
     });
     thread_sleep_to(&current, crate::kernel::thread::Status::WaitForReply, target.clone());
   }) {
-    cpu().schedule();
+    cpu().tick();
     Ok(Unit)
   } else {
     Err(ERROR_HOLD_ON)
@@ -56,9 +56,10 @@ pub fn itc_reply_recv(tid: Tid, a: usize, b: usize, c: usize, d: usize) -> Resul
     });
     thread_sleep_to(&current, ThreadStatus::WaitForRequest, target.clone());
   }) {
-    cpu().schedule();
+    cpu().tick();
     Ok(Unit)
   } else {
-    Err(ERROR_DENIED)
+    warn!("t{} not wait for reply from t{} status {:?}", target.tid(), current.tid(), target.status());
+    Ok(Unit)
   }
 }

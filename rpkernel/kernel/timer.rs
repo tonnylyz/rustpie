@@ -25,8 +25,7 @@ pub fn current_sec() -> usize {
 }
 
 pub fn interrupt() {
-  crate::driver::timer::next();
-  crate::kernel::cpu::cpu().schedule();
+  crate::kernel::cpu::cpu().tick();
 }
 
 #[cfg(target_arch = "aarch64")]
