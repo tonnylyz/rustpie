@@ -31,7 +31,15 @@ mod common;
 
 mod fs;
 mod root;
+
+#[cfg(all(target_arch = "aarch64", feature = "virt"))]
+#[path = "terminal_pl011.rs"]
 mod terminal;
+
+#[cfg(not(all(target_arch = "aarch64", feature = "virt")))]
+#[path = "terminal.rs"]
+mod terminal;
+
 mod mm;
 mod pm;
 mod logger;

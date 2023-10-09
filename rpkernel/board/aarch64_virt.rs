@@ -47,21 +47,33 @@ pub fn launch_other_cores() {
   }
 }
 
+// virtio_mmio@a000000 {
+//   dma-coherent;
+//   interrupts = <0x00 0x10 0x01>;
+//   reg = <0x00 0xa000000 0x00 0x200>;
+//   compatible = "virtio,mmio";
+// };
+
+// pl031@9010000 {
+//   clock-names = "apb_pclk";
+//   clocks = <0x8000>;
+//   interrupts = <0x00 0x02 0x04>;
+//   reg = <0x00 0x9010000 0x00 0x1000>;
+//   compatible = "arm,pl031\0arm,primecell";
+// };
+
+// pl011@9000000 {
+//   clock-names = "uartclk\0apb_pclk";
+//   clocks = <0x8000 0x8000>;
+//   interrupts = <0x00 0x01 0x04>;
+//   reg = <0x00 0x9000000 0x00 0x1000>;
+//   compatible = "arm,pl011\0arm,primecell";
+// };
+
 pub fn devices() -> Vec<Device> {
   vec![
-    Device::new(
-      "virtio_blk",
-      vec![
-        0x0a000000..0x0a000200
-      ],
-      vec![
-        0x10 + 32
-      ]),
-    Device::new(
-      "pl031",
-      vec![
-        0x9010000..0x9011000
-      ],
-      vec![]),
+    Device::new("virtio_blk", vec![0xa000000..0xa000200], vec![0x10 + 32]),
+    Device::new("pl031", vec![0x9010000..0x9011000], vec![]),
+    Device::new("pl011", vec![0x9000000..0x9001000], vec![0x1 + 32]),
   ]
 }
