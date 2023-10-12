@@ -65,21 +65,32 @@ pub unsafe extern "C" fn hart_spin(core_id: usize) {
   crate::main(core_id);
 }
 
+// virtio_mmio@10001000 {
+//   interrupts = <0x01>;
+//   interrupt-parent = <0x09>;
+//   reg = <0x00 0x10001000 0x00 0x1000>;
+//   compatible = "virtio,mmio";
+// };
+
+// rtc@101000 {
+//   interrupts = <0x0b>;
+//   interrupt-parent = <0x09>;
+//   reg = <0x00 0x101000 0x00 0x1000>;
+//   compatible = "google,goldfish-rtc";
+// };
+
+// serial@10000000 {
+//   interrupts = <0x0a>;
+//   interrupt-parent = <0x09>;
+//   clock-frequency = "\08@";
+//   reg = <0x00 0x10000000 0x00 0x100>;
+//   compatible = "ns16550a";
+// };
+
 pub fn devices() -> Vec<Device> {
   vec![
-    Device::new(
-      "virtio_blk",
-      vec![
-        0x10001000..0x10002000
-      ],
-      vec![
-        1
-      ]),
-    Device::new(
-      "rtc",
-      vec![
-        0x101000..0x102000
-      ],
-      vec![]),
+    Device::new("virtio_blk", vec![0x10001000..0x10002000], vec![0x1]),
+    Device::new("rtc", vec![0x101000..0x102000], vec![]),
+    Device::new("serial", vec![0x10000000..0x10001000], vec![0xa]),
   ]
 }

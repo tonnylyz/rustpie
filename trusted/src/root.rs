@@ -17,8 +17,7 @@ pub fn main() {
     server_wrapper(crate::fs::server::server);
   }));
   
-  // TODO: implement userspace uart driver for virt riscv
-  #[cfg(all(target_arch = "riscv64", feature = "virt"))]
+  #[cfg(not(feature = "virt"))]
   join_handlers.push(thread::spawn(|| {
     server_wrapper(crate::terminal::input_server);
   }));

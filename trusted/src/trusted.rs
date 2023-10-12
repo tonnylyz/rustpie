@@ -36,7 +36,15 @@ mod root;
 #[path = "terminal_pl011.rs"]
 mod terminal;
 
-#[cfg(not(all(target_arch = "aarch64", feature = "virt")))]
+#[cfg(all(target_arch = "aarch64", not(feature = "virt")))]
+#[path = "terminal.rs"]
+mod terminal;
+
+#[cfg(all(target_arch = "riscv64", feature = "virt"))]
+#[path = "terminal_ns16550.rs"]
+mod terminal;
+
+#[cfg(all(target_arch = "riscv64", not(feature = "virt")))]
 #[path = "terminal.rs"]
 mod terminal;
 
