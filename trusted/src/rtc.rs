@@ -3,16 +3,10 @@ use rpabi::time::RtcTime;
 use rpsyscall::get_tid;
 
 #[cfg(target_arch = "aarch64")]
-#[cfg(not(feature = "tx2"))]
+#[cfg(feature = "virt")]
 pub fn timestamp() -> u64 {
   const PL031_MMIO_BASE: usize = 0x8_0000_0000 + 0x9010000;
   unsafe { (PL031_MMIO_BASE as *mut u32).read() as u64 }
-}
-
-#[cfg(target_arch = "aarch64")]
-#[cfg(feature = "tx2")]
-pub fn timestamp() -> u64 {
-  0
 }
 
 #[cfg(target_arch = "riscv64")]

@@ -14,16 +14,12 @@ extern crate log;
 
 use unwind::catch::catch_unwind;
 
-#[cfg(any(feature = "shyper", feature = "virt"))]
+#[cfg(feature = "virt")]
 #[path = "blk/virtio_blk.rs"]
 mod blk;
 
 #[cfg(feature = "k210")]
 #[path = "blk/k210_sdcard.rs"]
-mod blk;
-
-#[cfg(feature = "tx2")]
-#[path = "blk/ramdisk.rs"]
 mod blk;
 
 #[macro_use]
@@ -34,10 +30,6 @@ mod root;
 
 #[cfg(all(target_arch = "aarch64", feature = "virt"))]
 #[path = "terminal_pl011.rs"]
-mod terminal;
-
-#[cfg(all(target_arch = "aarch64", not(feature = "virt")))]
-#[path = "terminal.rs"]
 mod terminal;
 
 #[cfg(all(target_arch = "riscv64", feature = "virt"))]

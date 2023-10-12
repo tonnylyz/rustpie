@@ -11,16 +11,10 @@ const GIC_1_BIT_NUM: usize = GIC_INTERRUPT_NUM / 32;
 const GIC_8_BIT_NUM: usize = GIC_INTERRUPT_NUM * 8 / 32;
 const GIC_2_BIT_NUM: usize = GIC_INTERRUPT_NUM * 2 / 32;
 
-#[cfg(not(feature = "tx2"))]
+#[cfg(feature = "virt")]
 const GICD_BASE: usize = 0x08000000;
-#[cfg(not(feature = "tx2"))]
+#[cfg(feature = "virt")]
 const GICC_BASE: usize = 0x08010000;
-
-
-#[cfg(feature = "tx2")]
-const GICD_BASE: usize = 0x3881000;
-#[cfg(feature = "tx2")]
-const GICC_BASE: usize = 0x3882000;
 
 register_bitfields! {
   u32,

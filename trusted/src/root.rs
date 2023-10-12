@@ -8,7 +8,6 @@ pub fn main() {
     server_wrapper(crate::blk::server);
   }));
 
-  #[cfg(not(feature = "tx2"))]
   join_handlers.push(thread::spawn(|| {
     server_wrapper(crate::rtc::server);
   }));

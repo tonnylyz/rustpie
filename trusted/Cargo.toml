@@ -25,10 +25,8 @@ redoxfs = { git = "https://github.com/tonnylyz/redoxfs", branch = "rustpi", defa
 redox_syscall = { git = "https://github.com/tonnylyz/redox_syscall", branch = "rustpi" }
 
 [features]
-default = []
+default = ["virt"]
 k210 = ["k210-hal"]
-tx2 = []
-shyper = []
 virt = []
 
 [profile.release]

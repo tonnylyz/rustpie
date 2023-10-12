@@ -30,16 +30,11 @@ cfg_if::cfg_if! {
     #[path = "arch/aarch64/mod.rs"]
     mod arch;
 
-    #[cfg(not(feature = "tx2"))]
+    #[cfg(feature = "virt")]
     #[path = "board/aarch64_virt.rs"]
     mod board;
 
-    #[cfg(feature = "tx2")]
-    #[path = "board/aarch64_tx2.rs"]
-    mod board;
-
     #[path = "driver/aarch64/mod.rs"]
-
     mod driver;
     // Note: size of ContextFrame needs to be synced with `arch/*/exception.S`
     assert_eq_size!([u8; 0x110], ContextFrame);

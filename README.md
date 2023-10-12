@@ -11,18 +11,12 @@ Rustpi now supports following platforms.
 |---------|-------------------------|-----------------------------------------|
 | virt    | **aarch64** (AArch64)   | QEMU virt machine (qemu-system-aarch64) |
 | virt    | **riscv64** (RISC-V 64) | QEMU virt machine (qemu-system-riscv64) |
-| tx2     | **aarch64** (AArch64)   | NVIDIA TX2                              |
 | k210    | **riscv64** (RISC-V 64) | Kendryte K210                           |
 
 
 For QEMU target, use this line to build and emulate:
 ```
 make MACHINE=virt ARCH=[aarch64|riscv64] emu
-```
-
-For TX2 target, use this line to build a u-boot image and upload to a TFTP server:
-```
-make MACHINE=tx2 ARCH=aarch64 tftp
 ```
 
 For K210 target, use this line to flash:

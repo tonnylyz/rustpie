@@ -26,12 +26,10 @@ aarch64-cpu = "9.3.1"
 riscv = { git = "https://github.com/tonnylyz/riscv", branch = "rustpi" }
 
 [features]
-default = ["user_release"]
+default = ["user_release", "virt"]
 user_release = []
 virt = []
-shyper = []
 k210 = []
-tx2 = []
 
 [profile.release]
 debug = true

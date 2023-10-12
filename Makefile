@@ -7,7 +7,7 @@ TRUSTED_PROFILE ?= release
 # NOTE: generate frame pointer for every function
 export RUSTFLAGS := ${RUSTFLAGS} -C force-frame-pointers=yes
 
-CARGO_FLAGS := ${CARGO_FLAGS} --features ${MACHINE}
+CARGO_FLAGS := ${CARGO_FLAGS} --no-default-features --features ${MACHINE}
 
 ifeq (${PROFILE}, release)
 CARGO_FLAGS := ${CARGO_FLAGS} --release
@@ -19,18 +19,14 @@ endif
 
 KERNEL := target/${ARCH}${MACHINE}/${PROFILE}/rustpi
 
-.PHONY: all emu debug dependencies clean disk trusted_image user_image ramdisk.img rplibc user_c_image
+.PHONY: all emu debug dependencies clean disk trusted_image user_image rplibc user_c_image
 
 all: ${KERNEL} ${KERNEL}.bin ${KERNEL}.asm
 
 ${KERNEL}: trusted_image
 	cargo build --target rpkernel/cargo_target/${ARCH}${MACHINE}.json -Z build-std=core,alloc  ${CARGO_FLAGS}
 
-ifeq (${MACHINE}, tx2)
-trusted_image: ramdisk.img
-else
 trusted_image:
-endif
 	make ARCH=${ARCH} TRUSTED_PROFILE=${TRUSTED_PROFILE} MACHINE=${MACHINE} -C trusted
 
 user_image:
@@ -72,12 +68,6 @@ debug: ${KERNEL}.bin ${KERNEL}.asm disk
 flash: ${KERNEL}-flash.bin
 	sudo kflash -tp /dev/ttyUSB0 -b 3000000 -B dan ${KERNEL}-flash.bin
 
-tftp: ${KERNEL}.bin
-	mkimage -n rustpi -A arm64 -O linux -C none -T kernel -a 0x80080000 -e 0x80080000 -d $< ${KERNEL}.ubi
-	scp ${KERNEL} root@192.168.106.153:/tftp
-	scp ${KERNEL}.ubi root@192.168.106.153:/tftp
-	echo "tftp 0xf0200000 192.168.106.153:rustpi; tftp 0x8a000000 192.168.106.153:rustpi.ubi; bootm start 0x8a000000 - 0x80000000; bootm loados; bootm go" | xclip -selection c
-
 clean:
 	-cargo clean
 	make -C trusted clean
@@ -95,24 +85,14 @@ disk: user_image user_c_image
 	sync
 	umount disk
 
-sdcard: user_image
-	rm -rf sdcard
-	mkdir sdcard
-	sudo redoxfs-mkfs /dev/sda
-	sudo redoxfs /dev/sda sdcard
-	sudo cp user/target/${ARCH}/${USER_PROFILE}/{shell,cat,ls,mkdir,touch,rm,rd,stat,hello,ps,write} sdcard/
-	sync
-	sudo umount sdcard
-
-ramdisk.img: user_image
-	rm -rf ramdisk
-	mkdir ramdisk
-	dd if=/dev/zero of=ramdisk.img bs=1M count=4
-	redoxfs-mkfs ramdisk.img
-	redoxfs ramdisk.img ramdisk
-	cp user/target/${ARCH}/${USER_PROFILE}/{shell,cat,ls,mkdir,touch,rm,rd,stat,hello,ps,write} ramdisk/
-	sync
-	umount ramdisk
+# sdcard: user_image
+# 	rm -rf sdcard
+# 	mkdir sdcard
+# 	sudo redoxfs-mkfs /dev/sda
+# 	sudo redoxfs /dev/sda sdcard
+# 	sudo cp user/target/${ARCH}/${USER_PROFILE}/{shell,cat,ls,mkdir,touch,rm,rd,stat,hello,ps,write} sdcard/
+# 	sync
+# 	sudo umount sdcard
 
 dependencies:
 	rustup component add rust-src
