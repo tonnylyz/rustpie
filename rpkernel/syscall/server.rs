@@ -5,13 +5,13 @@ use spin::Mutex;
 
 use crate::kernel::thread::Tid;
 
-use super::{Result, SyscallOutRegisters::*};
+use super::{Result, SyscallOutRegisters::*, VOID};
 
 #[inline(never)]
 pub fn server_register(server_id: usize) -> Result {
   let t = super::current_thread()?;
   set(server_id, t.tid());
-  Ok(Unit)
+  VOID
 }
 
 #[inline(never)]
@@ -21,7 +21,7 @@ pub fn server_tid(server_id: usize) -> Result {
       Err(ERROR_INVARG)
     }
     Some(tid) => {
-      Ok(Single(tid as usize))
+      Ok((Single(tid as usize), false))
     }
   }
 }

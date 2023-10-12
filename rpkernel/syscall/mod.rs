@@ -48,7 +48,10 @@ impl Display for SyscallOutRegisters {
   }
 }
 
-pub type Result = core::result::Result<SyscallOutRegisters, Error>;
+pub type Result = core::result::Result<(SyscallOutRegisters, bool), Error>;
+
+pub const VOID: Result = Ok((Unit, false));
+pub const VOID_SCHEDULE: Result = Ok((Unit, true));
 
 fn lookup_as(asid: u16) -> core::result::Result<AddressSpace, Error> {
   let a = if asid == 0 {

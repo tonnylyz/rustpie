@@ -3,7 +3,7 @@ use riscv::regs::*;
 use unwind::arch::Riscv64;
 use unwind::registers::Registers;
 
-use crate::syscall::{Result as SyscallResult, SyscallOutRegisters};
+use crate::syscall::SyscallOutRegisters;
 
 #[repr(C)]
 #[derive(Copy, Clone, Debug)]
@@ -125,41 +125,34 @@ impl crate::kernel::traits::ContextFrameTrait for Riscv64ContextFrame {
     self.gpr[17] as usize
   }
 
-  fn set_syscall_result(&mut self, v: &SyscallResult) {
+  fn set_syscall_result(&mut self, v: &SyscallOutRegisters, err: usize) {
+    self.gpr[16] = err as u64;
     match v {
-      Ok(regs) => {
-        self.gpr[16] = 0;
-        match regs {
-          SyscallOutRegisters::Unit => {}
-          SyscallOutRegisters::Single(a) => {
-            self.gpr[10] = *a as u64;
-          }
-          SyscallOutRegisters::Double(a, b) => {
-            self.gpr[10] = *a as u64;
-            self.gpr[11] = *b as u64;
-          }
-          SyscallOutRegisters::Triple(a, b, c) => {
-            self.gpr[10] = *a as u64;
-            self.gpr[11] = *b as u64;
-            self.gpr[12] = *c as u64;
-          }
-          SyscallOutRegisters::Quadruple(a, b, c, d) => {
-            self.gpr[10] = *a as u64;
-            self.gpr[11] = *b as u64;
-            self.gpr[12] = *c as u64;
-            self.gpr[13] = *d as u64;
-          }
-          SyscallOutRegisters::Pentad(a, b, c, d, e) => {
-            self.gpr[10] = *a as u64;
-            self.gpr[11] = *b as u64;
-            self.gpr[12] = *c as u64;
-            self.gpr[13] = *d as u64;
-            self.gpr[14] = *e as u64;
-          }
-        }
+      SyscallOutRegisters::Unit => {}
+      SyscallOutRegisters::Single(a) => {
+        self.gpr[10] = *a as u64;
       }
-      Err(e) => {
-        self.gpr[16] = *e as u64;
+      SyscallOutRegisters::Double(a, b) => {
+        self.gpr[10] = *a as u64;
+        self.gpr[11] = *b as u64;
+      }
+      SyscallOutRegisters::Triple(a, b, c) => {
+        self.gpr[10] = *a as u64;
+        self.gpr[11] = *b as u64;
+        self.gpr[12] = *c as u64;
+      }
+      SyscallOutRegisters::Quadruple(a, b, c, d) => {
+        self.gpr[10] = *a as u64;
+        self.gpr[11] = *b as u64;
+        self.gpr[12] = *c as u64;
+        self.gpr[13] = *d as u64;
+      }
+      SyscallOutRegisters::Pentad(a, b, c, d, e) => {
+        self.gpr[10] = *a as u64;
+        self.gpr[11] = *b as u64;
+        self.gpr[12] = *c as u64;
+        self.gpr[13] = *d as u64;
+        self.gpr[14] = *e as u64;
       }
     }
   }

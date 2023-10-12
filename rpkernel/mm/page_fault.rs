@@ -9,15 +9,9 @@ use crate::util::*;
 pub fn handle() {
   let t = cpu().running_thread();
   match t {
-    None => {
-      crate::kernel::cpu::cpu().tick();
-      return;
-    }
+    None => panic!(),
     Some(t) => match t.address_space() {
-      None => {
-        crate::kernel::cpu::cpu().tick();
-        return;
-      }
+      None => panic!(),
       Some(a) => {
         let addr = crate::arch::Arch::fault_address();
         let va = round_down(addr, PAGE_SIZE);

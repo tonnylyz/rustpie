@@ -6,7 +6,7 @@ use crate::kernel::traits::ArchPageTableEntryTrait;
 use crate::mm::page_table::{Entry, PageTableEntryAttrTrait, PageTableTrait};
 use crate::util::round_down;
 
-use super::{Result, SyscallOutRegisters::*};
+use super::{Result, VOID};
 
 #[inline(never)]
 pub fn mem_alloc(asid: u16, va: usize, attr: usize) -> Result {
@@ -17,7 +17,7 @@ pub fn mem_alloc(asid: u16, va: usize, attr: usize) -> Result {
   let attr = Entry::from(ArchPageTableEntry::from_pte(attr)).attribute().filter();
   let uf = crate::mm::Frame::from(frame);
   a.page_table().insert_page(va, uf, attr).map_err(|_| ERROR_INTERNAL)?;
-  Ok(Unit)
+  VOID
 }
 
 #[inline(never)]
@@ -29,7 +29,7 @@ pub fn mem_map(src_asid: u16, src_va: usize, dst_asid: u16, dst_va: usize, attr:
   let attr = Entry::from(ArchPageTableEntry::from_pte(attr)).attribute().filter();
   if let Some(uf) = src_as.page_table().lookup_user_page(src_va) {
     dst_as.page_table().insert_page(dst_va, uf, attr).map_err(|_| ERROR_INTERNAL)?;
-    Ok(Unit)
+    VOID
   } else {
     Err(ERROR_MEM_NOT_MAP)
   }
@@ -40,5 +40,5 @@ pub fn mem_unmap(asid: u16, va: usize) -> Result {
   let va = round_down(va, PAGE_SIZE);
   let a = super::lookup_as(asid)?;
   a.page_table().remove_page(va).map_err(|_| ERROR_INTERNAL)?;
-  Ok(Unit)
+  VOID
 }

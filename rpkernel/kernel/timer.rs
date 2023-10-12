@@ -25,7 +25,7 @@ pub fn current_sec() -> usize {
 }
 
 pub fn interrupt() {
-  crate::kernel::cpu::cpu().tick();
+  crate::kernel::cpu::cpu().tick(true);
 }
 
 #[cfg(target_arch = "aarch64")]

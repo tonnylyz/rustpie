@@ -7,9 +7,9 @@ use spin::Mutex;
 
 use crate::kernel::interrupt::INT_SEM;
 use crate::kernel::semaphore::SemaphoreWaitResult;
-use crate::kernel::thread::Tid;
+use crate::kernel::thread::{Tid, thread_sleep};
 
-use super::{Result, SyscallOutRegisters::*};
+use super::{Result, VOID, VOID_SCHEDULE};
 
 #[inline(never)]
 pub fn event_wait(event_type: usize, event_num: usize) -> Result {
@@ -18,15 +18,20 @@ pub fn event_wait(event_type: usize, event_num: usize) -> Result {
     match e {
       Event::Interrupt(i) => {
         match INT_SEM.wait(t.clone(), i) {
-          SemaphoreWaitResult::Acquired => Ok(Unit),
-          SemaphoreWaitResult::Enqueued => super::thread::thread_yield(),
+          SemaphoreWaitResult::Acquired => {
+            VOID
+          },
+          SemaphoreWaitResult::Enqueued => {
+            thread_sleep(&t, crate::kernel::thread::Status::WaitForEvent);
+            VOID_SCHEDULE
+          },
         }
       }
       Event::ThreadExit(tid) => {
         let map = PARENT_WAIT_CHILD_MAP.lock();
         if let Some(vec) = map.get(&t.tid()) {
           if vec.contains(&tid) {
-            Ok(Unit)
+            VOID
           } else {
             Err(ERROR_HOLD_ON)
           }

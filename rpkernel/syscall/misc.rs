@@ -1,57 +1,10 @@
-use alloc::boxed::Box;
-
 use rpabi::syscall::error::ERROR_INVARG;
 
-use super::{Result, SyscallOutRegisters::*};
-
-#[allow(dead_code)]
-struct ResourceA;
-
-#[allow(dead_code)]
-struct ResourceB;
-
-impl Drop for ResourceA {
-  fn drop(&mut self) {
-    info!("resource a drop")
-  }
-}
+use super::{Result, SyscallOutRegisters::*, VOID};
 
 #[inline(never)]
-#[allow(dead_code)]
-fn make_page_fault() {
-  unsafe { (0xdeadbeef0000 as *mut usize).write(0); };
-  panic!()
-}
-
-#[inline(never)]
-#[allow(dead_code)]
-#[allow(unreachable_code)]
-#[allow(unused_variables)]
-pub fn null(dummy: usize) -> Result {
-  match dummy {
-    0 => {
-      Ok(Unit) // normal null call
-    }
-    1 => {
-      info!("null called - kernel panic");
-      let a = Box::new(ResourceA);
-      panic!();
-      let b = Box::new(ResourceB);
-      Box::leak(a);
-      Box::leak(b);
-      Ok(Unit)
-    }
-    2 => {
-      info!("null called - kernel page fault");
-      let a = Box::new(ResourceA);
-      make_page_fault();
-      let b = Box::new(ResourceB);
-      Box::leak(a);
-      Box::leak(b);
-      Ok(Unit)
-    }
-    _ => Ok(Unit)
-  }
+pub fn null() -> Result {
+  VOID
 }
 
 #[inline(never)]
@@ -63,14 +16,14 @@ pub fn putc(c: char) -> Result {
     c = 8;
   }
   crate::driver::uart::putc(c);
-  Ok(Unit)
+  VOID
 }
 
 #[inline(never)]
 pub fn getc() -> Result {
   match crate::driver::uart::getc() {
     None => Err(rpabi::syscall::error::ERROR_HOLD_ON),
-    Some(c) => Ok(Single(c as usize))
+    Some(c) => Ok((Single(c as usize), false))
   }
 }
 
@@ -81,7 +34,7 @@ pub fn set_exception_handler(handler: usize) -> Result {
     None => Err(ERROR_INVARG),
     Some(a) => {
       a.set_exception_handler(Some(handler));
-      Ok(Unit)
+      VOID
     }
   }
 }

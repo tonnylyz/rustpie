@@ -98,27 +98,28 @@ impl Core {
     r
   }
 
-  pub fn tick(&mut self) {
+  pub fn tick(&mut self, queue_prev: bool) {
     let mut run_queue = self.run_queue.lock();
     if let Some(next) = run_queue.pop_front() {
       self.running_idle = false;
       drop(run_queue);
-      self.run(next);
+      self.run(next, queue_prev);
     } else {
       self.running_idle = true;
       drop(run_queue);
-      self.run(self.idle_thread());
+      self.run(self.idle_thread(), queue_prev);
     }
     crate::driver::timer::next();
   }
 
-  fn run(&mut self, t: Thread) {
+  fn run(&mut self, t: Thread, queue_prev: bool) {
     if let Some(prev) = self.running_thread() {
-      // info!("switch thread from {} to {}", prev.tid(), t.tid());
+      // info!("t{}->[{}]", prev.tid(), t.tid());
       // Note: normal switch
       prev.set_context(*self.context());
-      // add back to scheduler queue
-      if prev.runnable() {
+      prev.clear_running_cpu();
+      // add back to scheduler queue if it explicitly yield
+      if prev.tid() != self.idle_thread().tid() && queue_prev {
         scheduler().add(prev.clone());
       }
       *self.context_mut() = t.context();
@@ -132,6 +133,7 @@ impl Core {
       }
     }
     self.set_running_thread(Some(t.clone()));
+    t.set_running_cpu(crate::arch::Arch::core_id());
     if let Some(a) = t.address_space() {
       self.set_address_space(a);
     }

@@ -7,7 +7,6 @@ use spin::Mutex;
 
 use crate::arch::ContextFrame;
 use crate::kernel::address_space::AddressSpace;
-use crate::kernel::cpu::cpu;
 use crate::kernel::scheduler::scheduler;
 use crate::kernel::traits::*;
 use crate::syscall::event::thread_exit_signal;
@@ -41,7 +40,7 @@ struct Inner {
 struct InnerMut {
   status: Mutex<Status>,
   context_frame: Mutex<ContextFrame>,
-  // running_cpu: Mutex<Option<usize>>,
+  running_cpu: Mutex<Option<usize>>,
 }
 
 struct ControlBlock {
@@ -76,9 +75,20 @@ impl Thread {
     }
   }
 
-  pub fn runnable(&self) -> bool {
-    let lock = self.0.inner_mut.status.lock();
-    *lock == Status::Runnable
+  pub fn running_cpu(&self) -> Option<usize> {
+    let cpu = self.0.inner_mut.running_cpu.lock();
+    cpu.clone()
+  }
+
+  pub fn set_running_cpu(&self, new: usize) {
+    let mut cpu = self.0.inner_mut.running_cpu.lock();
+    assert!(cpu.is_none());
+    *cpu = Some(new);
+  }
+
+  pub fn clear_running_cpu(&self) {
+    let mut cpu = self.0.inner_mut.running_cpu.lock();
+    *cpu = None;
   }
 
   pub fn status(&self) -> Status {
@@ -125,6 +135,11 @@ impl Thread {
   }
 
   pub fn map_with_context<F, T>(&self, f: F) -> T where F: FnOnce(&mut ContextFrame) -> T {
+    loop {
+      if self.running_cpu().is_none() {
+        break;
+      }
+    }
     let mut context_frame = self.0.inner_mut.context_frame.lock();
     f(&mut *context_frame)
   }
@@ -150,7 +165,7 @@ pub fn new_user(pc: usize, sp: usize, arg: usize, a: AddressSpace, parent: Optio
     inner_mut: InnerMut {
       status: Mutex::new(Status::Sleep),
       context_frame: Mutex::new(ContextFrame::new(pc, sp, arg, false)),
-      // running_cpu: Mutex::new(None),
+      running_cpu: Mutex::new(None),
     },
   }));
   let mut map = THREAD_MAP.lock();
@@ -170,7 +185,7 @@ pub fn new_kernel(pc: usize, sp: usize, arg: usize) -> Thread {
     inner_mut: InnerMut {
       status: Mutex::new(Status::Sleep),
       context_frame: Mutex::new(ContextFrame::new(pc, sp, arg, true)),
-      // running_cpu: Mutex::new(None),
+      running_cpu: Mutex::new(None),
     },
   }));
   let mut map = THREAD_MAP.lock();
@@ -204,18 +219,6 @@ pub fn thread_wake(t: &Thread) {
 }
 
 pub fn thread_sleep(t: &Thread, reason: Status) {
-  assert_ne!(reason, Status::Runnable);
-  let mut status = t.0.inner_mut.status.lock();
-  *status = reason;
-  drop(status);
-  if let Some(current) = cpu().running_thread() {
-    if current.tid() == t.tid() {
-      cpu().tick();
-    }
-  }
-}
-
-pub fn thread_sleep_to(t: &Thread, reason: Status, _next: Thread) {
   assert_ne!(reason, Status::Runnable);
   let mut status = t.0.inner_mut.status.lock();
   *status = reason;

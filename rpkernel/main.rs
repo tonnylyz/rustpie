@@ -181,7 +181,7 @@ pub unsafe fn main(core_id: arch::CoreId) -> ! {
   }
 
   util::barrier();
-  kernel::cpu::cpu().tick();
+  kernel::cpu::cpu().tick(false);
 
   extern {
     fn pop_context_first(ctx: usize, core_id: usize) -> !;
