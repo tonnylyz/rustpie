@@ -15,7 +15,7 @@ pub trait ArchTrait {
   fn wait_for_interrupt();
   fn nop();
   fn fault_address() -> usize;
-  fn core_id() -> usize;
+  fn raw_arch_id() -> usize;
 }
 
 pub trait ContextFrameTrait {

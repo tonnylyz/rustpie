@@ -2,6 +2,7 @@
 
 .global _start
 _start:
+    mov x20, x0 // x20 <- FDT
     mrs x1, mpidr_el1
 #    and x2, x1, #0x100
 #    cbnz x2, _loop
@@ -52,8 +53,10 @@ _el1_entry:
     mov sp, x0
     mov x0, x19
     mov fp, sp
-    ldr x1, =main
-    blr x1
+    // main(core_id, fdt)
+    ldr x2, =main
+    mov x1, x20
+    blr x2
 
 _loop:
     wfe

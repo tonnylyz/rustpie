@@ -6,6 +6,7 @@ _start:
     addiw sp, sp, 0 // sp sign-extended to 64 bit
 
     mv    t0, a0 // t0 <- hartid
+    mv    s2, a1 // s2 <- fdt
     slli  t0, t0, 12 // t0 <- hartid * 4096
     subw  sp, sp, t0 // sp <- BOOT_STACK_TOP - hartid * 4096
 
@@ -51,6 +52,7 @@ _start:
     mv    s0, sp // fp <- sp
 
     mv    a0, s1 // a0 <- hart_id
+    mv    a1, s2
     lui   t0, %hi(hart_spin)
     addi  t0, t0, %lo(hart_spin)
     addiw t0, t0, 0

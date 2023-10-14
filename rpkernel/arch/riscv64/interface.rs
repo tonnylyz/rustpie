@@ -55,10 +55,7 @@ impl ArchTrait for Riscv64Arch {
     STVAL.get() as usize
   }
 
-  fn core_id() -> CoreId {
-    // Note: a pointer to hart_id is stored in sscratch
-    unsafe {
-      ((SSCRATCH.get() as usize) as *const usize).read()
-    }
+  fn raw_arch_id() -> usize {
+    panic!()
   }
 }

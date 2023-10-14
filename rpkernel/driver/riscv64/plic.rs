@@ -5,17 +5,17 @@ use tock_registers::{
   register_structs,
 };
 
+use crate::core_id;
 use crate::kernel::interrupt::{
   InterProcessInterrupt as IPI, InterProcessorInterruptController, InterruptController,
 };
-use crate::kernel::traits::ArchTrait;
 
 // platform level interrupt controller
 // https://github.com/riscv/riscv-plic-spec/blob/master/riscv-plic.adoc
 const PLIC_BASE_ADDR: usize = 0xffff_ffff_0000_0000 + 0x0c00_0000;
 
 pub struct Rv64InterruptController {
-  ipi_mailboxes: Mutex<[Option<(IPI, usize)>; crate::board::BOARD_CORE_NUMBER]>,
+  ipi_mailboxes: Mutex<[Option<(IPI, usize)>; crate::MAX_CPU_NUMBER]>,
 }
 
 register_structs! {
@@ -86,7 +86,7 @@ static PLIC_MMIO: PlicMmio = PlicMmio::new(PLIC_BASE_ADDR);
 impl InterruptController for Rv64InterruptController {
   fn init(&self) {
     let plic = &PLIC_MMIO;
-    let core_id = crate::arch::Arch::core_id();
+    let core_id = core_id();
     match core_id {
       0 => plic.PriorityThresholdCtx1.set(0),
       1 => plic.PriorityThresholdCtx3.set(0),
@@ -98,7 +98,7 @@ impl InterruptController for Rv64InterruptController {
 
   fn enable(&self, i: Interrupt) {
     let plic = &PLIC_MMIO;
-    let core_id = crate::arch::Arch::core_id();
+    let core_id = core_id();
     let reg_idx = i / 32;
     let bit_idx = i % 32;
     let bit_mask: u32 = 1 << bit_idx;
@@ -123,7 +123,7 @@ impl InterruptController for Rv64InterruptController {
 
   fn disable(&self, i: Interrupt) {
     let plic = &PLIC_MMIO;
-    let core_id = crate::arch::Arch::core_id();
+    let core_id = core_id();
     let reg_idx = i / 32;
     let bit_idx = i % 32;
     let bit_mask: u32 = 1 << bit_idx;
@@ -146,7 +146,7 @@ impl InterruptController for Rv64InterruptController {
 
   fn fetch(&self) -> Option<(Interrupt, usize)> {
     let plic = &PLIC_MMIO;
-    let core_id = crate::arch::Arch::core_id();
+    let core_id = core_id();
     let int = match core_id {
       0 => plic.InterruptClaimCompletionCtx1.get(),
       1 => plic.InterruptClaimCompletionCtx3.get(),
@@ -163,7 +163,7 @@ impl InterruptController for Rv64InterruptController {
 
   fn finish(&self, int: Interrupt) {
     let plic = &PLIC_MMIO;
-    let core_id = crate::arch::Arch::core_id();
+    let core_id = core_id();
     match core_id {
       0 => plic.InterruptClaimCompletionCtx1.set(int as u32),
       1 => plic.InterruptClaimCompletionCtx3.set(int as u32),
@@ -175,27 +175,27 @@ impl InterruptController for Rv64InterruptController {
 }
 
 pub static INTERRUPT_CONTROLLER: Rv64InterruptController = Rv64InterruptController {
-  ipi_mailboxes: Mutex::new([None; crate::board::BOARD_CORE_NUMBER]),
+  ipi_mailboxes: Mutex::new([None; crate::MAX_CPU_NUMBER]),
 };
 
 pub type Interrupt = usize;
 
 impl InterProcessorInterruptController for Rv64InterruptController {
   fn send_to_one(&self, irq: IPI, target: usize) {
-    assert!(target != crate::arch::Arch::core_id());
+    assert!(target != core_id());
     self.send_to_multiple(irq, 1usize << target);
   }
 
   fn send_to_multiple(&self, irq: IPI, target_mask: usize) {
     use super::sbi::*;
     let mut mailboxes = self.ipi_mailboxes.lock();
-    for i in 0..crate::board::BOARD_CORE_NUMBER {
+    for i in 0..crate::cpu_number() {
       if target_mask & (1usize << i) != 0 {
         let old = mailboxes[i].take();
         if let Some((ipi, core)) = old {
           trace!("dropping ipi {:?} from cpu {}", ipi, core);
         }
-        mailboxes[i] = Some((irq, crate::arch::Arch::core_id()));
+        mailboxes[i] = Some((irq, core_id()));
       }
     }
     drop(mailboxes);
@@ -206,7 +206,7 @@ impl InterProcessorInterruptController for Rv64InterruptController {
 
 impl Rv64InterruptController {
   pub fn read_ipi_event(&self) -> Option<(IPI, usize)> {
-    let mut mailbox = self.ipi_mailboxes.lock()[crate::arch::Arch::core_id()];
+    let mut mailbox = self.ipi_mailboxes.lock()[core_id()];
     mailbox.take()
   }
 }

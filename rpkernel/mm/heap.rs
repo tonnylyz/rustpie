@@ -1,9 +1,10 @@
+use core::ops::Range;
+
 use buddy_system_allocator::LockedHeap;
 
 use crate::kernel::traits::*;
 
-pub fn init() {
-  let range = super::config::heap_range();
+pub fn init(range: Range<usize>) {
   unsafe {
     HEAP_ALLOCATOR.lock().init(range.start.pa2kva(), range.end - range.start)
   }

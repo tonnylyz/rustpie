@@ -22,6 +22,10 @@ use kernel::traits::*;
 use mm::page_table::PageTableEntryAttrTrait;
 use mm::page_table::PageTableTrait;
 
+pub const MAX_CPU_NUMBER: usize = 4;
+pub use board::cpu_number;
+pub use board::core_id;
+
 #[macro_use]
 mod misc;
 
@@ -95,14 +99,17 @@ mod macros {
 struct AlignPage;
 
 #[no_mangle]
-pub unsafe fn main(core_id: arch::CoreId) -> ! {
+extern "C" fn main(core_id: arch::CoreId, fdt: usize) -> ! {
   crate::arch::Arch::exception_init();
   if core_id == 0 {
-    board::init();
-    mm::heap::init();
+    let (hr, pr) = board::init(fdt);
+    println!("Heap {:x?} Paged {:x?}", hr, pr);
+
+    mm::heap::init(hr);
     let _ = logger::init();
     info!("heap init ok");
-    mm::page_pool::init();
+
+    mm::page_pool::init(pr);
     info!("page pool init ok");
 
     board::launch_other_cores();
@@ -185,7 +192,7 @@ pub unsafe fn main(core_id: arch::CoreId) -> ! {
     None => panic!("no running thread"),
     Some(t) => {
       let ctx = t.context();
-      pop_context_first(&ctx as *const _ as usize, core_id);
+      unsafe { pop_context_first(&ctx as *const _ as usize, core_id) };
     }
   }
 }

@@ -3,7 +3,6 @@ use core::mem::size_of;
 use aarch64_cpu::registers::*;
 use tock_registers::interfaces::Readable;
 
-use crate::board::BOARD_CORE_NUMBER;
 use crate::kernel::traits::*;
 
 pub const PAGE_SHIFT: usize = 12;
@@ -62,7 +61,7 @@ impl ArchTrait for Aarch64Arch {
     FAR_EL1.get() as usize
   }
 
-  fn core_id() -> CoreId {
-    MPIDR_EL1.get() as usize & (BOARD_CORE_NUMBER - 1)
+  fn raw_arch_id() -> usize {
+    MPIDR_EL1.get() as usize
   }
 }

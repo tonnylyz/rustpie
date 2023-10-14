@@ -2,8 +2,6 @@ use log::{Level, Metadata, Record};
 use log::{LevelFilter, SetLoggerError};
 use spin::Mutex;
 
-use crate::kernel::traits::ArchTrait;
-
 struct SimpleLogger;
 
 static LOCK: Mutex<()> = Mutex::new(());
@@ -33,7 +31,7 @@ impl log::Log for SimpleLogger {
         Level::Trace =>
           print!("[T]"),
       }
-      print!("[{}]", crate::arch::Arch::core_id());
+      print!("[{}]", crate::core_id());
       if let Some(m) = record.module_path() {
         print!("[{}]", m);
       }

@@ -2,8 +2,9 @@ use spin::Once;
 use spin::Mutex;
 use alloc::collections::VecDeque as RunQueue;
 
+use crate::MAX_CPU_NUMBER;
 use crate::arch::{AddressSpaceId, ContextFrame, PAGE_SIZE};
-use crate::board::BOARD_CORE_NUMBER;
+use crate::core_id;
 use crate::kernel::address_space::AddressSpace;
 use crate::kernel::scheduler::scheduler;
 use crate::kernel::thread::Thread;
@@ -37,7 +38,7 @@ const CORE: Core = Core {
   address_space: None,
 };
 
-static mut CORES: [Core; BOARD_CORE_NUMBER] = [CORE; BOARD_CORE_NUMBER];
+static mut CORES: [Core; MAX_CPU_NUMBER] = [CORE; MAX_CPU_NUMBER];
 
 impl Core {
   // context
@@ -75,7 +76,7 @@ impl Core {
         let t = crate::kernel::thread::new_kernel(
           idle_thread as usize,
           frame.kva() + PAGE_SIZE,
-          crate::arch::Arch::core_id());
+          0);
         self.idle_stack.call_once(|| frame);
         self.idle_thread.call_once(|| t).clone()
       }
@@ -133,7 +134,7 @@ impl Core {
       }
     }
     self.set_running_thread(Some(t.clone()));
-    t.set_running_cpu(crate::arch::Arch::core_id());
+    t.set_running_cpu(core_id());
     if let Some(a) = t.address_space() {
       self.set_address_space(a);
     }
@@ -156,7 +157,7 @@ impl Core {
 }
 
 pub fn cpu() -> &'static mut Core {
-  let core_id = crate::arch::Arch::core_id();
+  let core_id = core_id();
   unsafe { &mut CORES[core_id] }
 }
 

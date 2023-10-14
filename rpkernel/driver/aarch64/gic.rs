@@ -2,8 +2,8 @@ use tock_registers::interfaces::{Readable, Writeable};
 use tock_registers::registers::*;
 use tock_registers::*;
 
+use crate::core_id;
 use crate::kernel::interrupt::{InterProcessorInterruptController, InterruptController};
-use crate::kernel::traits::ArchTrait;
 
 const GIC_INTERRUPT_NUM: usize = 1024;
 const GIC_SGI_NUM: usize = 16;
@@ -64,7 +64,7 @@ register_structs! {
 
 struct GicDistributor {
   base_addr: usize,
-  cpu_if_id: spin::Mutex<[u8; crate::board::BOARD_CORE_NUMBER]>,
+  cpu_if_id: spin::Mutex<[u8; crate::MAX_CPU_NUMBER]>,
 }
 
 impl core::ops::Deref for GicDistributor {
@@ -130,7 +130,7 @@ impl GicCpuInterface {
 
 impl GicDistributor {
   const fn new(base_addr: usize) -> Self {
-    GicDistributor { base_addr, cpu_if_id: spin::Mutex::new([0; crate::board::BOARD_CORE_NUMBER]) }
+    GicDistributor { base_addr, cpu_if_id: spin::Mutex::new([0; crate::MAX_CPU_NUMBER]) }
   }
 
   fn ptr(&self) -> *const GicDistributorBlock {
@@ -164,7 +164,7 @@ impl GicDistributor {
     let cpu_if_id = (self.ITARGETSR[0].get() & 0xff) as u8;
     info!("cpu_if_id {}", cpu_if_id);
     let mut ids = self.cpu_if_id.lock();
-    ids[crate::arch::Arch::core_id()] = cpu_if_id;
+    ids[core_id()] = cpu_if_id;
   }
 
   fn set_enable(&self, int: usize) {
@@ -216,7 +216,7 @@ pub struct Gic;
 
 impl InterruptController for Gic {
   fn init(&self) {
-    let core_id = crate::arch::Arch::core_id();
+    let core_id = core_id();
     let gicd = &GICD;
     if core_id == 0 {
       gicd.init();
@@ -228,7 +228,7 @@ impl InterruptController for Gic {
   }
 
   fn enable(&self, int: Interrupt) {
-    let core_id = crate::arch::Arch::core_id();
+    let core_id = core_id();
     let gicd = &GICD;
     gicd.set_enable(int);
     gicd.set_priority(int, 0x7f);
@@ -275,7 +275,7 @@ use crate::kernel::interrupt::InterProcessInterrupt as IPI;
 
 impl InterProcessorInterruptController for Gic {
   fn send_to_one(&self, irq: IPI, target: usize) {
-    assert!(target != crate::arch::Arch::core_id());
+    assert!(target != core_id());
     self.send_to_multiple(irq, 1usize << target);
   }
 

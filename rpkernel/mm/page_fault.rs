@@ -42,7 +42,7 @@ pub fn handle() {
           }
         }
         let pt = a.page_table();
-        info!("thread t{} asid {} core {} page fault va {:x} pte {:X?} fall through", t.tid(), a.asid(), crate::arch::Arch::core_id(), addr, pt.lookup_page(va));
+        info!("thread t{} asid {} page fault va {:x} pte {:X?} fall through", t.tid(), a.asid(), addr, pt.lookup_page(va));
 
         // default to user exception handler
         crate::kernel::exception::handle_user();

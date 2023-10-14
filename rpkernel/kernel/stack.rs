@@ -1,5 +1,4 @@
-use crate::arch::PAGE_SIZE;
-use crate::board::BOARD_CORE_NUMBER;
+use crate::{arch::PAGE_SIZE, MAX_CPU_NUMBER};
 
 const STACK_PAGE_NUM: usize = 64;
 
@@ -19,7 +18,7 @@ const STACK: Stack = Stack {
 };
 
 #[link_section = ".stack"]
-static STACKS: [Stack; BOARD_CORE_NUMBER] = [STACK; BOARD_CORE_NUMBER];
+static STACKS: [Stack; MAX_CPU_NUMBER] = [STACK; MAX_CPU_NUMBER];
 
 #[no_mangle]
 pub fn stack_of_core(core_id: usize) -> usize {
