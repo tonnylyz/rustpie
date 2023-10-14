@@ -1,10 +1,12 @@
 use alloc::vec::Vec;
 use core::ops::Range;
+use spin::Once;
 use tock_registers::interfaces::{Readable, Writeable};
 
 use crate::kernel::traits::Address;
 use crate::kernel::device::Device;
 use crate::kernel::interrupt::InterruptController;
+use crate::kernel::print::DebugUart;
 
 pub fn cpu_number() -> usize { 1 }
 
@@ -31,7 +33,7 @@ pub fn init(_fdt: usize) -> (Range<usize>, Range<usize>) {
   assert!(memory_range.contains(&paged_start));
   let paged_end = memory_range.end;
   
-  crate::driver::uart::init();
+  DEBUG_UART.call_once(|| { K210Uart }).init();
   (heap_start..heap_end, paged_start..paged_end)
 }
 
@@ -73,4 +75,45 @@ pub fn devices() -> Vec<Device> {
     Device::new("SYSCTL", vec![0x5044_0000..0x5044_1000], vec![]),
     Device::new("FPIOA", vec![0x502B_0000..0x502B_1000], vec![]),
   ]
+}
+
+pub static DEBUG_UART: Once<K210Uart> = Once::new();
+
+pub struct K210Uart;
+
+impl K210Uart {
+  fn send(&self, c: u8) {
+    let txfifo = 0x38000000.pa2kva() as *mut u32;
+    unsafe {
+      while txfifo.read_volatile() & 0x80000000 != 0 {}
+      txfifo.write(c as u32);
+    }
+  }
+}
+
+impl crate::kernel::print::DebugUart for K210Uart {
+  fn init(&self) {}
+  
+  fn putc(&self, c: u8) {
+    if c == b'\n' {
+      self.send(b'\r');
+    }
+    self.send(c);
+  }
+  
+  fn getc(&self) -> Option<u8> {
+    let rxfifo = 0x38000004.pa2kva() as *mut u32;
+    unsafe {
+      let r = rxfifo.read_volatile();
+      if r & 0x80000000 != 0 {
+        None
+      } else {
+        if r == 0xa {
+          Some(0xd)
+        } else {
+          Some(r as u8)
+        }
+      }
+    }
+  }
 }

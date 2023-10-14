@@ -1,5 +1,7 @@
 use rpabi::syscall::error::ERROR_INVARG;
 
+use crate::kernel::print::DebugUart;
+
 use super::{Result, SyscallOutRegisters::*, VOID};
 
 #[inline(never)]
@@ -10,18 +12,20 @@ pub fn null() -> Result {
 #[inline(never)]
 pub fn putc(c: char) -> Result {
   let mut c = c as u8;
+  let uart = crate::board::DEBUG_UART.get().unwrap();
   if c == 127 {
-    crate::driver::uart::putc(8);
-    crate::driver::uart::putc(b' ');
+    uart.putc(8);
+    uart.putc(b' ');
     c = 8;
   }
-  crate::driver::uart::putc(c);
+  uart.putc(c);
   VOID
 }
 
 #[inline(never)]
 pub fn getc() -> Result {
-  match crate::driver::uart::getc() {
+  let uart = crate::board::DEBUG_UART.get().unwrap();
+  match uart.getc() {
     None => Err(rpabi::syscall::error::ERROR_HOLD_ON),
     Some(c) => Ok((Single(c as usize), false))
   }

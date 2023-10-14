@@ -1,13 +1,16 @@
 use alloc::vec::Vec;
-use riscv::regs::SSCRATCH;
 use core::ops::Range;
 use core::sync::atomic::{AtomicBool, Ordering};
+use spin::Once;
+use riscv::regs::SSCRATCH;
 use tock_registers::interfaces::{Readable, Writeable};
+use hardware::ns16550::*;
 
 use crate::MAX_CPU_NUMBER;
 use crate::kernel::device::Device;
 use crate::kernel::interrupt::InterruptController;
 use crate::kernel::traits::*;
+use crate::kernel::print::DebugUart;
 
 static CPU_NUMBER: spin::Once<usize> = spin::Once::new();
 pub fn cpu_number() -> usize { *CPU_NUMBER.get().unwrap() }
@@ -48,7 +51,9 @@ pub fn init(fdt: usize) -> (Range<usize>, Range<usize>) {
 
   let chosen = fdt.chosen();
   if let Some(stdout) = chosen.stdout() {
-    println!("It would write stdout to: {}", stdout.name);
+    let range = stdout.reg().unwrap().next().unwrap();
+    let start_addr = range.starting_address as usize;
+    DEBUG_UART.call_once(|| { Ns16550Mmio::new(start_addr.pa2kva())}).init();
   }
 
   let soc = fdt.find_node("/soc");
@@ -57,7 +62,6 @@ pub fn init(fdt: usize) -> (Range<usize>, Range<usize>) {
         println!("soc/{}", child.name);
       }
   }
-  crate::driver::uart::init();
   (heap_start..heap_end, paged_start..paged_end)
 }
 
@@ -143,4 +147,34 @@ pub fn devices() -> Vec<Device> {
     Device::new("rtc", vec![0x101000..0x102000], vec![]),
     Device::new("serial", vec![0x10000000..0x10001000], vec![0xa]),
   ]
+}
+
+pub static DEBUG_UART: Once<Ns16550Mmio> = Once::new();
+
+impl crate::kernel::print::DebugUart for Ns16550Mmio {
+  fn init(&self) {
+    self.ISR_FCR
+      .write(ISR_FCR::EN_FIFO::Mode16550);
+  }
+
+  fn putc(&self, c: u8) {
+    fn send(uart: &Ns16550Mmio, c: u8) {
+      while !uart.LSR.is_set(LSR::THRE) {
+        // Wait until it is possible to write data.
+      }
+      uart.RHR_THR_DLL.set(c);
+    }
+    if c == b'\n' {
+      send(self, b'\r');
+    }
+    send(self, c);
+  }
+
+  fn getc(&self) -> Option<u8> {
+    if self.LSR.is_set(LSR::RDR) {
+      Some(self.RHR_THR_DLL.get() as u8)
+    } else {
+      None
+    }
+  }
 }

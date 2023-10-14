@@ -1,5 +1,9 @@
+use aarch64_cpu::registers::DAIF::F;
 use alloc::vec::Vec;
+use spin::Once;
 use core::ops::Range;
+use hardware::pl011::Pl011Mmio;
+use tock_registers::interfaces::{Readable, Writeable};
 
 use crate::Address;
 use crate::driver::gic::INT_TIMER;
@@ -7,10 +11,11 @@ use crate::kernel::device::Device;
 use crate::kernel::interrupt::InterruptController;
 use crate::kernel::traits::ArchTrait;
 
+
 pub const BOARD_DEVICE_MEMORY_RANGE: Range<usize> = 0x0000_0000..0x4000_0000;
 pub const BOARD_NORMAL_MEMORY_RANGE: Range<usize> = 0x4000_0000..0x1_0000_0000;
 
-static CPU_NUMBER: spin::Once<usize> = spin::Once::new();
+static CPU_NUMBER: Once<usize> = Once::new();
 pub fn cpu_number() -> usize { *CPU_NUMBER.get().unwrap() }
 
 pub fn init(fdt: usize) -> (Range<usize>, Range<usize>) {
@@ -56,10 +61,10 @@ pub fn init(fdt: usize) -> (Range<usize>, Range<usize>) {
 
   let chosen = fdt.chosen();
   if let Some(stdout) = chosen.stdout() {
-    println!("stdout {}", stdout.name);
+    let range = stdout.reg().unwrap().next().unwrap();
+    let start_addr = range.starting_address as usize;
+    DEBUG_UART.call_once(|| { Pl011Mmio::new(start_addr.pa2kva())}).init();
   }
-
-  crate::driver::uart::init();
 
   (heap_start..heap_end, paged_start..paged_end)
 }
@@ -134,4 +139,35 @@ pub fn devices() -> Vec<Device> {
     Device::new("pl031", vec![0x9010000..0x9011000], vec![]),
     Device::new("pl011", vec![0x9000000..0x9001000], vec![0x1 + 32]),
   ]
+}
+
+pub static DEBUG_UART: Once<Pl011Mmio> = Once::new();
+
+const UART_FR_RXFE: u32 = 1 << 4;
+const UART_FR_TXFF: u32 = 1 << 5;
+
+impl crate::kernel::print::DebugUart for Pl011Mmio {
+  fn init(&self) {
+      
+  }
+
+  fn putc(&self, c: u8) {
+    if c == b'\n' {
+      self.putc(b'\r');
+    }
+    loop {
+      if self.Flag.get() & UART_FR_TXFF == 0 {
+        break;
+      }
+    }
+    self.Data.set(c as u32);
+  }
+
+  fn getc(&self) -> Option<u8> {
+    if self.Flag.get() & UART_FR_RXFE == 0 {
+      Some((self.Data.get() & 0xff) as u8)
+    } else {
+      None
+    }
+  }
 }
