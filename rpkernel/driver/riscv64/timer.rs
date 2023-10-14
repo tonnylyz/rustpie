@@ -3,7 +3,8 @@ use tock_registers::interfaces::Readable;
 
 use super::sbi::{sbi_call, SBI_EID_TIMER, SBI_FID_SET_TIMER};
 
-const TIMER_DEFAULT_COUNT: usize = 250000;
+const TIMER_TICK_MS: usize = 10;
+const TIMER_DEFAULT_COUNT: usize = TIMER_TICK_MS * TIMER_FREQUENCY / 1000;
 
 pub fn next() {
   let _ = sbi_call(SBI_EID_TIMER, SBI_FID_SET_TIMER, counter() + TIMER_DEFAULT_COUNT, 0, 0);
