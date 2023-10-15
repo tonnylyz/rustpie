@@ -1,4 +1,3 @@
-use aarch64_cpu::registers::DAIF::F;
 use alloc::vec::Vec;
 use spin::Once;
 use core::ops::Range;
@@ -10,7 +9,7 @@ use crate::driver::gic::INT_TIMER;
 use crate::kernel::device::Device;
 use crate::kernel::interrupt::InterruptController;
 use crate::kernel::traits::ArchTrait;
-
+use crate::kernel::print::DebugUart;
 
 pub const BOARD_DEVICE_MEMORY_RANGE: Range<usize> = 0x0000_0000..0x4000_0000;
 pub const BOARD_NORMAL_MEMORY_RANGE: Range<usize> = 0x4000_0000..0x1_0000_0000;
