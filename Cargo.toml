@@ -18,7 +18,7 @@ hardware = { path = "hardware" }
 
 rpabi = { path = "rpabi" }
 unwind = { path = "unwind" }
-fdt = "0.1.5"
+fdt = { git = "https://github.com/tonnylyz/fdt" }
 
 [target.'cfg(target_arch = "aarch64")'.dependencies]
 aarch64-cpu = "9.3.1"

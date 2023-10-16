@@ -1,17 +1,17 @@
-use alloc::vec::Vec;
 use core::ops::Range;
 use spin::Once;
 use tock_registers::interfaces::{Readable, Writeable};
 
-use crate::kernel::traits::Address;
-use crate::kernel::device::Device;
+use crate::kernel::device::{Device, PlatformInfo};
 use crate::kernel::interrupt::InterruptController;
 use crate::kernel::print::DebugUart;
+use crate::kernel::traits::Address;
 
-pub fn cpu_number() -> usize { 1 }
+pub fn cpu_number() -> usize {
+  1
+}
 
 pub fn init(_fdt: usize) -> (Range<usize>, Range<usize>) {
-
   extern "C" {
     // Note: link-time label, see linker.ld
     fn KERNEL_END();
@@ -26,14 +26,27 @@ pub fn init(_fdt: usize) -> (Range<usize>, Range<usize>) {
   assert_eq!(heap_end % PAGE_SIZE, 0);
 
   let memory_range = 0x8000_0000..0x8060_0000;
-  
+
   assert!(memory_range.contains(&kernel_end));
   assert!(memory_range.contains(&heap_start));
   assert!(memory_range.contains(&heap_end));
   assert!(memory_range.contains(&paged_start));
   let paged_end = memory_range.end;
-  
-  DEBUG_UART.call_once(|| { K210Uart }).init();
+
+  DEBUG_UART.call_once(|| K210Uart).init();
+
+  PLATFORM_INFO.call_once(|| PlatformInfo {
+    devices: [
+      Some(Device::new("GPIOHS", 0x3800_1000..0x3800_2000, None)),
+      Some(Device::new("SPI0", 0x5200_0000..0x5200_1000, None)),
+      Some(Device::new("DMAC", 0x5000_0000..0x5000_1000, None)),
+      Some(Device::new("SYSCTL", 0x5044_0000..0x5044_1000, None)),
+      Some(Device::new("FPIOA", 0x502B_0000..0x502B_1000, None)),
+      None,
+      None,
+      None,
+    ],
+  });
   (heap_start..heap_end, paged_start..paged_end)
 }
 
@@ -67,15 +80,7 @@ pub unsafe extern "C" fn hart_spin(core_id: usize) {
   crate::main(core_id, 0);
 }
 
-pub fn devices() -> Vec<Device> {
-  vec![
-    Device::new("GPIOHS", vec![0x3800_1000..0x3800_2000], vec![]),
-    Device::new("SPI0", vec![0x5200_0000..0x5200_1000], vec![]),
-    Device::new("DMAC", vec![0x5000_0000..0x5000_1000], vec![]),
-    Device::new("SYSCTL", vec![0x5044_0000..0x5044_1000], vec![]),
-    Device::new("FPIOA", vec![0x502B_0000..0x502B_1000], vec![]),
-  ]
-}
+pub static PLATFORM_INFO: Once<PlatformInfo> = Once::new();
 
 pub static DEBUG_UART: Once<K210Uart> = Once::new();
 
@@ -93,14 +98,14 @@ impl K210Uart {
 
 impl crate::kernel::print::DebugUart for K210Uart {
   fn init(&self) {}
-  
+
   fn putc(&self, c: u8) {
     if c == b'\n' {
       self.send(b'\r');
     }
     self.send(c);
   }
-  
+
   fn getc(&self) -> Option<u8> {
     let rxfifo = 0x38000004.pa2kva() as *mut u32;
     unsafe {

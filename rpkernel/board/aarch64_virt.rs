@@ -1,21 +1,22 @@
-use alloc::vec::Vec;
-use spin::Once;
 use core::ops::Range;
 use hardware::pl011::Pl011Mmio;
+use spin::Once;
 use tock_registers::interfaces::{Readable, Writeable};
 
-use crate::Address;
 use crate::driver::gic::INT_TIMER;
-use crate::kernel::device::Device;
+use crate::kernel::device::{Device, PlatformInfo};
 use crate::kernel::interrupt::InterruptController;
-use crate::kernel::traits::ArchTrait;
 use crate::kernel::print::DebugUart;
+use crate::kernel::traits::ArchTrait;
+use crate::Address;
 
 pub const BOARD_DEVICE_MEMORY_RANGE: Range<usize> = 0x0000_0000..0x4000_0000;
 pub const BOARD_NORMAL_MEMORY_RANGE: Range<usize> = 0x4000_0000..0x1_0000_0000;
 
 static CPU_NUMBER: Once<usize> = Once::new();
-pub fn cpu_number() -> usize { *CPU_NUMBER.get().unwrap() }
+pub fn cpu_number() -> usize {
+  *CPU_NUMBER.get().unwrap()
+}
 
 pub fn init(fdt: usize) -> (Range<usize>, Range<usize>) {
   // println!("FDT phyaddr {:x}", fdt);
@@ -24,14 +25,17 @@ pub fn init(fdt: usize) -> (Range<usize>, Range<usize>) {
   // println!("FDT model {}", fdt.root().model());
   // println!("FDT compatible {}", fdt.root().compatible().first());
 
-  CPU_NUMBER.call_once(|| { fdt.cpus().count() });
+  CPU_NUMBER.call_once(|| fdt.cpus().count());
   for cpu in fdt.cpus() {
     let mpidr = cpu.ids().first();
     assert!(mpidr < 0xff);
     assert!(mpidr < crate::MAX_CPU_NUMBER);
-    assert_eq!(cpu.property("enable-method").unwrap().as_str().unwrap(), "psci");
+    assert_eq!(
+      cpu.property("enable-method").unwrap().as_str().unwrap(),
+      "psci"
+    );
   }
-  
+
   extern "C" {
     // Note: link-time label, see linker.ld
     fn KERNEL_END();
@@ -47,7 +51,9 @@ pub fn init(fdt: usize) -> (Range<usize>, Range<usize>) {
 
   let memory_node = fdt.memory();
   let mut region_iter = memory_node.regions();
-  let first_region = region_iter.next().expect("require at least one memory region");
+  let first_region = region_iter
+    .next()
+    .expect("require at least one memory region");
   let memory_start = first_region.starting_address as usize;
   let memory_range = memory_start..(memory_start + first_region.size.unwrap());
 
@@ -60,11 +66,26 @@ pub fn init(fdt: usize) -> (Range<usize>, Range<usize>) {
 
   let chosen = fdt.chosen();
   if let Some(stdout) = chosen.stdout() {
-    let range = stdout.reg().unwrap().next().unwrap();
+    let range = stdout.node().reg().unwrap().next().unwrap();
     let start_addr = range.starting_address as usize;
-    DEBUG_UART.call_once(|| { Pl011Mmio::new(start_addr.pa2kva())}).init();
+    DEBUG_UART
+      .call_once(|| Pl011Mmio::new(start_addr.pa2kva()))
+      .init();
   }
-
+  PLATFORM_INFO.call_once(|| {
+    let mut r = PlatformInfo::default();
+    if let Some(x) = fdt.find_compatible(&["virtio,mmio"]) {
+      // add first virtio,mmio
+      r.devices[0] = Some(Device::from_fdt_node(&fdt, &x));
+    }
+    if let Some(x) = fdt.find_compatible(&["arm,pl031"]) {
+      r.devices[1] = Some(Device::from_fdt_node(&fdt, &x));
+    }
+    if let Some(x) = fdt.find_compatible(&["arm,pl011"]) {
+      r.devices[2] = Some(Device::from_fdt_node(&fdt, &x));
+    }
+    r
+  });
   (heap_start..heap_end, paged_start..paged_end)
 }
 
@@ -104,7 +125,11 @@ pub fn launch_other_cores() {
   let core_id = mpidr_to_linear(crate::arch::Arch::raw_arch_id() as u64);
   for i in 0..crate::cpu_number() {
     if i != core_id {
-      crate::driver::psci::cpu_on(linear_to_mpidr(i), (KERNEL_ENTRY as usize).kva2pa() as u64, 0);
+      crate::driver::psci::cpu_on(
+        linear_to_mpidr(i),
+        (KERNEL_ENTRY as usize).kva2pa() as u64,
+        0,
+      );
     }
   }
 }
@@ -132,13 +157,7 @@ pub fn launch_other_cores() {
 //   compatible = "arm,pl011\0arm,primecell";
 // };
 
-pub fn devices() -> Vec<Device> {
-  vec![
-    Device::new("virtio_blk", vec![0xa000000..0xa000200], vec![0x10 + 32]),
-    Device::new("pl031", vec![0x9010000..0x9011000], vec![]),
-    Device::new("pl011", vec![0x9000000..0x9001000], vec![0x1 + 32]),
-  ]
-}
+pub static PLATFORM_INFO: Once<PlatformInfo> = Once::new();
 
 pub static DEBUG_UART: Once<Pl011Mmio> = Once::new();
 
@@ -146,9 +165,7 @@ const UART_FR_RXFE: u32 = 1 << 4;
 const UART_FR_TXFF: u32 = 1 << 5;
 
 impl crate::kernel::print::DebugUart for Pl011Mmio {
-  fn init(&self) {
-      
-  }
+  fn init(&self) {}
 
   fn putc(&self, c: u8) {
     if c == b'\n' {

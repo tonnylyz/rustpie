@@ -167,16 +167,18 @@ extern "C" fn main(core_id: arch::CoreId, fdt: usize) -> ! {
     );
     kernel::thread::thread_wake(&t);
 
-    for device in board::devices() {
-      for uf in device.to_user_frames().iter() {
-        a.page_table().insert_page(
-          0x8_0000_0000 + uf.pa(),
-          uf.clone(),
-          mm::page_table::EntryAttribute::user_device(),
-        ).unwrap();
-      }
-      for i in device.interrupts.iter() {
-        crate::driver::INTERRUPT_CONTROLLER.enable(*i);
+    for device in &board::PLATFORM_INFO.get().unwrap().devices {
+      if let Some(device) = device {
+        for uf in device.to_user_frames().iter() {
+          a.page_table().insert_page(
+            0x8_0000_0000 + uf.pa(),
+            uf.clone(),
+            mm::page_table::EntryAttribute::user_device(),
+          ).unwrap();
+        }
+        for i in device.interrupt.iter() {
+          crate::driver::INTERRUPT_CONTROLLER.enable(*i);
+        }
       }
     }
     info!("device added to user space");

@@ -1,4 +1,3 @@
-use alloc::vec::Vec;
 use core::ops::Range;
 use core::sync::atomic::{AtomicBool, Ordering};
 use spin::Once;
@@ -7,7 +6,7 @@ use tock_registers::interfaces::{Readable, Writeable};
 use hardware::ns16550::*;
 
 use crate::MAX_CPU_NUMBER;
-use crate::kernel::device::Device;
+use crate::kernel::device::{Device, PlatformInfo};
 use crate::kernel::interrupt::InterruptController;
 use crate::kernel::traits::*;
 use crate::kernel::print::DebugUart;
@@ -51,17 +50,25 @@ pub fn init(fdt: usize) -> (Range<usize>, Range<usize>) {
 
   let chosen = fdt.chosen();
   if let Some(stdout) = chosen.stdout() {
-    let range = stdout.reg().unwrap().next().unwrap();
+    let range = stdout.node().reg().unwrap().next().unwrap();
     let start_addr = range.starting_address as usize;
     DEBUG_UART.call_once(|| { Ns16550Mmio::new(start_addr.pa2kva())}).init();
   }
 
-  let soc = fdt.find_node("/soc");
-  if let Some(soc) = soc {
-      for child in soc.children() {
-        println!("soc/{}", child.name);
-      }
-  }
+  PLATFORM_INFO.call_once(|| {
+    let mut r = PlatformInfo::default();
+    if let Some(x) = fdt.find_node("/soc/virtio_mmio@10001000") {
+      // add first virtio,mmio
+      r.devices[0] = Some(Device::from_fdt_node(&fdt, &x));
+    }
+    if let Some(x) = fdt.find_compatible(&["google,goldfish-rtc"]) {
+      r.devices[1] = Some(Device::from_fdt_node(&fdt, &x));
+    }
+    if let Some(x) = fdt.find_compatible(&["ns16550a"]) {
+      r.devices[2] = Some(Device::from_fdt_node(&fdt, &x));
+    }
+    r
+  });
   (heap_start..heap_end, paged_start..paged_end)
 }
 
@@ -141,13 +148,7 @@ pub unsafe extern "C" fn hart_spin(core_id: usize, fdt: usize) {
 //   compatible = "ns16550a";
 // };
 
-pub fn devices() -> Vec<Device> {
-  vec![
-    Device::new("virtio_blk", vec![0x10001000..0x10002000], vec![0x1]),
-    Device::new("rtc", vec![0x101000..0x102000], vec![]),
-    Device::new("serial", vec![0x10000000..0x10001000], vec![0xa]),
-  ]
-}
+pub static PLATFORM_INFO: Once<PlatformInfo> = Once::new();
 
 pub static DEBUG_UART: Once<Ns16550Mmio> = Once::new();
 
