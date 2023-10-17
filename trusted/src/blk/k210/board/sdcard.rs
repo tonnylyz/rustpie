@@ -3,8 +3,8 @@ use core::convert::TryInto;
 
 use k210_hal::pac::SPI0;
 
-use crate::blk::k210::soc::dmac::DMACExt;
-use crate::blk::k210::soc::spi::{SPIExt, SPIImpl};
+use super::super::super::k210::soc::dmac::DMACExt;
+use super::super::super::k210::soc::spi::{SPIExt, SPIImpl};
 
 use super::super::soc::dmac::{dma_channel, DMAC};
 use super::super::soc::gpio;

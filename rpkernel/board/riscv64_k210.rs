@@ -2,7 +2,7 @@ use core::ops::Range;
 use spin::Once;
 use tock_registers::interfaces::{Readable, Writeable};
 
-use crate::kernel::device::{Device, PlatformInfo};
+use crate::kernel::device::{device_new, PlatformInfo};
 use crate::kernel::interrupt::InterruptController;
 use crate::kernel::print::DebugUart;
 use crate::kernel::traits::Address;
@@ -37,11 +37,11 @@ pub fn init(_fdt: usize) -> (Range<usize>, Range<usize>) {
 
   PLATFORM_INFO.call_once(|| PlatformInfo {
     devices: [
-      Some(Device::new("GPIOHS", 0x3800_1000..0x3800_2000, None)),
-      Some(Device::new("SPI0", 0x5200_0000..0x5200_1000, None)),
-      Some(Device::new("DMAC", 0x5000_0000..0x5000_1000, None)),
-      Some(Device::new("SYSCTL", 0x5044_0000..0x5044_1000, None)),
-      Some(Device::new("FPIOA", 0x502B_0000..0x502B_1000, None)),
+      Some(device_new("GPIOHS", 0x3800_1000..0x3800_2000, None, None)),
+      Some(device_new("SPI0", 0x5200_0000..0x5200_1000, None, None)),
+      Some(device_new("DMAC", 0x5000_0000..0x5000_1000, None, None)),
+      Some(device_new("SYSCTL", 0x5044_0000..0x5044_1000, None, None)),
+      Some(device_new("FPIOA", 0x502B_0000..0x502B_1000, None, None)),
       None,
       None,
       None,

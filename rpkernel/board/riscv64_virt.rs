@@ -1,18 +1,20 @@
 use core::ops::Range;
 use core::sync::atomic::{AtomicBool, Ordering};
-use spin::Once;
-use riscv::regs::SSCRATCH;
-use tock_registers::interfaces::{Readable, Writeable};
 use hardware::ns16550::*;
+use riscv::regs::SSCRATCH;
+use spin::Once;
+use tock_registers::interfaces::{Readable, Writeable};
 
-use crate::MAX_CPU_NUMBER;
-use crate::kernel::device::{Device, PlatformInfo};
+use crate::kernel::device::{device_from_fdt_node, PlatformInfo};
 use crate::kernel::interrupt::InterruptController;
-use crate::kernel::traits::*;
 use crate::kernel::print::DebugUart;
+use crate::kernel::traits::*;
+use crate::MAX_CPU_NUMBER;
 
 static CPU_NUMBER: spin::Once<usize> = spin::Once::new();
-pub fn cpu_number() -> usize { *CPU_NUMBER.get().unwrap() }
+pub fn cpu_number() -> usize {
+  *CPU_NUMBER.get().unwrap()
+}
 
 pub fn init(fdt: usize) -> (Range<usize>, Range<usize>) {
   // println!("FDT phyaddr {:x}", fdt);
@@ -21,7 +23,7 @@ pub fn init(fdt: usize) -> (Range<usize>, Range<usize>) {
   // println!("FDT model {}", fdt.root().model());
   // println!("FDT compatible {}", fdt.root().compatible().first());
 
-  CPU_NUMBER.call_once(|| { fdt.cpus().count() });
+  CPU_NUMBER.call_once(|| fdt.cpus().count());
 
   extern "C" {
     // Note: link-time label, see linker.ld
@@ -38,7 +40,9 @@ pub fn init(fdt: usize) -> (Range<usize>, Range<usize>) {
 
   let memory_node = fdt.memory();
   let mut region_iter = memory_node.regions();
-  let first_region = region_iter.next().expect("require at least one memory region");
+  let first_region = region_iter
+    .next()
+    .expect("require at least one memory region");
   let memory_start = first_region.starting_address as usize;
   let memory_range = memory_start..(memory_start + first_region.size.unwrap());
 
@@ -52,20 +56,34 @@ pub fn init(fdt: usize) -> (Range<usize>, Range<usize>) {
   if let Some(stdout) = chosen.stdout() {
     let range = stdout.node().reg().unwrap().next().unwrap();
     let start_addr = range.starting_address as usize;
-    DEBUG_UART.call_once(|| { Ns16550Mmio::new(start_addr.pa2kva())}).init();
+    DEBUG_UART
+      .call_once(|| Ns16550Mmio::new(start_addr.pa2kva()))
+      .init();
   }
 
   PLATFORM_INFO.call_once(|| {
     let mut r = PlatformInfo::default();
     if let Some(x) = fdt.find_node("/soc/virtio_mmio@10001000") {
       // add first virtio,mmio
-      r.devices[0] = Some(Device::from_fdt_node(&fdt, &x));
+      r.devices[0] = Some(device_from_fdt_node(
+        &fdt,
+        &x,
+        Some(rpabi::platform::Driver::VirtioBlk),
+      ));
     }
     if let Some(x) = fdt.find_compatible(&["google,goldfish-rtc"]) {
-      r.devices[1] = Some(Device::from_fdt_node(&fdt, &x));
+      r.devices[1] = Some(device_from_fdt_node(
+        &fdt,
+        &x,
+        Some(rpabi::platform::Driver::GoldfishRtc),
+      ));
     }
     if let Some(x) = fdt.find_compatible(&["ns16550a"]) {
-      r.devices[2] = Some(Device::from_fdt_node(&fdt, &x));
+      r.devices[2] = Some(device_from_fdt_node(
+        &fdt,
+        &x,
+        Some(rpabi::platform::Driver::Ns16550),
+      ));
     }
     r
   });
@@ -80,25 +98,18 @@ pub fn init_per_core() {
   //    * timer interrupt
   //    * external interrupt (from PLIC)
   //    * software interrupt (IPI)
-  SIE.write(
-    SIE::STIE::SET
-   + SIE::SEIE::SET
-   + SIE::SSIE::SET
-  );
+  SIE.write(SIE::STIE::SET + SIE::SEIE::SET + SIE::SSIE::SET);
   info!("SIE val {:b}", SIE.get());
 }
 
 pub fn core_id() -> usize {
   // Note: a pointer to hart_id is stored in sscratch
-  unsafe {
-    ((SSCRATCH.get() as usize) as *const usize).read()
-  }
+  unsafe { ((SSCRATCH.get() as usize) as *const usize).read() }
 }
 
 pub fn launch_other_cores() {
   HART_SPIN.store(true, Ordering::Relaxed);
 }
-
 
 static HART_SPIN: AtomicBool = AtomicBool::new(false);
 
@@ -154,8 +165,7 @@ pub static DEBUG_UART: Once<Ns16550Mmio> = Once::new();
 
 impl crate::kernel::print::DebugUart for Ns16550Mmio {
   fn init(&self) {
-    self.ISR_FCR
-      .write(ISR_FCR::EN_FIFO::Mode16550);
+    self.ISR_FCR.write(ISR_FCR::EN_FIFO::Mode16550);
   }
 
   fn putc(&self, c: u8) {

@@ -49,6 +49,10 @@ path = "src/ps.rs"
 name = "write"
 path = "src/write.rs"
 
+[[bin]]
+name = "date"
+path = "src/date.rs"
+
 [dependencies]
 rpstdlib = { path = "../rpstdlib" }
 getopts = { git = "https://github.com/tonnylyz/getopts" }

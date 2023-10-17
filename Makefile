@@ -80,7 +80,7 @@ disk: user_image user_c_image
 	mkdir disk
 	redoxfs disk.img disk
 	# @trap 'umount disk' EXIT
-	for f in shell cat ls mkdir touch rm rd stat hello ps write; do cp user/target/${ARCH}/${USER_PROFILE}/$$f disk/; done
+	for f in shell cat ls mkdir touch rm rd stat hello ps write date; do cp user/target/${ARCH}/${USER_PROFILE}/$$f disk/; done
 	cp user-c/hello2 disk/
 	sync
 	umount disk

@@ -24,6 +24,8 @@ pub const CONFIG_HEAP_BTM: usize = 0x10_0000_0000;
 pub const CONFIG_VIRTUAL_HEAP_BTM: usize = 0x20_0000_0000;
 pub const CONFIG_VIRTUAL_HEAP_TOP: usize = 0x20_1000_0000;
 
+pub const CONFIG_TRUSTED_PLATFORM_INFO: usize = 0x4000_0000;
+
 pub const CONFIG_ELF_IMAGE: usize = 0x8000_0000;
 
 pub const PAGE_SIZE: usize = 4096;
@@ -34,6 +36,33 @@ pub const PAGE_TABLE_L3_SHIFT: usize = 12;
 
 pub const WORD_SHIFT: usize = 3;
 pub const WORD_SIZE: usize = 1 << WORD_SHIFT;
+
+pub mod platform {
+  pub const DEVICE_NAME_LEN: usize = 32;
+  pub const PLATFORM_DEVICE_LEN: usize = 8;
+  pub const USER_SPACE_DRIVER_MMIO_OFFSET: usize = 0x8_0000_0000;
+  #[derive(Debug, PartialEq, Eq, Clone, Copy)]
+  pub enum Driver {
+    VirtioBlk,
+    Ns16550,
+    Pl011,
+    Pl031,
+    GoldfishRtc,
+  }
+  #[derive(Debug)]
+  pub struct Device {
+    pub name: [u8; DEVICE_NAME_LEN],
+    pub register: core::ops::Range<usize>,
+    pub interrupt: Option<usize>,
+    pub driver: Option<Driver>,
+  }
+
+  #[repr(align(4096))]
+  #[derive(Debug, Default)]
+  pub struct PlatformInfo {
+    pub devices: [Option<Device>; PLATFORM_DEVICE_LEN],
+  }
+}
 
 pub mod syscall {
   pub const SYS_NULL: usize = 0;
@@ -112,7 +141,64 @@ pub mod time {
 
   impl Display for RtcTime {
     fn fmt(&self, f: &mut Formatter<'_>) -> core::fmt::Result {
-      write!(f, "{:04}-{:02}-{:02} {:02}:{:02}:{:02}", self.year + 1900, self.mon + 1, self.mday, self.hour, self.min, self.sec)
+      write!(
+        f,
+        "{:04}-{:02}-{:02} {:02}:{:02}:{:02}",
+        self.year + 1900,
+        self.mon + 1,
+        self.mday,
+        self.hour,
+        self.min,
+        self.sec
+      )
+    }
+  }
+
+  impl RtcTime {
+    pub fn from_timestamp(time: u64) -> Self {
+      let leaps_thru_end_of = |y: i32| (y) / 4 - (y) / 100 + (y) / 400;
+      let is_leap_year = |y: i32| ((y % 4 == 0) && (y % 100 != 0)) || (y % 400 == 0);
+      let rtc_month_days = |month: i32, year: i32| -> i32 {
+        const RTC_DAYS_IN_MONTH: [u8; 12] = [31, 28, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31];
+        RTC_DAYS_IN_MONTH[month as usize] as i32
+          + if is_leap_year(year) && month == 1 {
+            1
+          } else {
+            0
+          }
+      };
+      let mut r = RtcTime::default();
+      let mut days: i32 = (time / 86400) as i32;
+      let mut secs: i32 = (time - (days as u64) * 86400) as i32;
+      r.wday = ((days + 4) % 7) as i32;
+      let mut year = 1970 + days / 365;
+      days -= (year - 1970) * 365 + leaps_thru_end_of(year - 1) - leaps_thru_end_of(1970 - 1);
+      if days < 0 {
+        year -= 1;
+        days += 365 + if is_leap_year(year) { 1 } else { 0 };
+      }
+      r.year = (year - 1900) as i32;
+      r.yday = (days + 1) as i32;
+      let mut month = 0;
+      loop {
+        if month == 12 {
+          break;
+        }
+        let newdays = days - rtc_month_days(month, year);
+        if newdays < 0 {
+          break;
+        }
+        days = newdays;
+        month += 1;
+      }
+      r.mon = month as i32;
+      r.mday = (days + 1) as i32;
+      r.hour = (secs / 3600) as i32;
+      secs -= r.hour * 3600;
+      r.min = (secs / 60) as i32;
+      r.sec = (secs - r.min * 60) as i32;
+      r.isdst = 0;
+      r
     }
   }
 }

@@ -4,7 +4,7 @@ use spin::Once;
 use tock_registers::interfaces::{Readable, Writeable};
 
 use crate::driver::gic::INT_TIMER;
-use crate::kernel::device::{Device, PlatformInfo};
+use crate::kernel::device::{device_from_fdt_node, PlatformInfo};
 use crate::kernel::interrupt::InterruptController;
 use crate::kernel::print::DebugUart;
 use crate::kernel::traits::ArchTrait;
@@ -76,13 +76,25 @@ pub fn init(fdt: usize) -> (Range<usize>, Range<usize>) {
     let mut r = PlatformInfo::default();
     if let Some(x) = fdt.find_compatible(&["virtio,mmio"]) {
       // add first virtio,mmio
-      r.devices[0] = Some(Device::from_fdt_node(&fdt, &x));
+      r.devices[0] = Some(device_from_fdt_node(
+        &fdt,
+        &x,
+        Some(rpabi::platform::Driver::VirtioBlk),
+      ));
     }
     if let Some(x) = fdt.find_compatible(&["arm,pl031"]) {
-      r.devices[1] = Some(Device::from_fdt_node(&fdt, &x));
+      r.devices[1] = Some(device_from_fdt_node(
+        &fdt,
+        &x,
+        Some(rpabi::platform::Driver::Pl031),
+      ));
     }
     if let Some(x) = fdt.find_compatible(&["arm,pl011"]) {
-      r.devices[2] = Some(Device::from_fdt_node(&fdt, &x));
+      r.devices[2] = Some(device_from_fdt_node(
+        &fdt,
+        &x,
+        Some(rpabi::platform::Driver::Pl011),
+      ));
     }
     r
   });

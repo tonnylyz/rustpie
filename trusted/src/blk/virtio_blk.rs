@@ -18,7 +18,7 @@ struct VirtioBlk {
   mmio: VirtioMmio,
   irq: usize,
   size_in_sector: usize,
-  mutable: /* Mutex< */VirtioBlkInnerMut/* > */,
+  mutable: VirtioBlkInnerMut, /* > */
 }
 
 trait BaseAddr {
@@ -84,9 +84,9 @@ impl VirtioBlk {
     mmio.Status.set(status.get());
 
     mmio.DeviceFeaturesSel.set(0);
-    info!("device feature low  {:08x}", mmio.DeviceFeatures.get());
+    trace!("device feature low  {:08x}", mmio.DeviceFeatures.get());
     mmio.DeviceFeaturesSel.set(1);
-    info!("device feature high {:08x}", mmio.DeviceFeatures.get());
+    trace!("device feature high {:08x}", mmio.DeviceFeatures.get());
 
     mmio.DriverFeaturesSel.set(0);
     mmio.DriverFeatures.write(
@@ -174,7 +174,6 @@ impl VirtioBlk {
     let status = Box::new(255u8);
     let mutable = &mut self.mutable;
     if let Some((ia, ib, ic)) = mutable.alloc_desc() {
-
       mutable.ring.desc[ia].addr = virt_to_phys(hdr.as_ref() as *const _ as usize) as u64;
       mutable.ring.desc[ia].len = size_of::<VirtioBlkOutHdr>() as u32;
       mutable.ring.desc[ia].flags = VRING_DESC_F_NEXT;
@@ -206,10 +205,9 @@ impl VirtioBlk {
       });
       let last_avail_idx = mutable.ring.driver.idx;
       mutable.ring.driver.idx = last_avail_idx.wrapping_add(1);
-      
+
       let mmio = &self.mmio;
       mmio.QueueNotify.set(0); // queue num #0
-      
     } else {
       return Err("queue full. no desc available");
     }
@@ -229,11 +227,11 @@ impl VirtioBlk {
         if mutable.last_used == mutable.ring.device.idx {
           break;
         }
-        let comp_head = mutable.ring.device.ring[(mutable.last_used as usize) % DRIVER_QUEUE_SIZE].id as usize;
+        let comp_head =
+          mutable.ring.device.ring[(mutable.last_used as usize) % DRIVER_QUEUE_SIZE].id as usize;
         if let Some(req) = mutable.queue[comp_head].take() {
           match *req.status {
-            VIRTIO_BLK_S_OK => {
-            }
+            VIRTIO_BLK_S_OK => {}
             VIRTIO_BLK_S_IOERR => {
               error!("irq status io err {:#x?}", req);
             }
@@ -384,22 +382,17 @@ const NONE_DISK_REQUEST: Option<DiskRequest> = None;
 
 // static VIRTIO_BLK: Once<VirtioBlk> = Once::new();
 
-pub fn server() {
+pub fn server(base_addr: usize, irq_num: usize) {
   info!("server started t{}", get_tid());
+  let base_addr = base_addr + rpabi::platform::USER_SPACE_DRIVER_MMIO_OFFSET;
   rpsyscall::server_register(rpabi::server::SERVER_BLK).unwrap();
   // VIRTIO_BLK.call_once(|| {
-  //   #[cfg(target_arch = "aarch64")]
-  //   let mut virtio_blk = VirtioBlk::new(0x8_0000_0000 + 0x0a000000, 0x10 + 32);
-  //   #[cfg(target_arch = "riscv64")]
-  //   let virtio_blk = VirtioBlk::new(0x8_0000_0000 + 0x10001000, 0x1);
+  //   let virtio_blk = VirtioBlk::new(base_addr, irq_num);
   //   virtio_blk.init();
   //   virtio_blk
   // });
-  
-  #[cfg(target_arch = "aarch64")]
-  let mut virtio_blk = VirtioBlk::new(0x8_0000_0000 + 0x0a000000, 0x10 + 32);
-  #[cfg(target_arch = "riscv64")]
-  let mut virtio_blk = VirtioBlk::new(0x8_0000_0000 + 0x10001000, 0x1);
+
+  let mut virtio_blk = VirtioBlk::new(base_addr, irq_num);
   virtio_blk.init();
 
   // let irq_thread = crate::common::thread::spawn(|| {
@@ -422,7 +415,7 @@ pub fn server() {
           Ok(_) => {
             // will reply in irq thread
             virtio_blk.poll_irq();
-          },
+          }
           Err(_) => {
             let mut msg = rpsyscall::message::Message::default();
             msg.a = 0xff; // submit error

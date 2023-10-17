@@ -1,10 +1,8 @@
 #![no_std]
 #![no_main]
 #![feature(panic_info_message)]
-
 // for ::try_new allocation
 #![feature(allocator_api)]
-
 // for unwind feature: eh_personality and so on
 #![allow(internal_features)]
 #![feature(lang_items)]
@@ -23,8 +21,8 @@ use mm::page_table::PageTableEntryAttrTrait;
 use mm::page_table::PageTableTrait;
 
 pub const MAX_CPU_NUMBER: usize = 4;
-pub use board::cpu_number;
 pub use board::core_id;
+pub use board::cpu_number;
 
 #[macro_use]
 mod misc;
@@ -62,13 +60,12 @@ cfg_if::cfg_if! {
   }
 }
 
-
 mod kernel;
+mod logger;
 mod mm;
 mod panic;
-mod util;
-mod logger;
 mod syscall;
+mod util;
 
 #[macro_use]
 mod macros {
@@ -79,20 +76,19 @@ mod macros {
   }
 
   macro_rules! include_bytes_align_as {
-  ($align_ty:ty, $path:literal) => {
-    {  // const block expression to encapsulate the static
+    ($align_ty:ty, $path:literal) => {{
+      // const block expression to encapsulate the static
       use $crate::macros::AlignedAs;
 
       // this assignment is made possible by CoerceUnsized
-      static ALIGNED: &AlignedAs::<$align_ty, [u8]> = &AlignedAs {
+      static ALIGNED: &AlignedAs<$align_ty, [u8]> = &AlignedAs {
         _align: [],
         bytes: *include_bytes!($path),
       };
 
       &ALIGNED.bytes
-    }
-  };
-}
+    }};
+  }
 }
 
 #[repr(align(4096))]
@@ -121,20 +117,20 @@ extern "C" fn main(core_id: arch::CoreId, fdt: usize) -> ! {
   util::barrier();
   if core_id == 0 {
     #[cfg(target_arch = "aarch64")]
-      #[cfg(not(feature = "user_release"))]
-      let bin = include_bytes_align_as!(AlignPage, "../trusted/target/aarch64/debug/trusted.bin");
+    #[cfg(not(feature = "user_release"))]
+    let bin = include_bytes_align_as!(AlignPage, "../trusted/target/aarch64/debug/trusted.bin");
 
     #[cfg(target_arch = "aarch64")]
-      #[cfg(feature = "user_release")]
-      let bin = include_bytes_align_as!(AlignPage, "../trusted/target/aarch64/release/trusted.bin");
+    #[cfg(feature = "user_release")]
+    let bin = include_bytes_align_as!(AlignPage, "../trusted/target/aarch64/release/trusted.bin");
 
     #[cfg(target_arch = "riscv64")]
-      #[cfg(not(feature = "user_release"))]
-      let bin = include_bytes_align_as!(AlignPage, "../trusted/target/riscv64/debug/trusted.bin");
+    #[cfg(not(feature = "user_release"))]
+    let bin = include_bytes_align_as!(AlignPage, "../trusted/target/riscv64/debug/trusted.bin");
 
     #[cfg(target_arch = "riscv64")]
-      #[cfg(feature = "user_release")]
-      let bin = include_bytes_align_as!(AlignPage, "../trusted/target/riscv64/release/trusted.bin");
+    #[cfg(feature = "user_release")]
+    let bin = include_bytes_align_as!(AlignPage, "../trusted/target/riscv64/release/trusted.bin");
 
     info!("embedded trusted {:x}", bin.as_ptr() as usize);
     let (a, entry) = kernel::address_space::load_image(bin);
@@ -142,26 +138,42 @@ extern "C" fn main(core_id: arch::CoreId, fdt: usize) -> ! {
 
     let page_table = a.page_table();
     let stack_frame = mm::page_pool::page_alloc().expect("failed to allocate trusted stack");
-    page_table.insert_page(rpabi::CONFIG_USER_STACK_TOP - arch::PAGE_SIZE,
-                           mm::Frame::from(stack_frame),
-                           mm::page_table::EntryAttribute::user_default()).unwrap();
+    page_table
+      .insert_page(
+        rpabi::CONFIG_USER_STACK_TOP - arch::PAGE_SIZE,
+        mm::Frame::from(stack_frame),
+        mm::page_table::EntryAttribute::user_default(),
+      )
+      .unwrap();
+    let plat_info_pa = (&board::PLATFORM_INFO as *const _ as usize).kva2pa();
+    page_table
+      .insert_page(
+        rpabi::CONFIG_TRUSTED_PLATFORM_INFO,
+        mm::Frame::from(mm::PhysicalFrame::new(plat_info_pa)),
+        mm::page_table::EntryAttribute::user_readonly(),
+      )
+      .unwrap();
 
     #[cfg(feature = "k210")]
-      {
-        let dma_frame = mm::page_pool::page_alloc().expect("failed to allocate trusted dma frame");
-        let dma_frame_no_cache = dma_frame.pa() - 0x40000000;
-        info!("dma_frame {:016x}", dma_frame_no_cache);
-        page_table.insert_page(0x8_0000_0000,
-                               mm::Frame::Device(dma_frame_no_cache),
-                               mm::page_table::EntryAttribute::user_device()).unwrap();
-        core::mem::forget(dma_frame);
-      }
+    {
+      let dma_frame = mm::page_pool::page_alloc().expect("failed to allocate trusted dma frame");
+      let dma_frame_no_cache = dma_frame.pa() - 0x40000000;
+      info!("dma_frame {:016x}", dma_frame_no_cache);
+      page_table
+        .insert_page(
+          rpabi::platform::USER_SPACE_DRIVER_MMIO_OFFSET,
+          mm::Frame::Device(dma_frame_no_cache),
+          mm::page_table::EntryAttribute::user_device(),
+        )
+        .unwrap();
+      core::mem::forget(dma_frame);
+    }
 
     info!("user stack ok");
     let t = crate::kernel::thread::new_user(
       entry,
       rpabi::CONFIG_USER_STACK_TOP,
-      0,
+      rpabi::CONFIG_TRUSTED_PLATFORM_INFO,
       a.clone(),
       None,
     );
@@ -169,12 +181,14 @@ extern "C" fn main(core_id: arch::CoreId, fdt: usize) -> ! {
 
     for device in &board::PLATFORM_INFO.get().unwrap().devices {
       if let Some(device) = device {
-        for uf in device.to_user_frames().iter() {
-          a.page_table().insert_page(
-            0x8_0000_0000 + uf.pa(),
-            uf.clone(),
-            mm::page_table::EntryAttribute::user_device(),
-          ).unwrap();
+        for uf in kernel::device::device_to_user_frames(device).iter() {
+          a.page_table()
+            .insert_page(
+              rpabi::platform::USER_SPACE_DRIVER_MMIO_OFFSET + uf.pa(),
+              uf.clone(),
+              mm::page_table::EntryAttribute::user_device(),
+            )
+            .unwrap();
         }
         for i in device.interrupt.iter() {
           crate::driver::INTERRUPT_CONTROLLER.enable(*i);
@@ -187,7 +201,7 @@ extern "C" fn main(core_id: arch::CoreId, fdt: usize) -> ! {
   util::barrier();
   kernel::cpu::cpu().tick(false);
 
-  extern {
+  extern "C" {
     fn pop_context_first(ctx: usize, core_id: usize) -> !;
   }
   match kernel::cpu::cpu().running_thread() {

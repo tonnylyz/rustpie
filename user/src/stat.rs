@@ -6,7 +6,7 @@ extern crate alloc;
 extern crate rpstdlib;
 
 use alloc::vec::Vec;
-use rpstdlib::rtc::rtc_time64_to_tm;
+use rpstdlib::rtc::RtcTime;
 
 #[no_mangle]
 fn main(arg: Vec<&'static str>) -> i32 {
@@ -36,9 +36,9 @@ Create: {}",
         stat.st_mode,
         stat.st_uid,
         stat.st_gid,
-        rtc_time64_to_tm(stat.st_atime),
-        rtc_time64_to_tm(stat.st_mtime),
-        rtc_time64_to_tm(stat.st_ctime),
+        RtcTime::from_timestamp(stat.st_atime),
+        RtcTime::from_timestamp(stat.st_mtime),
+        RtcTime::from_timestamp(stat.st_ctime),
       );
     }
     Err(e) => {
