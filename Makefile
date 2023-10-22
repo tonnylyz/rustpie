@@ -3,7 +3,7 @@ MACHINE ?= virt
 PROFILE ?= release
 USER_PROFILE ?= release
 TRUSTED_PROFILE ?= release
-
+GIC_VERSION ?= 3
 # NOTE: generate frame pointer for every function
 export RUSTFLAGS := ${RUSTFLAGS} -C force-frame-pointers=yes
 
@@ -15,6 +15,10 @@ endif
 
 ifeq (${TRUSTED_PROFILE}, release)
 CARGO_FLAGS := ${CARGO_FLAGS} --features user_release
+endif
+
+ifeq (${GIC_VERSION}, 3)
+CARGO_FLAGS := ${CARGO_FLAGS} --features gicv3
 endif
 
 KERNEL := target/${ARCH}${MACHINE}/${PROFILE}/rustpi
@@ -48,7 +52,12 @@ ${KERNEL}.asm: ${KERNEL}
 	llvm-objdump --demangle -d $< > $@
 
 ifeq (${ARCH}, aarch64)
+ifeq (${GIC_VERSION}, 3)
+QEMU_CMD := qemu-system-aarch64 -M virt,gic-version=3,its=off -cpu cortex-a53 -device loader,file=${KERNEL},addr=0x80000000,force-raw=on
+endif
+ifeq (${GIC_VERSION}, 2)
 QEMU_CMD := qemu-system-aarch64 -M virt -cpu cortex-a53 -device loader,file=${KERNEL},addr=0x80000000,force-raw=on
+endif
 endif
 ifeq (${ARCH}, riscv64)
 QEMU_CMD := qemu-system-riscv64 -M virt -bios default -device loader,file=${KERNEL},addr=0xc0000000,force-raw=on

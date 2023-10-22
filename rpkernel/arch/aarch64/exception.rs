@@ -76,7 +76,7 @@ unsafe extern "C" fn lower_aarch64_irq(ctx: *mut ContextFrame) {
       }
     }
     None => {
-      panic!("GIC unknown irq")
+      warn!("GIC special irq")
     }
   }
   if irq.is_some() {
