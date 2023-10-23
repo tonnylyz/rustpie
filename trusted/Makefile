@@ -7,7 +7,9 @@ else
 CARGO_FLAGS =
 endif
 
-CARGO_FLAGS := ${CARGO_FLAGS} --no-default-features --features ${MACHINE}
+ifeq (${MACHINE}, k210)
+CARGO_FLAGS := ${CARGO_FLAGS} --features k210
+endif
 
 TRUSTED_IMAGE := target/${ARCH}/${TRUSTED_PROFILE}/trusted
 
