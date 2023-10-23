@@ -12,3 +12,6 @@ rplibc/Cargo.lock
 rpservapi/Cargo.lock
 rpstdlib/Cargo.lock
 rpsyscall/Cargo.lock
+
+*.dts
+*.dtb
