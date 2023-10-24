@@ -7,5 +7,9 @@ int main(int argc, char** argv) {
         puts(argv[i]);
         putc('\n');
     }
+
+    int fd = open("play", O_CREAT | O_RDWR);
+    write(fd, "ground!", 7);
+    close(fd);
     return 0;
 }

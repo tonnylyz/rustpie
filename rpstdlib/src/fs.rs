@@ -18,12 +18,33 @@ pub enum SeekFrom {
 }
 
 impl File {
+  pub fn from_handle(handle: usize) -> Self {
+    File {
+      handle
+    }
+  }
+
+  pub fn handle(&self) -> usize {
+    self.handle
+  }
+
   pub fn open<P: AsRef<str>>(path: P) -> Result<File> {
     let msg = Message {
       a: SYS_OPEN,
       b: path.as_ref().as_ptr() as usize,
       c: path.as_ref().len(),
       d: O_RDONLY,
+    };
+    let msg = msg.call(SERVER_REDOX_FS).map_err(|_| Error::new(EIO))?;
+    Error::demux(msg.a).map(|handle| File { handle })
+  }
+
+  pub fn open_with_flags<P: AsRef<str>>(path: P, flags: isize) -> Result<File> {
+    let msg = Message {
+      a: SYS_OPEN,
+      b: path.as_ref().as_ptr() as usize,
+      c: path.as_ref().len(),
+      d: flags as usize,
     };
     let msg = msg.call(SERVER_REDOX_FS).map_err(|_| Error::new(EIO))?;
     Error::demux(msg.a).map(|handle| File { handle })
