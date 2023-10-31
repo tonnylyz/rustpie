@@ -11,12 +11,12 @@ ifeq (${MACHINE}, k210)
 CARGO_FLAGS := ${CARGO_FLAGS} --features k210
 endif
 
-TRUSTED_IMAGE := target/${ARCH}/${TRUSTED_PROFILE}/trusted
+TRUSTED_IMAGE := target/${TARGET}/${TRUSTED_PROFILE}/trusted
 
 .PHONY: all clean
 
 all:
-	cargo build --target cargo_target/${ARCH}.json -Z build-std=core,alloc ${CARGO_FLAGS}
+	cargo build --target cargo_target/${TARGET}.json -Z build-std=core,alloc ${CARGO_FLAGS}
 	llvm-objcopy --strip-all ${TRUSTED_IMAGE} ${TRUSTED_IMAGE}.bin
 	llvm-objdump -d ${TRUSTED_IMAGE} > ${TRUSTED_IMAGE}.asm
 

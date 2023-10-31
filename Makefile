@@ -21,20 +21,36 @@ ifeq (${GIC_VERSION}, 3)
 CARGO_FLAGS := ${CARGO_FLAGS} --features gicv3
 endif
 
-KERNEL := target/${ARCH}${MACHINE}/${PROFILE}/rustpi
+ifeq (${ARCH}, aarch64)
+KERNEL_TARGET := aarch64-virt-rustpi
+TRUSTED_TARGET := aarch64-unknown-rustpi
+USER_TARGET := aarch64-unknown-rustpi
+endif
+ifeq (${ARCH}, riscv64)
+ifeq (${MACHINE}, virt)
+KERNEL_TARGET := riscv64gc-virt-rustpi-elf
+endif
+ifeq (${MACHINE}, k210)
+KERNEL_TARGET := riscv64gc-k210-rustpi-elf
+endif
+TRUSTED_TARGET := riscv64gc-unknown-rustpi-elf
+USER_TARGET := riscv64gc-unknown-rustpi-elf
+endif
+
+KERNEL := target/${KERNEL_TARGET}/${PROFILE}/rustpi
 
 .PHONY: all emu debug dependencies clean disk trusted_image user_image rplibc user_c_image
 
 all: ${KERNEL} ${KERNEL}.bin ${KERNEL}.asm
 
 ${KERNEL}: trusted_image
-	cargo build --target rpkernel/cargo_target/${ARCH}${MACHINE}.json -Z build-std=core,alloc  ${CARGO_FLAGS}
+	cargo build --target rpkernel/cargo_target/${KERNEL_TARGET}.json -Z build-std=core,alloc  ${CARGO_FLAGS}
 
 trusted_image:
-	make ARCH=${ARCH} TRUSTED_PROFILE=${TRUSTED_PROFILE} MACHINE=${MACHINE} -C trusted
+	make ARCH=${ARCH} TRUSTED_PROFILE=${TRUSTED_PROFILE} MACHINE=${MACHINE} TARGET=${TRUSTED_TARGET} -C trusted
 
 user_image:
-	make ARCH=${ARCH} USER_PROFILE=${USER_PROFILE} -C user
+	make ARCH=${ARCH} USER_PROFILE=${USER_PROFILE} TARGET=${USER_TARGET} -C user
 
 rplibc:
 	make ARCH=${ARCH} -C rplibc
@@ -83,14 +99,13 @@ clean:
 	make -C user clean
 
 disk: user_image user_c_image
-	dd if=/dev/zero of=disk.img bs=1M count=1024
-	redoxfs-mkfs disk.img
+	test -f disk.img || (dd if=/dev/zero of=disk.img bs=1M count=1024 && redoxfs-mkfs disk.img)
+	true || (mountpoint -q disk && umount disk)
 	rm -rf disk
 	mkdir disk
 	redoxfs disk.img disk
-	# @trap 'umount disk' EXIT
-	for f in shell cat ls mkdir touch rm rd stat hello ps write date; do cp user/target/${ARCH}/${USER_PROFILE}/$$f disk/; done
-	cp user-c/hello2 disk/
+	for f in shell cat ls mkdir touch rm rd stat hello ps write date; do cp user/target/${USER_TARGET}/${USER_PROFILE}/$$f disk; done
+	cp user-c/hello2 disk
 	sync
 	umount disk
 
