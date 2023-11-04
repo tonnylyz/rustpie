@@ -98,6 +98,36 @@ pub fn init(fdt: usize) -> (Range<usize>, Range<usize>) {
     }
     r
   });
+  match fdt.find_node("/").unwrap().interrupt_parent() {
+    Some(node) => {
+      let comp = node.compatible().unwrap().first();
+      match comp {
+        "arm,cortex-a15-gic" => {
+          let mut reg_iter = node.reg().unwrap();
+          let gicd_region = reg_iter.next().unwrap();
+          let gicd_base = gicd_region.starting_address as usize;
+          let gicc_region = reg_iter.next().unwrap();
+          let gicc_base = gicc_region.starting_address as usize;
+          crate::driver::INTERRUPT_CONTROLLER.call_once(|| {
+            crate::driver::gic::Gic::new(gicd_base, gicc_base)
+          });
+        },
+        "arm,gic-v3" => {
+          assert_eq!(node.property("#redistributor-regions").unwrap().as_usize().unwrap(), 1);
+          let mut reg_iter = node.reg().unwrap();
+          let gicd_region = reg_iter.next().unwrap();
+          let gicd_base = gicd_region.starting_address as usize;
+          let gicr_region = reg_iter.next().unwrap();
+          let gicr_base = gicr_region.starting_address as usize;
+          crate::driver::INTERRUPT_CONTROLLER.call_once(|| {
+            crate::driver::gic::Gic::new(gicd_base, gicr_base)
+          });
+        }
+        _ => panic!(),
+      }
+    },
+    None => panic!(),
+  }
   (heap_start..heap_end, paged_start..paged_end)
 }
 

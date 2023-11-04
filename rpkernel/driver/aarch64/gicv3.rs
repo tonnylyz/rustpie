@@ -343,15 +343,15 @@ pub struct Gic {
 const NONE_GICR: Option<GicRedistributor> = None;
 
 impl Gic {
-  fn new() -> Self {
+  pub fn new(gicd_base: usize, gicr_base: usize) -> Self {
     let mut r = Gic {
       d: GicDistributor {
-        base_addr: 0x8000000usize.pa2kva(),
+        base_addr: gicd_base.pa2kva(),
       },
       r: [NONE_GICR; crate::MAX_CPU_NUMBER],
       c: GicCpuInterface {},
     };
-    let gicr_base = 0x80a0000usize.pa2kva();
+    let gicr_base = gicr_base.pa2kva();
     for i in 0..crate::cpu_number() {
       r.r[i] = Some(GicRedistributor {
         rd_base: gicr_base + i * 0x20000,
@@ -364,7 +364,7 @@ impl Gic {
 
 impl InterruptController for Once<Gic> {
   fn init(&self) {
-    let gic = self.call_once(|| Gic::new());
+    let gic = self.get().unwrap();
     let core_id = core_id();
     if core_id == 0 {
       gic.d.init();

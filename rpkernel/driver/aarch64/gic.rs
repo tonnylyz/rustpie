@@ -1,3 +1,4 @@
+use spin::Once;
 use tock_registers::interfaces::{Readable, Writeable};
 use tock_registers::registers::*;
 use tock_registers::*;
@@ -10,11 +11,6 @@ const GIC_SGI_NUM: usize = 16;
 const GIC_1_BIT_NUM: usize = GIC_INTERRUPT_NUM / 32;
 const GIC_8_BIT_NUM: usize = GIC_INTERRUPT_NUM * 8 / 32;
 const GIC_2_BIT_NUM: usize = GIC_INTERRUPT_NUM * 2 / 32;
-
-#[cfg(feature = "virt")]
-const GICD_BASE: usize = 0x08000000;
-#[cfg(feature = "virt")]
-const GICC_BASE: usize = 0x08010000;
 
 register_bitfields! {
   u32,
@@ -130,7 +126,10 @@ impl GicCpuInterface {
 
 impl GicDistributor {
   const fn new(base_addr: usize) -> Self {
-    GicDistributor { base_addr, cpu_if_id: spin::Mutex::new([0; crate::MAX_CPU_NUMBER]) }
+    GicDistributor {
+      base_addr,
+      cpu_if_id: spin::Mutex::new([0; crate::MAX_CPU_NUMBER]),
+    }
   }
 
   fn ptr(&self) -> *const GicDistributorBlock {
@@ -209,27 +208,36 @@ impl GicDistributor {
   }
 }
 
-static GICD: GicDistributor = GicDistributor::new(GICD_BASE | 0xFFFF_FF80_0000_0000);
-static GICC: GicCpuInterface = GicCpuInterface::new(GICC_BASE | 0xFFFF_FF80_0000_0000);
+pub struct Gic {
+  d: GicDistributor,
+  c: GicCpuInterface,
+}
 
-pub struct Gic;
+impl Gic {
+  pub fn new(gicd_base: usize, gicc_base: usize) -> Self {
+    Gic {
+      d: GicDistributor::new(gicd_base.pa2kva()),
+      c: GicCpuInterface::new(gicc_base.pa2kva()),
+    }
+  }
+}
 
-impl InterruptController for Gic {
+impl InterruptController for Once<Gic> {
   fn init(&self) {
     let core_id = core_id();
-    let gicd = &GICD;
+    let gicd = &self.get().unwrap().d;
     if core_id == 0 {
       gicd.init();
     }
     crate::util::barrier();
-    let gicc = &GICC;
+    let gicc = &self.get().unwrap().c;
     gicd.init_per_core();
     gicc.init();
   }
 
   fn enable(&self, int: Interrupt) {
     let core_id = core_id();
-    let gicd = &GICD;
+    let gicd = &self.get().unwrap().d;
     gicd.set_enable(int);
     gicd.set_priority(int, 0x7f);
     if int < 16 {
@@ -243,12 +251,12 @@ impl InterruptController for Gic {
   }
 
   fn disable(&self, int: Interrupt) {
-    let gicd = &GICD;
+    let gicd = &self.get().unwrap().d;
     gicd.clear_enable(int);
   }
 
   fn fetch(&self) -> Option<(Interrupt, usize)> {
-    let gicc = &GICC;
+    let gicc = &self.get().unwrap().c;
     let iar = gicc.IAR.extract();
     let int_id = iar.read(GICC_IAR::INTID);
     let src_cpu_id = iar.read(GICC_IAR::CPUID);
@@ -260,27 +268,28 @@ impl InterruptController for Gic {
   }
 
   fn finish(&self, int: Interrupt) {
-    let gicc = &GICC;
+    let gicc = &self.get().unwrap().c;
     gicc.EOIR.set(int as u32);
   }
 }
 
 pub const INT_TIMER: Interrupt = 27; // virtual timer
 
-pub static INTERRUPT_CONTROLLER: Gic = Gic {};
+pub static INTERRUPT_CONTROLLER: Once<Gic> = Once::new();
 
 pub type Interrupt = usize;
 
 use crate::kernel::interrupt::InterProcessInterrupt as IPI;
+use crate::kernel::traits::Address;
 
-impl InterProcessorInterruptController for Gic {
+impl InterProcessorInterruptController for Once<Gic> {
   fn send_to_one(&self, irq: IPI, target: usize) {
     assert!(target != core_id());
     self.send_to_multiple(irq, 1usize << target);
   }
 
   fn send_to_multiple(&self, irq: IPI, target_mask: usize) {
-    let gicd = &GICD;
+    let gicd = &self.get().unwrap().d;
     let sgi_int_id: Interrupt = irq.into();
     assert!(sgi_int_id < 16); // SGI INT id range is 0-15
     assert!(target_mask != 0);
@@ -294,7 +303,8 @@ impl InterProcessorInterruptController for Gic {
       }
     }
     gicd.SGIR.write(
-      GICD_SGIR::CpuTargetList.val(if_mask as u8 as u32) + GICD_SGIR::SGIIntId.val(sgi_int_id as u32),
+      GICD_SGIR::CpuTargetList.val(if_mask as u8 as u32)
+        + GICD_SGIR::SGIIntId.val(sgi_int_id as u32),
     );
   }
 }
