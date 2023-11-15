@@ -55,6 +55,18 @@ cfg_if::cfg_if! {
     #[path = "driver/riscv64/mod.rs"]
     mod driver;
     assert_eq_size!([u8; 0x110], ContextFrame);
+  } else if #[cfg(target_arch = "x86_64")] {
+    
+    #[path = "arch/x86_64/mod.rs"]
+    mod arch;
+
+    #[path = "board/x86_64_virt.rs"]
+    mod board;
+
+    #[path = "driver/x86_64/mod.rs"]
+    mod driver;
+    // assert_eq_size!([u8; 0x110], ContextFrame);
+
   } else {
     compile_error!("unsupported target_arch");
   }
@@ -95,10 +107,10 @@ mod macros {
 struct AlignPage;
 
 #[no_mangle]
-extern "C" fn main(core_id: arch::CoreId, fdt: usize) -> ! {
+extern "C" fn main(core_id: arch::CoreId, boot_data: usize) -> ! {
   crate::arch::Arch::exception_init();
   if core_id == 0 {
-    let (hr, pr) = board::init(fdt);
+    let (hr, pr) = board::init(boot_data);
     println!("Heap {:x?} Paged {:x?}", hr, pr);
 
     mm::heap::init(hr);
@@ -131,6 +143,14 @@ extern "C" fn main(core_id: arch::CoreId, fdt: usize) -> ! {
     #[cfg(target_arch = "riscv64")]
     #[cfg(feature = "user_release")]
     let bin = include_bytes_align_as!(AlignPage, "../trusted/target/riscv64gc-unknown-rustpi-elf/release/trusted.bin");
+
+    #[cfg(target_arch = "x86_64")]
+    #[cfg(not(feature = "user_release"))]
+    let bin = include_bytes_align_as!(AlignPage, "../dummy_trusted.bin");
+
+    #[cfg(target_arch = "x86_64")]
+    #[cfg(feature = "user_release")]
+    let bin = include_bytes_align_as!(AlignPage, "../dummy_trusted.bin");
 
     info!("embedded trusted {:x}", bin.as_ptr() as usize);
     let (a, entry) = kernel::address_space::load_image(bin);

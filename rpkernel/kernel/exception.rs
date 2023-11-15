@@ -1,5 +1,6 @@
 use core::mem::size_of;
 
+#[cfg(not(target_arch = "x86_64"))]
 use unwind::unwind_from_exception;
 
 use crate::arch::{ContextFrame, PAGE_SIZE};
@@ -81,7 +82,10 @@ pub fn handle_kernel(ctx: &ContextFrame, is_page_fault: bool) {
   } else {
     error!("kernel other exception occurs");
   }
-  let ctx = ctx.clone();
-  let reg = ctx.into();
-  unwind_from_exception(reg);
+ 
+  #[cfg(not(target_arch = "x86_64"))] {
+    let ctx = ctx.clone();
+    let reg = ctx.into();
+    unwind_from_exception(reg);
+  }
 }

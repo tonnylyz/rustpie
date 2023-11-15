@@ -8,7 +8,9 @@ cfg_if::cfg_if! {
     pub const CONFIG_READ_ONLY_LEVEL_3_PAGE_TABLE_BTM: usize = 0x3f_c000_0000;
     pub const CONFIG_READ_ONLY_LEVEL_2_PAGE_TABLE_BTM: usize = 0x3f_c000_0000 - 0x20_0000;
     pub const CONFIG_READ_ONLY_LEVEL_1_PAGE_TABLE_BTM: usize = 0x3f_c000_0000 - 0x20_0000 - 0x1000; // 4 KB
-  } else {
+  } else if #[cfg(target_arch = "x86_64")] { 
+    pub const CONFIG_RECURSIVE_PAGE_TABLE_BTM: usize = 0x3f_c000_0000;
+  }else {
     compile_error!("unsupported target_arch");
   }
 }
@@ -201,4 +203,11 @@ pub mod time {
       r
     }
   }
+}
+
+
+#[derive(Debug)]
+pub struct X64BootData {
+  pub free_mem_start: usize,
+  pub free_mem_count: usize,
 }

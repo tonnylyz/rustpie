@@ -18,6 +18,7 @@ pub extern fn rust_eh_personality() {
   loop {}
 }
 
+#[cfg(not(target_arch = "x86_64"))]
 #[allow(non_snake_case)]
 #[no_mangle]
 extern "C" fn _Unwind_Resume(arg: usize) -> ! {

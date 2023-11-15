@@ -17,8 +17,10 @@ ifeq (${TRUSTED_PROFILE}, release)
 CARGO_FLAGS := ${CARGO_FLAGS} --features user_release
 endif
 
+ifeq (${ARCH}, aarch64)
 ifeq (${GIC_VERSION}, 3)
 CARGO_FLAGS := ${CARGO_FLAGS} --features gicv3
+endif
 endif
 
 ifeq (${ARCH}, aarch64)
@@ -36,15 +38,35 @@ endif
 TRUSTED_TARGET := riscv64gc-unknown-rustpi-elf
 USER_TARGET := riscv64gc-unknown-rustpi-elf
 endif
+ifeq (${ARCH}, x86_64)
+KERNEL_TARGET := x86_64-virt-rustpi
+TRUSTED_TARGET := x86_64-unknown-rustpi
+USER_TARGET := x86_64-unknown-rustpi
+endif
 
 KERNEL := target/${KERNEL_TARGET}/${PROFILE}/rustpi
 
-.PHONY: all emu debug dependencies clean disk trusted_image user_image rplibc user_c_image
+.PHONY: all emu debug dependencies clean disk trusted_image user_image rplibc user_c_image force
 
+ifeq (${ARCH}, x86_64)
+all: ${KERNEL} ${KERNEL}.bin ${KERNEL}.asm ${KERNEL}.sec
+
+EFISTUB := rpefistub/target/x86_64-unknown-uefi/release/rpefistub.efi
+
+${EFISTUB}: ${KERNEL}.bin force
+	make ARCH=${ARCH} -C rpefistub
+
+else
 all: ${KERNEL} ${KERNEL}.bin ${KERNEL}.asm
+endif
 
+ifeq (${ARCH}, x86_64)
+${KERNEL}: force
+	cargo build --target rpkernel/cargo_target/${KERNEL_TARGET}.json -Z build-std=core,alloc  ${CARGO_FLAGS}
+else
 ${KERNEL}: trusted_image
 	cargo build --target rpkernel/cargo_target/${KERNEL_TARGET}.json -Z build-std=core,alloc  ${CARGO_FLAGS}
+endif
 
 trusted_image:
 	make ARCH=${ARCH} TRUSTED_PROFILE=${TRUSTED_PROFILE} MACHINE=${MACHINE} TARGET=${TRUSTED_TARGET} -C trusted
@@ -67,6 +89,9 @@ ${KERNEL}-flash.bin: ${KERNEL}.bin
 ${KERNEL}.asm: ${KERNEL}
 	llvm-objdump --demangle -d $< > $@
 
+${KERNEL}.sec: ${KERNEL}
+	llvm-readelf -S $< > $@
+
 ifeq (${ARCH}, aarch64)
 ifeq (${GIC_VERSION}, 3)
 QEMU_CMD := qemu-system-aarch64 -M virt,gic-version=3,its=off -cpu cortex-a53 -device loader,file=${KERNEL},addr=0x80000000,force-raw=on
@@ -79,6 +104,18 @@ ifeq (${ARCH}, riscv64)
 QEMU_CMD := qemu-system-riscv64 -M virt -bios default -device loader,file=${KERNEL},addr=0xc0000000,force-raw=on
 endif
 
+ifeq (${ARCH}, x86_64)
+QEMU_CMD := qemu-system-x86_64 -bios /usr/share/ovmf/x64/OVMF.fd
+QEMU_DISK_OPTIONS := 
+QEMU_COMMON_OPTIONS := -serial stdio -display none -m 2048
+
+emu: ${EFISTUB}
+	${QEMU_CMD} ${QEMU_COMMON_OPTIONS} ${QEMU_DISK_OPTIONS} -kernel $< -s
+
+debug: ${EFISTUB}
+	${QEMU_CMD} ${QEMU_COMMON_OPTIONS} ${QEMU_DISK_OPTIONS} -kernel $< -s -S
+
+else
 QEMU_DISK_OPTIONS := -drive file=disk.img,if=none,format=raw,id=x0 \
 					 -device virtio-blk-device,drive=x0,bus=virtio-mmio-bus.0 \
 					 -global virtio-mmio.force-legacy=false
@@ -92,6 +129,8 @@ debug: ${KERNEL}.bin ${KERNEL}.asm disk
 
 flash: ${KERNEL}-flash.bin
 	sudo kflash -tp /dev/ttyUSB0 -b 3000000 -B dan ${KERNEL}-flash.bin
+
+endif
 
 clean:
 	-cargo clean

@@ -17,14 +17,20 @@ tock-registers = "0.8.1"
 hardware = { path = "hardware" }
 
 rpabi = { path = "rpabi" }
-unwind = { path = "unwind" }
 fdt = { git = "https://github.com/tonnylyz/fdt" }
 
 [target.'cfg(target_arch = "aarch64")'.dependencies]
 aarch64-cpu = "9.3.1"
+unwind = { path = "unwind" }
 
 [target.'cfg(target_arch = "riscv64")'.dependencies]
 riscv = { git = "https://github.com/tonnylyz/riscv", branch = "rustpi" }
+unwind = { path = "unwind" }
+
+[target.'cfg(target_arch = "x86_64")'.dependencies]
+#uefi = { version = "0.26", default-features = false, features = [] }
+#uefi-services = { version = "0.23", default-features = false, features = [] }
+x86_64 = "0.14"
 
 [features]
 default = ["user_release", "virt", "gicv3"]

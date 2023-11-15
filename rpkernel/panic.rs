@@ -38,6 +38,17 @@ impl Frame {
     Frame::new(fp, pc)
   }
 
+  #[cfg(target_arch = "x86_64")]
+  fn current() -> Frame {
+    let fp: u64;
+    let pc: u64;
+    unsafe {
+      core::arch::asm!("mov {}, rbp", out(reg) fp);
+      core::arch::asm!("mov {}, rip", out(reg) pc);
+    }
+    Frame::new(fp, pc)
+  }
+
   fn ip(&self) -> *mut u8 {
     self.pc as *mut u8
   }
@@ -93,6 +104,12 @@ pub fn exception_trace() {
     fp: ctx.gpr(8) as u64,
   };
 
+  #[cfg(target_arch = "x86_64")]
+    let frame_zero = Frame {
+    pc: ctx.exception_pc() as u64,
+    fp: ctx.frame_pointer() as u64,
+  };
+
   backtrace_from(frame_zero);
 }
 
@@ -132,5 +149,7 @@ pub fn panic_handler(info: &PanicInfo) -> ! {
   // backtrace();
   // info!("backtrace done");
 
+  #[cfg(not(target_arch = "x86_64"))]
   unwind::unwind_from_panic(1);
+  loop {}
 }
