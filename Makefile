@@ -42,6 +42,7 @@ ifeq (${ARCH}, x86_64)
 KERNEL_TARGET := x86_64-virt-rustpi
 TRUSTED_TARGET := x86_64-unknown-rustpi
 USER_TARGET := x86_64-unknown-rustpi
+BIOS_DIR ?= /usr/share/ovmf/x64/OVMF.fd
 endif
 
 KERNEL := target/${KERNEL_TARGET}/${PROFILE}/rustpi
@@ -105,7 +106,7 @@ QEMU_CMD := qemu-system-riscv64 -M virt -bios default -device loader,file=${KERN
 endif
 
 ifeq (${ARCH}, x86_64)
-QEMU_CMD := qemu-system-x86_64 -bios /usr/share/ovmf/x64/OVMF.fd
+QEMU_CMD := qemu-system-x86_64 -bios ${BIOS_DIR}
 QEMU_DISK_OPTIONS := 
 QEMU_COMMON_OPTIONS := -serial stdio -display none -m 2048
 
