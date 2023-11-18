@@ -11,6 +11,7 @@ extern crate alloc;
 extern crate log;
 
 use rpabi::platform::PlatformInfo;
+#[cfg(feature = "error_unwind")]
 use unwind::catch::catch_unwind;
 
 #[macro_use]
@@ -33,13 +34,18 @@ extern "C" fn _start(arg: *const PlatformInfo) -> ! {
   common::mm::heap_init();
   logger::init().expect("logger init failed");
   info!("trusted root start");
-  let r = catch_unwind(|| {
-    root::main(unsafe { arg.as_ref().unwrap() });
-  });
-  match r {
-    Ok(_) => {}
-    Err(_) => error!("root died"),
+  #[cfg(feature = "error_unwind")]
+  {
+    let r = catch_unwind(|| {
+      root::main(unsafe { arg.as_ref().unwrap() });
+    });
+    match r {
+      Ok(_) => {}
+      Err(_) => error!("root died"),
+    }
   }
+  #[cfg(not(feature = "error_unwind"))]
+  root::main(unsafe { arg.as_ref().unwrap() });
   let _ = rpsyscall::thread_destroy(0);
   loop {}
 }

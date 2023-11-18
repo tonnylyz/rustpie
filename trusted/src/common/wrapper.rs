@@ -1,4 +1,6 @@
 use rpsyscall::message::Message;
+
+#[cfg(feature = "error_unwind")]
 use unwind::catch::catch_unwind;
 
 pub type Error = usize;
@@ -8,6 +10,7 @@ pub const ERROR_PERSISTENT_FAILURE: usize = 0x999;
 
 const RETRY_MAX: usize = 0;
 
+#[cfg(feature = "error_unwind")]
 pub fn request_wrapper<F: Fn(Message, usize) -> R, R>(f: F, msg: Message, tid: usize) -> Result<R, Error> {
   let mut i = 0;
   loop {
@@ -26,6 +29,7 @@ pub fn request_wrapper<F: Fn(Message, usize) -> R, R>(f: F, msg: Message, tid: u
   }
 }
 
+#[cfg(feature = "error_unwind")]
 pub fn server_wrapper<F: Fn()>(f: F) {
   loop {
     let r = catch_unwind(|| {
@@ -40,4 +44,14 @@ pub fn server_wrapper<F: Fn()>(f: F) {
       }
     }
   }
+}
+
+#[cfg(not(feature = "error_unwind"))]
+pub fn request_wrapper<F: Fn(Message, usize) -> R, R>(f: F, msg: Message, tid: usize) -> Result<R, Error> {
+  Ok(f(msg, tid))
+}
+
+#[cfg(not(feature = "error_unwind"))]
+pub fn server_wrapper<F: Fn()>(f: F) {
+  f()
 }

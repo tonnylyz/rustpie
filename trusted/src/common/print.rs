@@ -34,9 +34,9 @@ fn panic_handler(info: &core::panic::PanicInfo) -> ! {
   } else {
     println!("          [E][trusted] panic t{} no message", get_tid());
   }
-  #[cfg(not(feature = "k210"))]
+  #[cfg(feature = "error_unwind")]
     unwind::unwind_from_panic(1);
-  #[cfg(feature = "k210")]
+  #[cfg(not(feature = "error_unwind"))]
   loop {}
 }
 
@@ -49,6 +49,7 @@ pub extern fn rust_eh_personality() {
 
 #[allow(non_snake_case)]
 #[no_mangle]
+#[cfg(feature = "error_unwind")]
 extern "C" fn _Unwind_Resume(arg: usize) -> ! {
   unwind::unwind_resume(arg)
 }

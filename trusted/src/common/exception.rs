@@ -1,8 +1,12 @@
 #[cfg(target_arch = "aarch64")]
+#[cfg(feature = "error_unwind")]
 use unwind::arch::Aarch64;
 #[cfg(target_arch = "riscv64")]
+#[cfg(feature = "error_unwind")]
 use unwind::arch::Riscv64;
+#[cfg(feature = "error_unwind")]
 use unwind::registers::Registers;
+#[cfg(feature = "error_unwind")]
 use unwind::unwind_from_exception;
 
 #[cfg(target_arch = "aarch64")]
@@ -22,6 +26,12 @@ pub struct ContextFrame {
   gpr: [u64; 32],
   sstatus: u64,
   sepc: u64,
+}
+
+#[cfg(target_arch = "x86_64")]
+#[repr(C)]
+#[derive(Copy, Clone, Debug)]
+pub struct ContextFrame {
 }
 
 #[cfg(target_arch = "riscv64")]
@@ -104,9 +114,15 @@ impl Into<Registers> for ContextFrame {
   }
 }
 
+#[cfg(feature = "error_unwind")]
 pub fn handler(ctx: &ContextFrame) {
   info!("exception handler");
   let ctx = ctx.clone();
   let reg = ctx.into();
   unwind_from_exception(reg);
+}
+
+#[cfg(not(feature = "error_unwind"))]
+pub fn handler(ctx: &ContextFrame) {
+  println!("{:X?}", ctx);
 }

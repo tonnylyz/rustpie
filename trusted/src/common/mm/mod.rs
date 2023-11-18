@@ -11,6 +11,11 @@ mod page_table;
 #[cfg(target_arch = "riscv64")]
 #[path = "arch/riscv64.rs"]
 mod page_table;
+
+#[cfg(target_arch = "x86_64")]
+#[path = "arch/x86_64.rs"]
+mod page_table;
+
 mod heap;
 
 pub fn default_page_attribute() -> usize {
