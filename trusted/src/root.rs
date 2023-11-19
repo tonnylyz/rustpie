@@ -3,6 +3,16 @@ use rpabi::platform::PlatformInfo;
 use crate::common::thread;
 use crate::common::wrapper::server_wrapper;
 
+#[cfg(target_arch = "x86_64")]
+pub fn main(_info: &'static PlatformInfo) {
+  use crate::common::mm::virt_to_phys;
+
+  info!("trusted main");
+  info!("test virt {:X} to phy {:X}", main as usize, virt_to_phys(main as usize));
+  loop {}
+}
+
+#[cfg(not(target_arch = "x86_64"))]
 pub fn main(info: &'static PlatformInfo) {
   let mut join_handlers = vec![];
   let mut has_user_space_serial = false;
@@ -40,6 +50,7 @@ pub fn main(info: &'static PlatformInfo) {
               crate::rtc::goldfish::server(dev.register.start, 0);
             }));
           }
+          rpabi::platform::Driver::Nil => {}
         },
         None => {}
       },
