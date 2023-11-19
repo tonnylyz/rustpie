@@ -7,7 +7,7 @@ use uefi::proto::loaded_image::LoadedImage;
 use uefi::table::boot::{self, MemoryType};
 use x86_64::structures::paging::{
   FrameAllocator, Mapper, OffsetPageTable, Page, PageTable, PageTableFlags, PhysFrame, Size2MiB,
-  Size4KiB,
+  Size4KiB, Size1GiB,
 };
 use x86_64::{PhysAddr, VirtAddr};
 
@@ -51,7 +51,7 @@ fn page_table() -> OffsetPageTable<'static> {
 
 fn identity_map(
   pa_max: u64,
-  page_table: &mut impl Mapper<Size2MiB>,
+  page_table: &mut impl Mapper<Size1GiB>,
   frame_allocator: &mut impl FrameAllocator<Size4KiB>,
 ) {
   let start_frame = PhysFrame::containing_address(PhysAddr::new(0));
