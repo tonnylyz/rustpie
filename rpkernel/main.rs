@@ -6,6 +6,7 @@
 // for unwind feature: eh_personality and so on
 #![allow(internal_features)]
 #![feature(lang_items)]
+#![feature(abi_x86_interrupt)]
 
 #[macro_use]
 extern crate alloc;
@@ -146,11 +147,11 @@ extern "C" fn main(core_id: arch::CoreId, boot_data: usize) -> ! {
 
     #[cfg(target_arch = "x86_64")]
     #[cfg(not(feature = "user_release"))]
-    let bin = include_bytes_align_as!(AlignPage, "../dummy_trusted.bin");
+    let bin = include_bytes_align_as!(AlignPage, "../trusted/target/x86_64-unknown-rustpi/debug/trusted.bin");
 
     #[cfg(target_arch = "x86_64")]
     #[cfg(feature = "user_release")]
-    let bin = include_bytes_align_as!(AlignPage, "../dummy_trusted.bin");
+    let bin = include_bytes_align_as!(AlignPage, "../trusted/target/x86_64-unknown-rustpi/release/trusted.bin");
 
     info!("embedded trusted {:x}", bin.as_ptr() as usize);
     let (a, entry) = kernel::address_space::load_image(bin);
@@ -199,6 +200,7 @@ extern "C" fn main(core_id: arch::CoreId, boot_data: usize) -> ! {
     );
     kernel::thread::thread_wake(&t);
 
+    #[cfg(not(target_arch = "x86_64"))]
     for device in &board::PLATFORM_INFO.get().unwrap().devices {
       if let Some(device) = device {
         for uf in kernel::device::device_to_user_frames(device).iter() {

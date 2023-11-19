@@ -60,13 +60,8 @@ else
 all: ${KERNEL} ${KERNEL}.bin ${KERNEL}.asm
 endif
 
-ifeq (${ARCH}, x86_64)
-${KERNEL}: force
+${KERNEL}: trusted_image force
 	cargo build --target rpkernel/cargo_target/${KERNEL_TARGET}.json -Z build-std=core,alloc  ${CARGO_FLAGS}
-else
-${KERNEL}: trusted_image
-	cargo build --target rpkernel/cargo_target/${KERNEL_TARGET}.json -Z build-std=core,alloc  ${CARGO_FLAGS}
-endif
 
 trusted_image:
 	make ARCH=${ARCH} TRUSTED_PROFILE=${TRUSTED_PROFILE} MACHINE=${MACHINE} TARGET=${TRUSTED_TARGET} -C trusted
