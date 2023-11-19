@@ -167,7 +167,7 @@ impl PageTableTrait for X64PageTable {
     let mut pt = self.mapped_pt();
     let pseudo_entry = ArchPageTableEntry::from(Entry::new(attr, pa));
     let page_flags = PageTableFlags::from_bits_truncate(pseudo_entry.0 as u64);
-    let table_flags = PageTableFlags::PRESENT | PageTableFlags::USER_ACCESSIBLE; // for recursive;
+    let table_flags = PageTableFlags::PRESENT | PageTableFlags::USER_ACCESSIBLE | PageTableFlags::WRITABLE; // for recursive;
     let lock = self.mutex.lock();
     unsafe {
       let fa = &mut self.mut_ref().table_frames;
