@@ -1,21 +1,85 @@
-use x86_64::{set_general_handler, VirtAddr};
+use x86_64::registers::control::{Cr4, Cr4Flags};
+use x86_64::registers::model_specific::{Efer, EferFlags, GsBase, KernelGsBase, Star};
+use x86_64::structures::gdt::{GlobalDescriptorTable, Descriptor};
 use x86_64::structures::idt::{InterruptDescriptorTable, InterruptStackFrame};
+use x86_64::structures::tss::TaskStateSegment;
+use x86_64::registers::segmentation::*;
+use x86_64::{set_general_handler, VirtAddr};
 
 use super::ContextFrame;
+
+static mut GDT: GlobalDescriptorTable = GlobalDescriptorTable::new();
+static mut TSS: TaskStateSegment = TaskStateSegment::new();
+
+#[repr(C)]
+#[derive(Debug)]
+struct X64PerCpuData {
+  kernel_rsp: usize,
+  user_rsp: usize,
+  scratch: usize,
+}
+
+static mut X64_PER_CPU_DATA: X64PerCpuData = X64PerCpuData {
+  kernel_rsp: 0,
+  user_rsp: 0,
+  scratch: 0,
+};
 
 pub static mut IDT: InterruptDescriptorTable = InterruptDescriptorTable::new();
 
 pub fn init() {
   extern "C" {
-      fn syscall_entry();
+    fn syscall_entry();
   }
   unsafe {
+
+    let kernel_cs = GDT.add_entry(Descriptor::kernel_code_segment()); // 1*8 = 8
+    let kernel_ss = GDT.add_entry(Descriptor::kernel_data_segment()); // 2*8 = 16
+    let user_cs = GDT.add_entry(Descriptor::user_code_segment()); // 3*8 + 3 = 27
+    let user_ss = GDT.add_entry(Descriptor::user_data_segment()); // 4*8 + 3 = 35
+    let sysret_cs = GDT.add_entry(Descriptor::user_data_segment()); // 5*8 + 3 = 43
+
+    println!("kernel_cs {:?} {}", kernel_cs, kernel_cs.0);
+    println!("kernel_ss {:?} {}", kernel_ss, kernel_ss.0);
+    println!("user_cs {:?} {}", user_cs, user_cs.0);
+    println!("user_ss {:?} {}", user_ss, user_ss.0);
+    println!("sysret_cs {:?} {}", sysret_cs, sysret_cs.0);
+
+    let tss_selector = GDT.add_entry(Descriptor::tss_segment(&TSS));
+
+    Efer::update(|f: &mut EferFlags| {
+      f.insert(EferFlags::SYSTEM_CALL_EXTENSIONS);
+      f.remove(EferFlags::NO_EXECUTE_ENABLE)
+    });
+    let efer = Efer::read();
+    println!("efer {:?}", efer);
+    Cr4::update(|f| f.insert(Cr4Flags::PCID));
+    let cr4 = Cr4::read();
+    println!("cr4 {:?}", cr4);
+    TSS.privilege_stack_table[0] = VirtAddr::new(crate::kernel::stack::stack_of_core(0) as u64);
+    X64_PER_CPU_DATA.kernel_rsp = crate::kernel::stack::stack_of_core(0);
+    GDT.load();
+    CS::set_reg(kernel_cs);
+    SS::set_reg(kernel_ss);
+    DS::set_reg(SegmentSelector(0));
+    ES::set_reg(SegmentSelector(0));
+    FS::set_reg(SegmentSelector(0));
+    GS::set_reg(SegmentSelector(0));
+    let per_cpu = VirtAddr::new(&X64_PER_CPU_DATA as *const _ as u64);
+    println!("per cpu {:?}", per_cpu);
+    GsBase::write(per_cpu);
+    KernelGsBase::write(VirtAddr::new(0));
+    Star::write(sysret_cs, user_ss, kernel_cs, kernel_ss).unwrap();
+    x86_64::instructions::tables::load_tss(tss_selector);
+
     let idt = &mut IDT;
     set_general_handler!(idt, abort, 0..32);
     set_general_handler!(idt, unhandle, 32..64);
     set_general_handler!(idt, unknown, 64..);
     idt.stack_segment_fault.set_handler_fn(stack_segment_fault);
-    idt.general_protection_fault.set_handler_fn(general_protection_fault);
+    idt
+      .general_protection_fault
+      .set_handler_fn(general_protection_fault);
     idt.page_fault.set_handler_fn(page_fault_handler);
     IDT.load();
     x86_64::registers::model_specific::LStar::write(VirtAddr::new(syscall_entry as u64));
@@ -59,10 +123,7 @@ extern "x86-interrupt" fn general_protection_fault(
   loop {}
 }
 
-extern "x86-interrupt" fn stack_segment_fault(
-  stack_frame: InterruptStackFrame,
-  error_code: u64,
-) {
+extern "x86-interrupt" fn stack_segment_fault(stack_frame: InterruptStackFrame, error_code: u64) {
   println!("stack_segment_fault");
   println!("error code: {:?}", error_code);
   loop {}
