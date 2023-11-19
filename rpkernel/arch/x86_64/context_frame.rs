@@ -14,27 +14,68 @@ pub struct X64ContextFrame {
   rsi: u64,
   rdi: u64,
   rbp: u64,
-  rsp: u64,
   r8: u64,
   r9: u64,
   r10: u64,
   r11: u64,
+  /* r12-r15 callee saved */
   r12: u64,
   r13: u64,
   r14: u64,
   r15: u64,
+  /* iret pop order */
   rip: u64,
+  cs: u64,
+  rflags: u64,
+  rsp: u64,
+  ss: u64,
 }
 
 impl core::fmt::Display for X64ContextFrame {
   fn fmt(&self, f: &mut Formatter<'_>) -> Result<(), core::fmt::Error> {
-    write!(f, "rip: {:016x}", self.rip)?;
+    write!(f, "rax: {:016x}  ", self.rax)?;
+    write!(f, "rbx: {:016x}  ", self.rbx)?;
+    writeln!(f)?;
+    write!(f, "rcx: {:016x}  ", self.rcx)?;
+    write!(f, "rdx: {:016x}  ", self.rdx)?;
+    writeln!(f)?;
+    write!(f, "rsi: {:016x}  ", self.rsi)?;
+    write!(f, "rdi: {:016x}  ", self.rdi)?;
+    writeln!(f)?;
+    write!(f, "rbp: {:016x}  ", self.rbp)?;
+    write!(f, "rsp: {:016x}  ", self.rsp)?;
+    writeln!(f)?;
+    write!(f, "r8:  {:016x}  ", self.r8)?;
+    write!(f, "r9:  {:016x}  ", self.r9)?;
+    writeln!(f)?;
+    write!(f, "r10: {:016x}  ", self.r10)?;
+    write!(f, "r11: {:016x}  ", self.r11)?;
+    writeln!(f)?;
+    write!(f, "r12: {:016x}  ", self.r12)?;
+    write!(f, "r13: {:016x}  ", self.r13)?;
+    writeln!(f)?;
+    write!(f, "r14: {:016x}  ", self.r14)?;
+    write!(f, "r15: {:016x}  ", self.r15)?;
+    writeln!(f)?;
+    write!(f, "flag:{:016x}  ", self.rflags)?;
+    write!(f, "rip: {:016x}  ", self.rip)?;
+    writeln!(f)?;
+    write!(f, "cs:  {:016x}  ", self.cs)?;
+    write!(f, "ss:  {:016x}  ", self.ss)?;
+    writeln!(f)?;
     Ok(())
   }
 }
 
 impl ContextFrameTrait for X64ContextFrame {
   fn new(pc: usize, sp: usize, arg: usize, privileged: bool) -> Self {
+    use x86_64::registers::rflags::RFlags;
+    let mut flags = RFlags::from_bits_retain(0x2); // EFLAGS (bit 1)
+    flags |= RFlags::INTERRUPT_FLAG;
+    if privileged {
+      flags |= RFlags::IOPL_LOW;
+    }
+
     let mut r = X64ContextFrame {
       rip: pc as u64,
         rax: 0,
@@ -44,7 +85,7 @@ impl ContextFrameTrait for X64ContextFrame {
         rsi: 0,
         rdi: 0,
         rbp: 0,
-        rsp: 0,
+        rsp: sp as u64,
         r8:  0,
         r9:  0,
         r10: 0,
@@ -53,6 +94,9 @@ impl ContextFrameTrait for X64ContextFrame {
         r13: 0,
         r14: 0,
         r15: 0,
+        rflags: flags.bits(),
+        cs: if privileged { 8 } else { 27 },
+        ss: if privileged { 16 } else { 35 },
     };
     r.set_argument(arg);
     r

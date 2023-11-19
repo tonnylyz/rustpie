@@ -30,6 +30,8 @@ macro_rules! syscall {
                     $(lateout("r10") $od,
                     $(lateout("r8") $oe,)?)?)?)?)?
                     lateout("rax") ret,
+                    out("rcx") _, // rip
+                    out("r11") _, // rflags
                     options(nostack),
                 );
                 }
