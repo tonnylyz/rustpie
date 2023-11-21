@@ -1,55 +1,31 @@
 pub use heap::{virtual_alloc, virtual_free};
 pub use heap::init as heap_init;
-pub use page_table::Entry;
-pub use page_table::query;
-pub use page_table::traverse;
+// pub use page_table::query;
+// pub use page_table::traverse;
 
 #[cfg(target_arch = "aarch64")]
 #[path = "arch/aarch64.rs"]
-mod page_table;
+mod arch;
 
 #[cfg(target_arch = "riscv64")]
 #[path = "arch/riscv64.rs"]
-mod page_table;
+mod arch;
 
 #[cfg(target_arch = "x86_64")]
 #[path = "arch/x86_64.rs"]
-mod page_table;
+mod arch;
 
 mod heap;
 
 pub fn default_page_attribute() -> usize {
-  Entry::new(true, true, false, false).attribute()
+  rpabi::syscall::mm::EntryAttribute::user_default().raw()
 }
 
 pub fn virt_to_phys(va: usize) -> usize {
-  match page_table::query(va) {
+  match arch::va_to_pa(va) {
     None => { 0 }
-    Some(pte) => {
-      pte.address() | (va & (rpabi::PAGE_SIZE - 1))
+    Some(pa) => {
+      pa | (va & (rpabi::PAGE_SIZE - 1))
     }
   }
-}
-
-
-pub trait PageAttribute {
-  fn executable(&self) -> bool;
-  fn writable(&self) -> bool;
-  fn copy_on_write(&self) -> bool;
-  fn shared(&self) -> bool;
-
-  fn set_executable(&mut self, b: bool);
-  fn set_writable(&mut self, b: bool);
-  fn set_copy_on_write(&mut self, b: bool);
-  fn set_shared(&mut self, b: bool);
-
-  fn address(&self) -> usize;
-  fn set_address(&mut self, addr: usize);
-
-  fn attribute(&self) -> usize;
-  fn set_attribute(&mut self, attr: usize);
-
-  fn is_valid(&self) -> bool;
-  fn is_table(&self) -> bool;
-  fn is_page(&self) -> bool;
 }

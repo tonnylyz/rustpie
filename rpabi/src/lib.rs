@@ -8,7 +8,7 @@ cfg_if::cfg_if! {
     pub const CONFIG_READ_ONLY_LEVEL_3_PAGE_TABLE_BTM: usize = 0x3f_c000_0000;
     pub const CONFIG_READ_ONLY_LEVEL_2_PAGE_TABLE_BTM: usize = 0x3f_c000_0000 - 0x20_0000;
     pub const CONFIG_READ_ONLY_LEVEL_1_PAGE_TABLE_BTM: usize = 0x3f_c000_0000 - 0x20_0000 - 0x1000; // 4 KB
-  } else if #[cfg(target_arch = "x86_64")] { 
+  } else if #[cfg(target_arch = "x86_64")] {
     pub const CONFIG_RECURSIVE_PAGE_TABLE_BTM: usize = 0x7F80_0000_0000; // 4 level page table
   }else {
     compile_error!("unsupported target_arch");
@@ -31,11 +31,6 @@ pub const CONFIG_TRUSTED_PLATFORM_INFO: usize = 0x4000_0000;
 pub const CONFIG_ELF_IMAGE: usize = 0x8000_0000;
 
 pub const PAGE_SIZE: usize = 4096;
-
-pub const PAGE_TABLE_L1_SHIFT: usize = 30;
-pub const PAGE_TABLE_L2_SHIFT: usize = 21;
-pub const PAGE_TABLE_L3_SHIFT: usize = 12;
-
 pub const WORD_SHIFT: usize = 3;
 pub const WORD_SIZE: usize = 1 << WORD_SHIFT;
 
@@ -45,6 +40,7 @@ pub mod platform {
   pub const USER_SPACE_DRIVER_MMIO_OFFSET: usize = 0x8_0000_0000;
   #[derive(Debug, PartialEq, Eq, Clone, Copy)]
   pub enum Driver {
+    Nil,
     VirtioBlk,
     Ns16550,
     Pl011,
@@ -101,6 +97,168 @@ pub mod syscall {
     pub const ERROR_HOLD_ON: usize = 6;
     pub const ERROR_OOR: usize = 7;
     pub const ERROR_PANIC: usize = 8;
+  }
+
+  pub mod mm {
+    pub const ENTRY_ATTR_WRITABLE: usize = 1 << 0;
+    pub const ENTRY_ATTR_USER_READABLE: usize = 1 << 1;
+    pub const ENTRY_ATTR_DEVICE: usize = 1 << 2;
+    pub const ENTRY_ATTR_KERNEL_EXE: usize = 1 << 3;
+    pub const ENTRY_ATTR_USER_EXE: usize = 1 << 4;
+    pub const ENTRY_ATTR_COPY_ON_WRITE: usize = 1 << 5;
+    pub const ENTRY_ATTR_SHARED: usize = 1 << 6;
+
+    #[derive(Copy, Clone, Debug, Eq, PartialEq)]
+    pub struct EntryAttribute(usize);
+
+    impl EntryAttribute {
+      pub fn new(
+        writable: bool,
+        user: bool,
+        device: bool,
+        k_executable: bool,
+        u_executable: bool,
+        copy_on_write: bool,
+        shared: bool,
+      ) -> Self {
+        let mut entry = 0;
+        if writable {
+          entry |= ENTRY_ATTR_WRITABLE;
+        }
+        if user {
+          entry |= ENTRY_ATTR_USER_READABLE;
+        }
+        if device {
+          entry |= ENTRY_ATTR_DEVICE;
+        }
+        if k_executable {
+          entry |= ENTRY_ATTR_KERNEL_EXE;
+        }
+        if u_executable {
+          entry |= ENTRY_ATTR_USER_EXE;
+        }
+        if copy_on_write {
+          entry |= ENTRY_ATTR_COPY_ON_WRITE;
+        }
+        if shared {
+          entry |= ENTRY_ATTR_SHARED;
+        }
+        EntryAttribute(entry)
+      }
+
+      pub fn from(raw: usize) -> Self {
+        EntryAttribute(raw)
+      }
+
+      pub fn writable(&self) -> bool {
+        self.0 & ENTRY_ATTR_WRITABLE != 0
+      }
+
+      pub fn k_executable(&self) -> bool {
+        self.0 & ENTRY_ATTR_KERNEL_EXE != 0
+      }
+
+      pub fn u_executable(&self) -> bool {
+        self.0 & ENTRY_ATTR_USER_EXE != 0
+      }
+
+      pub fn u_readable(&self) -> bool {
+        self.0 & ENTRY_ATTR_USER_READABLE != 0
+      }
+
+      pub fn u_shared(&self) -> bool {
+        self.0 & ENTRY_ATTR_SHARED != 0
+      }
+
+      pub fn device(&self) -> bool {
+        self.0 & ENTRY_ATTR_DEVICE != 0
+      }
+
+      pub fn copy_on_write(&self) -> bool {
+        self.0 & ENTRY_ATTR_COPY_ON_WRITE != 0
+      }
+
+      pub fn kernel_device() -> Self {
+        EntryAttribute::new(true, false, true, false, false, false, false)
+      }
+
+      pub fn user_default() -> Self {
+        EntryAttribute::new(true, true, false, false, true, false, false)
+      }
+
+      pub fn user_readonly() -> Self {
+        EntryAttribute::new(false, true, false, false, false, false, false)
+      }
+
+      pub fn user_executable() -> Self {
+        EntryAttribute::new(false, true, false, false, true, false, false)
+      }
+
+      pub fn user_data() -> Self {
+        EntryAttribute::new(true, true, false, false, false, false, false)
+      }
+
+      pub fn user_device() -> Self {
+        EntryAttribute::new(true, true, true, false, false, false, false)
+      }
+
+      pub fn filter(&self) -> Self {
+        EntryAttribute::new(
+          self.writable(),
+          true,
+          false,
+          false,
+          self.u_executable(),
+          self.copy_on_write(),
+          self.u_shared(),
+        )
+      }
+
+      pub fn raw(self) -> usize {
+        self.0
+      }
+    }
+
+    impl core::fmt::Display for EntryAttribute {
+      fn fmt(&self, f: &mut core::fmt::Formatter<'_>) -> Result<(), core::fmt::Error> {
+        if self.writable() {
+          write!(f, "W")?;
+        } else {
+          write!(f, "-")?;
+        }
+        if self.u_readable() {
+          write!(f, "U")?;
+        } else {
+          write!(f, "-")?;
+        }
+        if self.device() {
+          write!(f, "D")?;
+        } else {
+          write!(f, "-")?;
+        }
+        if self.k_executable() {
+          write!(f, "KX")?;
+        } else {
+          write!(f, "--")?;
+        }
+        if self.u_executable() {
+          write!(f, "UX")?;
+        } else {
+          write!(f, "--")?;
+        }
+        if self.copy_on_write() {
+          write!(f, "C")?;
+        } else {
+          write!(f, "-")?;
+        }
+        if self.u_shared() {
+          write!(f, "S")?;
+        } else {
+          write!(f, "-")?;
+        }
+        Ok(())
+      }
+    }
   }
 }
 
@@ -204,7 +362,6 @@ pub mod time {
     }
   }
 }
-
 
 #[derive(Debug)]
 pub struct X64BootData {
