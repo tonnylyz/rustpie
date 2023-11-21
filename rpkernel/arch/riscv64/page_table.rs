@@ -1,15 +1,11 @@
-use alloc::collections::BTreeMap;
 use alloc::vec::Vec;
 use hardware::mmu::riscv64_mmu::vm_descriptor::*;
-use rpabi::syscall::error::ERROR_INVARG;
-use riscv::regs::*;
-use spin::Mutex;
-use tock_registers::interfaces::Writeable;
+use rpabi::syscall::mm::EntryAttribute;
 
 use crate::arch::*;
 use crate::kernel::traits::*;
-use crate::mm::{Frame, PhysicalFrame};
-use crate::mm::page_table::{Entry, EntryAttribute, Error, PageTableEntryAttrTrait, PageTableTrait};
+use crate::mm::page_table::{Entry, Error, PageTableTrait};
+use crate::mm::PhysicalFrame;
 
 pub const PAGE_TABLE_L1_SHIFT: usize = 30;
 pub const PAGE_TABLE_L2_SHIFT: usize = 21;
@@ -17,26 +13,16 @@ pub const PAGE_TABLE_L3_SHIFT: usize = 12;
 
 #[derive(Debug)]
 pub struct Riscv64PageTable {
-  directory: PhysicalFrame,
-  pages: Mutex<Vec<PhysicalFrame>>,
-  user_pages: Mutex<BTreeMap<usize, Frame>>,
+  directory_kva: usize,
 }
 
 #[repr(transparent)]
 #[derive(Copy, Clone, Debug)]
 pub struct Riscv64PageTableEntry(usize);
 
-impl ArchPageTableEntryTrait for Riscv64PageTableEntry {
-  fn from_pte(value: usize) -> Self {
-    Riscv64PageTableEntry(value)
-  }
-
+impl Riscv64PageTableEntry {
   fn from_pa(pa: usize) -> Self {
     Riscv64PageTableEntry((pa >> 12) << 10)
-  }
-
-  fn to_pte(&self) -> usize {
-    self.0
   }
 
   fn to_pa(&self) -> usize {
@@ -71,8 +57,8 @@ impl ArchPageTableEntryTrait for Riscv64PageTableEntry {
       + TABLE_DESCRIPTOR::DIRTY::False
       + TABLE_DESCRIPTOR::ACCESSED::False
       + TABLE_DESCRIPTOR::USER::False
-        + TABLE_DESCRIPTOR::VALID::True
-      ).value as usize
+        + TABLE_DESCRIPTOR::VALID::True)
+        .value as usize,
     )
   }
 }
@@ -99,32 +85,51 @@ impl core::convert::From<Riscv64PageTableEntry> for Entry {
   fn from(u: Riscv64PageTableEntry) -> Self {
     use tock_registers::*;
     let reg = LocalRegisterCopy::<u64, PAGE_DESCRIPTOR::Register>::new(u.0 as u64);
-    Entry::new(EntryAttribute::new(
-      reg.is_set(PAGE_DESCRIPTOR::W),
-      reg.is_set(PAGE_DESCRIPTOR::USER),
-      false, // riscv do not has bits indicating device memory
-      false, // reg.is_set(PAGE_DESCRIPTOR::X)  && SUM bit in sstatus
-      reg.is_set(PAGE_DESCRIPTOR::X),
-      reg.is_set(PAGE_DESCRIPTOR::COW),
-      reg.is_set(PAGE_DESCRIPTOR::LIB),
-    ), (reg.read(PAGE_DESCRIPTOR::OUTPUT_PPN) as usize) << PAGE_SHIFT)
+    Entry::new(
+      EntryAttribute::new(
+        reg.is_set(PAGE_DESCRIPTOR::W),
+        reg.is_set(PAGE_DESCRIPTOR::USER),
+        false, // riscv do not has bits indicating device memory
+        false, // reg.is_set(PAGE_DESCRIPTOR::X)  && SUM bit in sstatus
+        reg.is_set(PAGE_DESCRIPTOR::X),
+        reg.is_set(PAGE_DESCRIPTOR::COW),
+        reg.is_set(PAGE_DESCRIPTOR::LIB),
+      ),
+      (reg.read(PAGE_DESCRIPTOR::OUTPUT_PPN) as usize) << PAGE_SHIFT,
+    )
   }
 }
 
 impl core::convert::From<Entry> for Riscv64PageTableEntry {
   fn from(pte: Entry) -> Self {
-    let r = Riscv64PageTableEntry((
-      if pte.attribute().u_shared() { PAGE_DESCRIPTOR::LIB::True } else { PAGE_DESCRIPTOR::LIB::False }
-        + if pte.attribute().u_copy_on_write() { PAGE_DESCRIPTOR::COW::True } else { PAGE_DESCRIPTOR::COW::False }
-        + if pte.attribute().u_executable() { PAGE_DESCRIPTOR::X::True } else { PAGE_DESCRIPTOR::X::False }
-        + if pte.attribute().u_readable() { PAGE_DESCRIPTOR::R::True } else { PAGE_DESCRIPTOR::R::False }
-        + if pte.attribute().writable() { PAGE_DESCRIPTOR::W::True } else { PAGE_DESCRIPTOR::W::False }
-        + PAGE_DESCRIPTOR::DIRTY::True
+    let r = Riscv64PageTableEntry(
+      (if pte.attribute().u_shared() {
+        PAGE_DESCRIPTOR::LIB::True
+      } else {
+        PAGE_DESCRIPTOR::LIB::False
+      } + if pte.attribute().copy_on_write() {
+        PAGE_DESCRIPTOR::COW::True
+      } else {
+        PAGE_DESCRIPTOR::COW::False
+      } + if pte.attribute().u_executable() {
+        PAGE_DESCRIPTOR::X::True
+      } else {
+        PAGE_DESCRIPTOR::X::False
+      } + if pte.attribute().u_readable() {
+        PAGE_DESCRIPTOR::R::True
+      } else {
+        PAGE_DESCRIPTOR::R::False
+      } + if pte.attribute().writable() {
+        PAGE_DESCRIPTOR::W::True
+      } else {
+        PAGE_DESCRIPTOR::W::False
+      } + PAGE_DESCRIPTOR::DIRTY::True
         + PAGE_DESCRIPTOR::ACCESSED::True
         + PAGE_DESCRIPTOR::VALID::True
         + PAGE_DESCRIPTOR::USER::True
-        + PAGE_DESCRIPTOR::OUTPUT_PPN.val((pte.ppn()) as u64)
-    ).value as usize);
+        + PAGE_DESCRIPTOR::OUTPUT_PPN.val((pte.ppn()) as u64))
+      .value as usize,
+    );
     r
   }
 }
@@ -132,10 +137,12 @@ impl core::convert::From<Entry> for Riscv64PageTableEntry {
 impl Riscv64PageTable {
   fn map_kernel_gigabyte_page(&self, va: usize, pa: usize) {
     let l1x = va.l1x();
-    let directory = Riscv64PageTableEntry::from_pa(self.directory.pa());
+    let directory = Riscv64PageTableEntry::from_pa(self.directory_kva.kva2pa());
     // same as mapping in `start.S`
-    directory.set_entry(l1x, Riscv64PageTableEntry(
-      (PAGE_DESCRIPTOR::OUTPUT_PPN.val((pa >> PAGE_SHIFT) as u64)
+    directory.set_entry(
+      l1x,
+      Riscv64PageTableEntry(
+        (PAGE_DESCRIPTOR::OUTPUT_PPN.val((pa >> PAGE_SHIFT) as u64)
         + PAGE_DESCRIPTOR::DIRTY::True
         + PAGE_DESCRIPTOR::ACCESSED::True
         + PAGE_DESCRIPTOR::USER::False
@@ -143,41 +150,52 @@ impl Riscv64PageTable {
         + PAGE_DESCRIPTOR::X::True
         + PAGE_DESCRIPTOR::W::True
         + PAGE_DESCRIPTOR::R::True
-        + PAGE_DESCRIPTOR::VALID::True).value as usize
-    ));
+        + PAGE_DESCRIPTOR::VALID::True)
+          .value as usize,
+      ),
+    );
   }
 }
 
 impl PageTableTrait for Riscv64PageTable {
-  fn new(directory: PhysicalFrame) -> Self {
-    let r = Riscv64PageTable {
-      directory,
-      pages: Mutex::new(Vec::new()),
-      user_pages: Mutex::new(BTreeMap::new()),
-    };
+  fn new(directory_kva: usize, table_frames: &mut Vec<PhysicalFrame>) -> Self {
+    let r = Riscv64PageTable { directory_kva };
     r.map_kernel_gigabyte_page(0xffff_ffff_0000_0000, 0x0000_0000);
     r.map_kernel_gigabyte_page(0xffff_ffff_4000_0000, 0x4000_0000);
     r.map_kernel_gigabyte_page(0xffff_ffff_8000_0000, 0x8000_0000);
     r.map_kernel_gigabyte_page(0xffff_ffff_c000_0000, 0xc000_0000);
+
+    r.map(
+      rpabi::CONFIG_READ_ONLY_LEVEL_1_PAGE_TABLE_BTM,
+      directory_kva.kva2pa(),
+      EntryAttribute::user_readonly(),
+      table_frames,
+    )
+    .unwrap();
     r
   }
 
-  fn base_pa(&self) -> usize {
-    self.directory.pa()
-  }
-
-  fn map(&self, va: usize, pa: usize, attr: EntryAttribute) -> Result<(), Error> {
-    let directory = Riscv64PageTableEntry::from_pa(self.directory.pa());
+  fn map(
+    &self,
+    va: usize,
+    pa: usize,
+    attr: EntryAttribute,
+    table_frames: &mut Vec<PhysicalFrame>,
+  ) -> Result<(), Error> {
+    let directory = Riscv64PageTableEntry::from_pa(self.directory_kva.kva2pa());
     let mut l1e = directory.entry(va.l1x());
     if !l1e.valid() {
       let frame = crate::mm::page_pool::page_alloc()?;
       frame.zero();
       l1e = Riscv64PageTableEntry::make_table(frame.pa());
-      let mut pages = self.pages.lock();
-      pages.push(frame);
-      drop(pages);
+      table_frames.push(frame);
       if va <= rpabi::CONFIG_READ_ONLY_LEVEL_1_PAGE_TABLE_BTM {
-        self.map(rpabi::CONFIG_READ_ONLY_LEVEL_2_PAGE_TABLE_BTM + va.l1x() * PAGE_SIZE, l1e.to_pa(), EntryAttribute::user_readonly())?;
+        self.map(
+          rpabi::CONFIG_READ_ONLY_LEVEL_2_PAGE_TABLE_BTM + va.l1x() * PAGE_SIZE,
+          l1e.to_pa(),
+          EntryAttribute::user_readonly(),
+          table_frames
+        )?;
       }
       directory.set_entry(va.l1x(), l1e);
     }
@@ -186,20 +204,26 @@ impl PageTableTrait for Riscv64PageTable {
       let frame = crate::mm::page_pool::page_alloc()?;
       frame.zero();
       l2e = Riscv64PageTableEntry::make_table(frame.pa());
-      let mut pages = self.pages.lock();
-      pages.push(frame);
-      drop(pages);
+      table_frames.push(frame);
       if va <= rpabi::CONFIG_READ_ONLY_LEVEL_1_PAGE_TABLE_BTM {
-        self.map(rpabi::CONFIG_READ_ONLY_LEVEL_3_PAGE_TABLE_BTM + va.l1x() * PAGE_SIZE * (PAGE_SIZE / MACHINE_SIZE) + va.l2x() * PAGE_SIZE, l2e.to_pa(), EntryAttribute::user_readonly())?;
+        self.map(
+          rpabi::CONFIG_READ_ONLY_LEVEL_3_PAGE_TABLE_BTM
+            + va.l1x() * PAGE_SIZE * (PAGE_SIZE / MACHINE_SIZE)
+            + va.l2x() * PAGE_SIZE,
+          l2e.to_pa(),
+          EntryAttribute::user_readonly(),
+          table_frames
+        )?;
       }
       l1e.set_entry(va.l2x(), l2e);
     }
     l2e.set_entry(va.l3x(), Riscv64PageTableEntry::from(Entry::new(attr, pa)));
+    crate::arch::Arch::invalidate_tlb();
     Ok(())
   }
 
   fn unmap(&self, va: usize) {
-    let directory = Riscv64PageTableEntry::from_pa(self.directory.pa());
+    let directory = Riscv64PageTableEntry::from_pa(self.directory_kva.kva2pa());
     let l1e = directory.entry(va.l1x());
     assert!(l1e.valid());
     let l2e = l1e.entry(va.l2x());
@@ -207,23 +231,8 @@ impl PageTableTrait for Riscv64PageTable {
     l2e.set_entry(va.l3x(), Riscv64PageTableEntry(0));
   }
 
-  fn insert_page(&self, va: usize, user_frame: crate::mm::Frame, attr: EntryAttribute) -> Result<(), Error> {
-    let pa = user_frame.pa();
-    if let Some(p) = self.lookup_page(va) {
-      if p.pa() != pa {
-        // replace mapped frame
-        self.remove_page(va)?;
-      }
-    }
-    self.map(va, pa, attr)?;
-    let mut user_frames = self.user_pages.lock();
-    user_frames.insert(va, user_frame);
-    crate::arch::Arch::invalidate_tlb();
-    Ok(())
-  }
-
   fn lookup_page(&self, va: usize) -> Option<Entry> {
-    let directory = Riscv64PageTableEntry::from_pa(self.directory.pa());
+    let directory = Riscv64PageTableEntry::from_pa(self.directory_kva.kva2pa());
     let l1e = directory.entry(va.l1x());
     if !l1e.valid() {
       return None;
@@ -240,29 +249,7 @@ impl PageTableTrait for Riscv64PageTable {
     }
   }
 
-  fn lookup_user_page(&self, va: usize) -> Option<Frame> {
-    let user_frames = self.user_pages.lock();
-    user_frames.get(&va).map(|x| x.clone())
-  }
-
-  fn remove_page(&self, va: usize) -> Result<(), crate::mm::page_table::Error> {
-    if let Some(_) = self.lookup_page(va) {
-      self.unmap(va);
-      let mut user_frames = self.user_pages.lock();
-      user_frames.remove(&va);
-      crate::arch::Arch::invalidate_tlb();
-      Ok(())
-    } else {
-      Err(ERROR_INVARG)
-    }
-  }
-
   fn recursive_map(&self, _va: usize) {
-    self.map(rpabi::CONFIG_READ_ONLY_LEVEL_1_PAGE_TABLE_BTM, self.directory.pa(), EntryAttribute::user_readonly()).expect("page table recursive map failed");
-  }
-
-  fn install_user_page_table(base: usize, asid: AddressSpaceId) {
-    SATP.write(SATP::MODE::Sv39 + SATP::ASID.val(asid as u64) + SATP::PPN.val((base >> PAGE_SHIFT) as u64));
-    riscv::barrier::sfence_vma_all();
+    // riscv64 can't do recursive_map
   }
 }

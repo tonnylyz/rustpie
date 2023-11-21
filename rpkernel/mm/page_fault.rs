@@ -3,7 +3,6 @@ use rpabi::{CONFIG_USER_STACK_BTM, CONFIG_USER_STACK_TOP};
 use crate::arch::PAGE_SIZE;
 use crate::kernel::cpu::cpu;
 use crate::kernel::traits::*;
-use crate::mm::page_table::{PageTableEntryAttrTrait, PageTableTrait};
 use crate::util::*;
 
 pub fn handle() {
@@ -18,13 +17,13 @@ pub fn handle() {
 
         // NOTE: allocate stack region automatically
         if addr > CONFIG_USER_STACK_BTM && addr < CONFIG_USER_STACK_TOP {
-          let pt = a.page_table();
+          let mut pt = a.page_table();
           match pt.lookup_page(va) {
             None => {
               if let Ok(frame) = crate::mm::page_pool::page_alloc() {
                 frame.zero();
                 match pt.insert_page(va, crate::mm::Frame::from(frame),
-                                     crate::mm::page_table::EntryAttribute::user_default()) {
+                                     rpabi::syscall::mm::EntryAttribute::user_default()) {
                   Ok(_) => {
                     return;
                   }

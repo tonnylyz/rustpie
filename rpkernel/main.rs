@@ -18,12 +18,11 @@ extern crate static_assertions;
 use arch::ContextFrame;
 use kernel::interrupt::InterruptController;
 use kernel::traits::*;
-use mm::page_table::PageTableEntryAttrTrait;
-use mm::page_table::PageTableTrait;
 
 pub const MAX_CPU_NUMBER: usize = 4;
 pub use board::core_id;
 pub use board::cpu_number;
+use rpabi::syscall::mm::EntryAttribute;
 
 #[macro_use]
 mod misc;
@@ -157,13 +156,13 @@ extern "C" fn main(core_id: arch::CoreId, boot_data: usize) -> ! {
     let (a, entry) = kernel::address_space::load_image(bin);
     info!("load_image ok");
 
-    let page_table = a.page_table();
+    let mut page_table = a.page_table();
     let stack_frame = mm::page_pool::page_alloc().expect("failed to allocate trusted stack");
     page_table
       .insert_page(
         rpabi::CONFIG_USER_STACK_TOP - arch::PAGE_SIZE,
         mm::Frame::from(stack_frame),
-        mm::page_table::EntryAttribute::user_default(),
+        EntryAttribute::user_default(),
       )
       .unwrap();
     let plat_info_pa = (&board::PLATFORM_INFO as *const _ as usize).kva2pa();
@@ -171,7 +170,7 @@ extern "C" fn main(core_id: arch::CoreId, boot_data: usize) -> ! {
       .insert_page(
         rpabi::CONFIG_TRUSTED_PLATFORM_INFO,
         mm::Frame::from(mm::PhysicalFrame::new(plat_info_pa)),
-        mm::page_table::EntryAttribute::user_readonly(),
+        EntryAttribute::user_readonly(),
       )
       .unwrap();
 
@@ -184,12 +183,11 @@ extern "C" fn main(core_id: arch::CoreId, boot_data: usize) -> ! {
         .insert_page(
           rpabi::platform::USER_SPACE_DRIVER_MMIO_OFFSET,
           mm::Frame::Device(dma_frame_no_cache),
-          mm::page_table::EntryAttribute::user_device(),
+          EntryAttribute::user_device(),
         )
         .unwrap();
       core::mem::forget(dma_frame);
     }
-
     info!("user stack ok");
     let t = crate::kernel::thread::new_user(
       entry,
@@ -204,11 +202,11 @@ extern "C" fn main(core_id: arch::CoreId, boot_data: usize) -> ! {
     for device in &board::PLATFORM_INFO.get().unwrap().devices {
       if let Some(device) = device {
         for uf in kernel::device::device_to_user_frames(device).iter() {
-          a.page_table()
+          page_table
             .insert_page(
               rpabi::platform::USER_SPACE_DRIVER_MMIO_OFFSET + uf.pa(),
               uf.clone(),
-              mm::page_table::EntryAttribute::user_device(),
+              rpabi::syscall::mm::EntryAttribute::user_device(),
             )
             .unwrap();
         }
@@ -218,6 +216,7 @@ extern "C" fn main(core_id: arch::CoreId, boot_data: usize) -> ! {
       }
     }
     info!("device added to user space");
+    drop(page_table);
   }
 
   util::barrier();

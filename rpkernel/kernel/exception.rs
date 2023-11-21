@@ -1,6 +1,6 @@
 use core::mem::size_of;
 
-#[cfg(not(target_arch = "x86_64"))]
+#[cfg(feature = "error_unwind")]
 use unwind::unwind_from_exception;
 
 use crate::arch::{ContextFrame, PAGE_SIZE};
@@ -8,7 +8,6 @@ use crate::kernel::cpu::cpu;
 use crate::kernel::thread::thread_destroy;
 use crate::kernel::traits::ArchTrait;
 use crate::kernel::traits::ContextFrameTrait;
-use crate::mm::page_table::{PageTableEntryAttrTrait, PageTableTrait};
 use crate::util::{round_down, round_up};
 
 enum HandleResult {
@@ -26,17 +25,25 @@ fn handle() -> HandleResult {
         // trusted exception
         if let Some(handler) = a.exception_handler() {
           let ctx = cpu().context_mut();
-          info!("trusted exception elr {:016x} far {:016x} sp {:016x}", ctx.exception_pc(), crate::arch::Arch::fault_address(), ctx.stack_pointer());
+          info!(
+            "trusted exception elr {:016x} far {:016x} sp {:016x}",
+            ctx.exception_pc(),
+            crate::arch::Arch::fault_address(),
+            ctx.stack_pointer()
+          );
           let ctx_copied = *ctx;
           ctx.set_exception_pc(handler);
           let sp = ctx.stack_pointer() - round_up(size_of::<ContextFrame>(), 16);
           ctx.set_stack_pointer(sp);
           let sp_va = round_down(sp, PAGE_SIZE);
-          let pt = a.page_table();
+          let mut pt = a.page_table();
           if let None = pt.lookup_user_page(sp_va) {
             if let Ok(frame) = crate::mm::page_pool::page_alloc() {
-              if let Err(_) = pt.insert_page(sp_va, crate::mm::Frame::from(frame),
-                                             crate::mm::page_table::EntryAttribute::user_default()) {
+              if let Err(_) = pt.insert_page(
+                sp_va,
+                crate::mm::Frame::from(frame),
+                rpabi::syscall::mm::EntryAttribute::user_default(),
+              ) {
                 return HandleResult::Err("page insert failed");
               }
             } else {
@@ -78,12 +85,19 @@ pub fn handle_user() {
 
 pub fn handle_kernel(ctx: &ContextFrame, is_page_fault: bool) {
   if is_page_fault {
-    error!("kernel page fault exception occurs {:016x}", crate::arch::Arch::fault_address());
+    error!(
+      "kernel page fault exception occurs {:016x}",
+      crate::arch::Arch::fault_address()
+    );
   } else {
     error!("kernel other exception occurs");
   }
- 
-  #[cfg(not(target_arch = "x86_64"))] {
+
+  #[cfg(not(feature = "error_unwind"))]
+  println!("{}", ctx);
+
+  #[cfg(feature = "error_unwind")]
+  {
     let ctx = ctx.clone();
     let reg = ctx.into();
     unwind_from_exception(reg);

@@ -56,4 +56,17 @@ impl ArchTrait for X64Arch {
   fn raw_arch_id() -> usize {
     todo!()
   }
+
+  fn install_user_page_table(base: usize, asid: AddressSpaceId) {
+    assert!(asid <= 4096); // 12-bit PCID limit
+    unsafe {
+      x86_64::registers::control::Cr3::write_pcid(
+        x86_64::structures::paging::PhysFrame::from_start_address(x86_64::PhysAddr::new(
+          base as u64,
+        ))
+        .unwrap(),
+        x86_64::instructions::tlb::Pcid::new(asid).unwrap(),
+      );
+    };
+  }
 }

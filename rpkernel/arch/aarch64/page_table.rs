@@ -1,42 +1,27 @@
-use alloc::collections::BTreeMap;
 use alloc::vec::Vec;
-
-use hardware::mmu::aarch64_mmu::vm_descriptor::*;
-use rpabi::syscall::error::ERROR_INVARG;
-use spin::Mutex;
-use tock_registers::interfaces::Writeable;
 
 use crate::arch::*;
 use crate::kernel::traits::*;
-use crate::mm::{Frame, PhysicalFrame};
-use crate::mm::page_table::{Entry, EntryAttribute, Error, PageTableEntryAttrTrait, PageTableTrait};
-
+use crate::mm::page_table::{Entry, Error, PageTableTrait};
+use crate::mm::PhysicalFrame;
+use hardware::mmu::aarch64_mmu::vm_descriptor::*;
+use rpabi::syscall::mm::EntryAttribute;
 pub const PAGE_TABLE_L1_SHIFT: usize = 30;
 pub const PAGE_TABLE_L2_SHIFT: usize = 21;
 pub const PAGE_TABLE_L3_SHIFT: usize = 12;
 
 #[derive(Debug)]
 pub struct Aarch64PageTable {
-  directory: PhysicalFrame,
-  pages: Mutex<Vec<PhysicalFrame>>,
-  user_pages: Mutex<BTreeMap<usize, Frame>>,
+  directory_kva: usize,
 }
 
 #[repr(transparent)]
 #[derive(Copy, Clone, Debug)]
 pub struct Aarch64PageTableEntry(usize);
 
-impl ArchPageTableEntryTrait for Aarch64PageTableEntry {
-  fn from_pte(value: usize) -> Self {
-    Aarch64PageTableEntry(value)
-  }
-
+impl Aarch64PageTableEntry {
   fn from_pa(pa: usize) -> Self {
     Aarch64PageTableEntry(pa)
-  }
-
-  fn to_pte(&self) -> usize {
-    self.0
   }
 
   fn to_pa(&self) -> usize {
@@ -88,69 +73,83 @@ impl core::convert::From<Aarch64PageTableEntry> for Entry {
   fn from(u: Aarch64PageTableEntry) -> Self {
     use tock_registers::*;
     let reg = LocalRegisterCopy::<u64, PAGE_DESCRIPTOR::Register>::new(u.0 as u64);
-    Entry::new(EntryAttribute::new(
-      reg.matches_all(PAGE_DESCRIPTOR::AP::RW_EL1) || reg.matches_all(PAGE_DESCRIPTOR::AP::RW_EL1_EL0),
-      reg.matches_all(PAGE_DESCRIPTOR::AP::RW_EL1_EL0) || reg.matches_all(PAGE_DESCRIPTOR::AP::RO_EL1_EL0),
-      reg.matches_all(PAGE_DESCRIPTOR::AttrIndx::DEVICE),
-      !reg.is_set(PAGE_DESCRIPTOR::PXN),
-      !reg.is_set(PAGE_DESCRIPTOR::UXN),
-      reg.is_set(PAGE_DESCRIPTOR::COW),
-      reg.is_set(PAGE_DESCRIPTOR::LIB),
-    ), (reg.read(PAGE_DESCRIPTOR::OUTPUT_PPN) as usize) << PAGE_SHIFT)
+    Entry::new(
+      EntryAttribute::new(
+        reg.matches_all(PAGE_DESCRIPTOR::AP::RW_EL1)
+          || reg.matches_all(PAGE_DESCRIPTOR::AP::RW_EL1_EL0),
+        reg.matches_all(PAGE_DESCRIPTOR::AP::RW_EL1_EL0)
+          || reg.matches_all(PAGE_DESCRIPTOR::AP::RO_EL1_EL0),
+        reg.matches_all(PAGE_DESCRIPTOR::AttrIndx::DEVICE),
+        !reg.is_set(PAGE_DESCRIPTOR::PXN),
+        !reg.is_set(PAGE_DESCRIPTOR::UXN),
+        reg.is_set(PAGE_DESCRIPTOR::COW),
+        reg.is_set(PAGE_DESCRIPTOR::LIB),
+      ),
+      (reg.read(PAGE_DESCRIPTOR::OUTPUT_PPN) as usize) << PAGE_SHIFT,
+    )
   }
 }
 
 impl core::convert::From<Entry> for Aarch64PageTableEntry {
   fn from(pte: Entry) -> Self {
-    Aarch64PageTableEntry((
-      if pte.attribute().u_shared() { PAGE_DESCRIPTOR::LIB::True } else { PAGE_DESCRIPTOR::LIB::False }
-        + if pte.attribute().u_copy_on_write() { PAGE_DESCRIPTOR::COW::True } else { PAGE_DESCRIPTOR::COW::False }
-        + if pte.attribute().u_executable() { PAGE_DESCRIPTOR::UXN::False } else { PAGE_DESCRIPTOR::UXN::True }
-        + if pte.attribute().k_executable() { PAGE_DESCRIPTOR::PXN::False } else { PAGE_DESCRIPTOR::PXN::True }
-        + if pte.attribute().device() {
+    Aarch64PageTableEntry(
+      (if pte.attribute().u_shared() {
+        PAGE_DESCRIPTOR::LIB::True
+      } else {
+        PAGE_DESCRIPTOR::LIB::False
+      } + if pte.attribute().copy_on_write() {
+        PAGE_DESCRIPTOR::COW::True
+      } else {
+        PAGE_DESCRIPTOR::COW::False
+      } + if pte.attribute().u_executable() {
+        PAGE_DESCRIPTOR::UXN::False
+      } else {
+        PAGE_DESCRIPTOR::UXN::True
+      } + if pte.attribute().k_executable() {
+        PAGE_DESCRIPTOR::PXN::False
+      } else {
+        PAGE_DESCRIPTOR::PXN::True
+      } + if pte.attribute().device() {
         PAGE_DESCRIPTOR::SH::OuterShareable + PAGE_DESCRIPTOR::AttrIndx::DEVICE
       } else {
         PAGE_DESCRIPTOR::SH::InnerShareable + PAGE_DESCRIPTOR::AttrIndx::NORMAL
-      }
-        + if pte.attribute().writable() && pte.attribute().u_readable() {
+      } + if pte.attribute().writable() && pte.attribute().u_readable() {
         PAGE_DESCRIPTOR::AP::RW_EL1_EL0
       } else if pte.attribute().writable() && !pte.attribute().u_readable() {
         PAGE_DESCRIPTOR::AP::RW_EL1
       } else if !pte.attribute().writable() && pte.attribute().u_readable() {
         PAGE_DESCRIPTOR::AP::RO_EL1_EL0
-      } else {// if !pte.attr.writable() && !pte.attr.u_readable() {
+      } else {
+        // if !pte.attr.writable() && !pte.attr.u_readable() {
         PAGE_DESCRIPTOR::AP::RO_EL1
-      }
-        + PAGE_DESCRIPTOR::TYPE::Table
+      } + PAGE_DESCRIPTOR::TYPE::Table
         + PAGE_DESCRIPTOR::VALID::True
         + PAGE_DESCRIPTOR::OUTPUT_PPN.val((pte.ppn()) as u64)
-        + PAGE_DESCRIPTOR::AF::True
-    ).value as usize)
+        + PAGE_DESCRIPTOR::AF::True)
+        .value as usize,
+    )
   }
 }
 
 impl PageTableTrait for Aarch64PageTable {
-  fn new(directory: PhysicalFrame) -> Self {
-    Aarch64PageTable {
-      directory,
-      pages: Mutex::new(Vec::new()),
-      user_pages: Mutex::new(BTreeMap::new()),
-    }
+  fn new(directory_kva: usize, _table_frames: &mut Vec<PhysicalFrame>) -> Self {
+    Aarch64PageTable { directory_kva }
   }
 
-  fn base_pa(&self) -> usize {
-    self.directory.pa()
-  }
-
-  fn map(&self, va: usize, pa: usize, attr: EntryAttribute) -> Result<(), Error> {
-    let directory = Aarch64PageTableEntry::from_pa(self.directory.pa());
+  fn map(
+    &self,
+    va: usize,
+    pa: usize,
+    attr: EntryAttribute,
+    table_frames: &mut Vec<PhysicalFrame>,
+  ) -> Result<(), Error> {
+    let directory = Aarch64PageTableEntry::from_pa(self.directory_kva.kva2pa());
     let mut l1e = directory.entry(va.l1x());
     if !l1e.valid() {
       let frame = crate::mm::page_pool::page_alloc()?;
       frame.zero();
       l1e = Aarch64PageTableEntry::make_table(frame.pa());
-      let mut pages = self.pages.lock();
-      pages.push(frame);
+      table_frames.push(frame);
       directory.set_entry(va.l1x(), l1e);
     }
     let mut l2e = l1e.entry(va.l2x());
@@ -158,16 +157,16 @@ impl PageTableTrait for Aarch64PageTable {
       let frame = crate::mm::page_pool::page_alloc()?;
       frame.zero();
       l2e = Aarch64PageTableEntry::make_table(frame.pa());
-      let mut pages = self.pages.lock();
-      pages.push(frame);
+      table_frames.push(frame);
       l1e.set_entry(va.l2x(), l2e);
     }
     l2e.set_entry(va.l3x(), Aarch64PageTableEntry::from(Entry::new(attr, pa)));
+    crate::arch::Arch::invalidate_tlb();
     Ok(())
   }
 
   fn unmap(&self, va: usize) {
-    let directory = Aarch64PageTableEntry::from_pa(self.directory.pa());
+    let directory = Aarch64PageTableEntry::from_pa(self.directory_kva.kva2pa());
     let l1e = directory.entry(va.l1x());
     assert!(l1e.valid());
     let l2e = l1e.entry(va.l2x());
@@ -175,23 +174,8 @@ impl PageTableTrait for Aarch64PageTable {
     l2e.set_entry(va.l3x(), Aarch64PageTableEntry(0));
   }
 
-  fn insert_page(&self, va: usize, user_frame: crate::mm::Frame, attr: EntryAttribute) -> Result<(), Error> {
-    let pa = user_frame.pa();
-    if let Some(p) = self.lookup_page(va) {
-      if p.pa() != pa {
-        // replace mapped frame
-        self.remove_page(va)?;
-      }
-    }
-    self.map(va, pa, attr)?;
-    let mut user_frames = self.user_pages.lock();
-    user_frames.insert(va, user_frame);
-    crate::arch::Arch::invalidate_tlb();
-    Ok(())
-  }
-
   fn lookup_page(&self, va: usize) -> Option<Entry> {
-    let directory = Aarch64PageTableEntry::from_pa(self.directory.pa());
+    let directory = Aarch64PageTableEntry::from_pa(self.directory_kva.kva2pa());
     let l1e = directory.entry(va.l1x());
     if !l1e.valid() {
       return None;
@@ -208,36 +192,16 @@ impl PageTableTrait for Aarch64PageTable {
     }
   }
 
-  fn lookup_user_page(&self, va: usize) -> Option<Frame> {
-    let user_frames = self.user_pages.lock();
-    user_frames.get(&va).map(|x| x.clone())
-  }
-
-  fn remove_page(&self, va: usize) -> Result<(), Error> {
-    if let Some(_) = self.lookup_page(va) {
-      self.unmap(va);
-      let mut user_frames = self.user_pages.lock();
-      user_frames.remove(&va);
-      // crate::arch::Arch::invalidate_tlb();
-      Ok(())
-    } else {
-      Err(ERROR_INVARG)
-    }
-  }
-
   fn recursive_map(&self, va: usize) {
     assert_eq!(va % (1 << PAGE_TABLE_L1_SHIFT), 0);
-    let directory = Aarch64PageTableEntry::from_pa(self.directory.pa());
-    let l1x = va / (1 << PAGE_TABLE_L1_SHIFT);
-    directory.set_entry(l1x, Aarch64PageTableEntry::from(Entry::new(
-      EntryAttribute::user_readonly(),
-      self.directory.pa(),
-    )));
-  }
-
-  fn install_user_page_table(base: usize, _asid: AddressSpaceId) {
-    use aarch64_cpu::registers::TTBR0_EL1;
-    TTBR0_EL1.write(TTBR0_EL1::BADDR.val((base >> 1) as u64));
-    crate::arch::Arch::invalidate_tlb();
+    let directory = Aarch64PageTableEntry::from_pa(self.directory_kva.kva2pa());
+    let recursive_index = va / (1 << PAGE_TABLE_L1_SHIFT);
+    directory.set_entry(
+      recursive_index,
+      Aarch64PageTableEntry::from(Entry::new(
+        EntryAttribute::user_readonly(),
+        self.directory_kva.kva2pa(),
+      )),
+    );
   }
 }

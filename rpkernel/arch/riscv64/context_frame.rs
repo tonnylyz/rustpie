@@ -1,6 +1,8 @@
 use core::fmt::Formatter;
 use riscv::regs::*;
+#[cfg(feature = "error_unwind")]
 use unwind::arch::Riscv64;
+#[cfg(feature = "error_unwind")]
 use unwind::registers::Registers;
 
 use crate::syscall::SyscallOutRegisters;
@@ -48,6 +50,7 @@ static REG_ABI_NAMES: [&str; 32] = [
   "T6",
 ];
 
+#[cfg(feature = "error_unwind")]
 impl Into<Registers> for Riscv64ContextFrame {
   fn into(self) -> Registers {
     let mut reg = Registers::default();

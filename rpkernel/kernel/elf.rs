@@ -1,15 +1,17 @@
 use rpabi::syscall::error::{ERROR_INVARG, ERROR_OOM};
+use spin::MutexGuard;
 use xmas_elf::*;
 
-use crate::arch::{PAGE_SIZE, PageTable};
+use crate::arch::PAGE_SIZE;
 use crate::kernel::traits::Address;
 use crate::mm::Frame;
-use crate::mm::page_table::{EntryAttribute, PageTableEntryAttrTrait, PageTableTrait};
+use crate::mm::page_table::PageTable;
+use rpabi::syscall::mm::EntryAttribute;
 use crate::util::round_up;
 
 pub type Error = usize;
 
-pub fn load(src: &'static [u8], page_table: &PageTable) -> Result<usize, Error> {
+pub fn load(src: &'static [u8], page_table: &mut MutexGuard<PageTable>) -> Result<usize, Error> {
   if let Ok(elf) = ElfFile::new(src) {
     let entry_point = elf.header.pt2.entry_point() as usize;
     for ph in elf.program_iter() {

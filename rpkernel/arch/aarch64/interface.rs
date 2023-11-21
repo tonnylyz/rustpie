@@ -1,7 +1,7 @@
 use core::mem::size_of;
 
 use aarch64_cpu::registers::*;
-use tock_registers::interfaces::Readable;
+use tock_registers::interfaces::{Readable, Writeable};
 
 use crate::kernel::traits::*;
 
@@ -26,8 +26,6 @@ pub type Arch = Aarch64Arch;
 pub type ContextFrame = super::context_frame::Aarch64ContextFrame;
 
 pub type PageTable = super::page_table::Aarch64PageTable;
-
-pub type ArchPageTableEntry = super::page_table::Aarch64PageTableEntry;
 
 pub type AddressSpaceId = u16;
 
@@ -63,5 +61,11 @@ impl ArchTrait for Aarch64Arch {
 
   fn raw_arch_id() -> usize {
     MPIDR_EL1.get() as usize
+  }
+  
+  fn install_user_page_table(base: usize, _asid: AddressSpaceId) {
+    use aarch64_cpu::registers::TTBR0_EL1;
+    TTBR0_EL1.write(TTBR0_EL1::BADDR.val((base >> 1) as u64));
+    Self::invalidate_tlb();
   }
 }

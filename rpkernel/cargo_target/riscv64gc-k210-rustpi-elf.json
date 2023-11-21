@@ -12,7 +12,7 @@
   "linker-is-gnu": true,
   "llvm-target": "riscv64",
   "max-atomic-width": 64,
-  "panic-strategy": "unwind",
+  "panic-strategy": "abort",
   "relocation-model": "static",
   "target-pointer-width": "64",
   "pre-link-args": {

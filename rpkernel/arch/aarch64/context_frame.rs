@@ -1,6 +1,8 @@
 use core::fmt::Formatter;
 
+#[cfg(feature = "error_unwind")]
 use unwind::arch::Aarch64;
+#[cfg(feature = "error_unwind")]
 use unwind::registers::Registers;
 
 use crate::ContextFrameTrait;
@@ -15,6 +17,7 @@ pub struct Aarch64ContextFrame {
   sp: u64,
 }
 
+#[cfg(feature = "error_unwind")]
 impl Into<Registers> for Aarch64ContextFrame {
   fn into(self) -> Registers {
     let mut reg = Registers::default();

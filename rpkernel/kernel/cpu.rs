@@ -9,7 +9,6 @@ use crate::kernel::address_space::AddressSpace;
 use crate::kernel::scheduler::scheduler;
 use crate::kernel::thread::Thread;
 use crate::kernel::traits::*;
-use crate::mm::page_table::PageTableTrait;
 use crate::mm::PhysicalFrame;
 
 pub struct Core {
@@ -152,7 +151,7 @@ impl Core {
       // info!("switch as from {} to {}", prev.asid(), a.asid());
     }
     self.address_space = Some(a.clone());
-    crate::arch::PageTable::install_user_page_table(a.page_table().base_pa(), a.asid() as AddressSpaceId);
+    crate::arch::Arch::install_user_page_table(a.page_table().directory_pa(), a.asid() as AddressSpaceId);
   }
 }
 

@@ -1,6 +1,6 @@
 use core::mem::size_of;
 use riscv::{asm::*, regs::*};
-use tock_registers::interfaces::Readable;
+use tock_registers::interfaces::{Readable, Writeable};
 
 use crate::kernel::traits::*;
 
@@ -25,8 +25,6 @@ pub type Arch = Riscv64Arch;
 pub type ContextFrame = super::context_frame::Riscv64ContextFrame;
 
 pub type PageTable = super::page_table::Riscv64PageTable;
-
-pub type ArchPageTableEntry = super::page_table::Riscv64PageTableEntry;
 
 pub type AddressSpaceId = u16;
 
@@ -56,6 +54,14 @@ impl ArchTrait for Riscv64Arch {
   }
 
   fn raw_arch_id() -> usize {
+    // hartid is m-mode only
     panic!()
+  }
+
+  fn install_user_page_table(base: usize, asid: AddressSpaceId) {
+    SATP.write(
+      SATP::MODE::Sv39 + SATP::ASID.val(asid as u64) + SATP::PPN.val((base >> PAGE_SHIFT) as u64),
+    );
+    riscv::barrier::sfence_vma_all();
   }
 }

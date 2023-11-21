@@ -1,27 +1,19 @@
 use crate::arch::*;
 use crate::kernel::traits::*;
-use crate::mm::page_table::{
-  Entry, EntryAttribute, Error, PageTableEntryAttrTrait, PageTableTrait,
-};
-use crate::mm::{Frame, PhysicalFrame};
-use alloc::collections::BTreeMap;
+use crate::mm::page_table::{Entry, Error, PageTableTrait};
+use crate::mm::PhysicalFrame;
 use alloc::vec::Vec;
-use spin::Mutex;
-use x86_64::instructions::tlb::Pcid;
+use rpabi::syscall::mm::EntryAttribute;
 use x86_64::structures::paging::mapper::PageTableFrameMapping;
 use x86_64::structures::paging::{
-  FrameAllocator, MappedPageTable, OffsetPageTable, PhysFrame, Size4KiB,
-  Translate,
+  FrameAllocator, MappedPageTable, OffsetPageTable, PhysFrame, Size4KiB, Translate,
 };
 use x86_64::structures::paging::{Mapper, PageTable as PT, PageTableFlags, Size1GiB};
 use x86_64::{PhysAddr, VirtAddr};
 
 #[derive(Debug)]
 pub struct X64PageTable {
-  directory: PhysicalFrame,
-  table_frames: X64FrameAllocator,
-  user_pages: Mutex<BTreeMap<usize, Frame>>,
-  mutex: Mutex<()>,
+  directory_kva: usize,
 }
 
 #[repr(transparent)]
@@ -34,7 +26,7 @@ impl X64PageTableEntry {
   }
 }
 
-impl ArchPageTableEntryTrait for X64PageTableEntry {
+impl X64PageTableEntry {
   fn from_pte(value: usize) -> Self {
     X64PageTableEntry(value)
   }
@@ -57,18 +49,6 @@ impl ArchPageTableEntryTrait for X64PageTableEntry {
 
   fn valid(&self) -> bool {
     self.flags().contains(PageTableFlags::PRESENT)
-  }
-
-  fn entry(&self, index: usize) -> Self {
-    unimplemented!()
-  }
-
-  fn set_entry(&self, index: usize, value: Self) {
-    unimplemented!()
-  }
-
-  fn make_table(frame_pa: usize) -> Self {
-    unimplemented!()
   }
 }
 
@@ -114,7 +94,7 @@ impl core::convert::From<Entry> for X64PageTableEntry {
 
 impl X64PageTable {
   fn l4pt(&self) -> &'static mut PT {
-    let l4pt = unsafe { (self.directory.kva() as *mut PT).as_mut().unwrap() };
+    let l4pt = unsafe { (self.directory_kva as *mut PT).as_mut().unwrap() };
     l4pt
   }
 
@@ -128,16 +108,10 @@ impl X64PageTable {
   }
 }
 
-const PHY_ADDR_MAX: usize = 0x1_0000_0000;
-
 impl PageTableTrait for X64PageTable {
-  fn new(directory: crate::mm::PhysicalFrame) -> Self {
-    let mut r = X64PageTable {
-      directory: directory,
-      table_frames: X64FrameAllocator::new(),
-      mutex: Mutex::new(()),
-      user_pages: Mutex::new(BTreeMap::new()),
-    };
+  fn new(directory_kva: usize, table_frames: &mut Vec<PhysicalFrame>) -> Self {
+    const PHY_ADDR_MAX: usize = 0x1_0000_0000;
+    let mut r = X64PageTable { directory_kva };
     let pt = r.l4pt();
     let mut offset_pt = unsafe { OffsetPageTable::new(pt, VirtAddr::new(0.pa2kva() as u64)) };
     let start_frame = PhysFrame::<Size1GiB>::containing_address(PhysAddr::new(0));
@@ -150,27 +124,27 @@ impl PageTableTrait for X64PageTable {
       let flags = PageTableFlags::PRESENT | PageTableFlags::WRITABLE;
       unsafe {
         let _ = offset_pt
-          .map_to(page, frame, flags, &mut r.table_frames)
+          .map_to(page, frame, flags, &mut X64FrameAllocator(table_frames))
           .unwrap();
       }
     }
-    trace!("directory {:x}", r.base_pa());
     r
   }
 
-  fn base_pa(&self) -> usize {
-    self.directory.pa()
-  }
-
-  fn map(&self, va: usize, pa: usize, attr: EntryAttribute) -> Result<(), Error> {
+  fn map(
+    &self,
+    va: usize,
+    pa: usize,
+    attr: EntryAttribute,
+    table_frames: &mut Vec<PhysicalFrame>,
+  ) -> Result<(), Error> {
     type X64Page = x86_64::structures::paging::Page<Size4KiB>;
     let mut pt = self.mapped_pt();
     let pseudo_entry = ArchPageTableEntry::from(Entry::new(attr, pa));
     let page_flags = PageTableFlags::from_bits_truncate(pseudo_entry.0 as u64);
-    let table_flags = PageTableFlags::PRESENT | PageTableFlags::USER_ACCESSIBLE | PageTableFlags::WRITABLE; // for recursive;
-    let lock = self.mutex.lock();
+    let table_flags =
+      PageTableFlags::PRESENT | PageTableFlags::USER_ACCESSIBLE | PageTableFlags::WRITABLE; // for recursive;
     unsafe {
-      let fa = &mut self.mut_ref().table_frames;
       let page = X64Page::from_start_address(VirtAddr::new(va as u64)).unwrap();
       let frame = PhysFrame::from_start_address(PhysAddr::new(pa as u64)).unwrap();
       trace!("{:?} -> {:?}", page, frame);
@@ -179,12 +153,11 @@ impl PageTableTrait for X64PageTable {
         frame,
         page_flags,
         table_flags,
-        fa,
+        &mut X64FrameAllocator(table_frames),
       )
       .unwrap()
       .flush()
     }
-    drop(lock);
     Ok(())
   }
 
@@ -195,25 +168,6 @@ impl PageTableTrait for X64PageTable {
       .unmap(X64Page::from_start_address(VirtAddr::new(va as u64)).unwrap())
       .unwrap();
     flush.flush();
-  }
-
-  fn insert_page(
-    &self,
-    va: usize,
-    user_frame: crate::mm::Frame,
-    attr: EntryAttribute,
-  ) -> Result<(), Error> {
-    let pa = user_frame.pa();
-    if let Some(p) = self.lookup_page(va) {
-      if p.pa() != pa {
-        // replace mapped frame
-        self.remove_page(va)?;
-      }
-    }
-    self.map(va, pa, attr)?;
-    let mut user_frames = self.user_pages.lock();
-    user_frames.insert(va, user_frame);
-    Ok(())
   }
 
   fn lookup_page(&self, va: usize) -> Option<Entry> {
@@ -234,51 +188,17 @@ impl PageTableTrait for X64PageTable {
     }
   }
 
-  fn lookup_user_page(&self, va: usize) -> Option<Frame> {
-    let user_frames = self.user_pages.lock();
-    user_frames.get(&va).map(|x| x.clone())
-  }
-
-  fn remove_page(&self, va: usize) -> Result<(), Error> {
-    if let Some(_) = self.lookup_page(va) {
-      self.unmap(va);
-      let mut user_frames = self.user_pages.lock();
-      user_frames.remove(&va);
-      Ok(())
-    } else {
-      Err(rpabi::syscall::error::ERROR_INVARG)
-    }
-  }
-
   fn recursive_map(&self, va: usize) {
     let recursive_index = va >> (PAGE_SHIFT + 3 * 9);
     let flags = PageTableFlags::PRESENT | PageTableFlags::USER_ACCESSIBLE;
-    self.l4pt()[recursive_index].set_addr(PhysAddr::new(self.directory.pa() as u64), flags);
-  }
-
-  fn install_user_page_table(base: usize, asid: AddressSpaceId) {
-    assert!(asid <= 4096); // 12-bit PCID limit
-    unsafe {
-      x86_64::registers::control::Cr3::write_pcid(
-        PhysFrame::from_start_address(PhysAddr::new(base as u64)).unwrap(),
-        Pcid::new(asid).unwrap(),
-      );
-    };
+    self.l4pt()[recursive_index].set_addr(PhysAddr::new(self.directory_kva.kva2pa() as u64), flags);
   }
 }
 
 #[derive(Debug)]
-struct X64FrameAllocator {
-  frames: Vec<PhysicalFrame>,
-}
+struct X64FrameAllocator<'a>(&'a mut Vec<PhysicalFrame>);
 
-impl X64FrameAllocator {
-  const fn new() -> Self {
-    X64FrameAllocator { frames: Vec::new() }
-  }
-}
-
-unsafe impl FrameAllocator<Size4KiB> for X64FrameAllocator {
+unsafe impl FrameAllocator<Size4KiB> for X64FrameAllocator<'_> {
   fn allocate_frame(&mut self) -> Option<PhysFrame> {
     match crate::mm::page_pool::page_alloc() {
       Ok(phy_frame) => {
@@ -286,7 +206,7 @@ unsafe impl FrameAllocator<Size4KiB> for X64FrameAllocator {
         let addr = phy_frame.pa();
         let frame = PhysFrame::containing_address(x86_64::PhysAddr::new(addr as u64));
         trace!("alloc pt frame {:x}", addr);
-        self.frames.push(phy_frame);
+        self.0.push(phy_frame);
         Some(frame)
       }
       Err(_) => None,

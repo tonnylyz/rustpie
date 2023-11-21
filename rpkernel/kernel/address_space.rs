@@ -4,11 +4,11 @@ use core::sync::atomic::{AtomicU16, Ordering};
 
 use rpabi::{CONFIG_ELF_IMAGE, PAGE_SIZE};
 use rpabi::syscall::error::{ERROR_OOM, ERROR_OOR};
-use spin::Mutex;
+use spin::{Mutex, MutexGuard};
 
-use crate::arch::PageTable;
 use crate::kernel::traits::Address;
-use crate::mm::page_table::{EntryAttribute, PageTableEntryAttrTrait, PageTableTrait};
+use crate::mm::page_table::PageTable;
+use rpabi::syscall::mm::EntryAttribute;
 use crate::util::round_up;
 
 pub type Asid = u16;
@@ -17,7 +17,7 @@ pub type Error = usize;
 #[derive(Debug)]
 struct Inner {
   asid: Asid,
-  page_table: PageTable,
+  page_table: Mutex<PageTable>,
   exception_handler: Mutex<Option<usize>>,
 }
 
@@ -40,8 +40,8 @@ impl AddressSpace {
   pub fn asid(&self) -> Asid {
     self.0.asid
   }
-  pub fn page_table(&self) -> &PageTable {
-    &self.0.page_table
+  pub fn page_table(&self) -> MutexGuard<PageTable> {
+    self.0.page_table.lock()
   }
 
   pub fn exception_handler(&self) -> Option<usize> {
@@ -68,13 +68,11 @@ pub fn address_space_alloc() -> Result<AddressSpace, Error> {
   if id == 0 {
     return Err(ERROR_OOR);
   }
-  let frame = crate::mm::page_pool::page_alloc().map_err(|_| ERROR_OOM)?;
-  frame.zero();
-  let page_table = PageTable::new(frame);
+  let page_table = PageTable::new()?;
   page_table.recursive_map(rpabi::CONFIG_RECURSIVE_PAGE_TABLE_BTM);
   let a = AddressSpace(Arc::try_new(Inner {
     asid: id,
-    page_table,
+    page_table: Mutex::new(page_table),
     exception_handler: Mutex::new(None),
   }).map_err(|_| ERROR_OOM)?);
   let mut map = ADDRESS_SPACE_MAP.lock();
@@ -98,12 +96,13 @@ pub fn address_space_destroy(a: AddressSpace) {
 
 pub fn load_image(elf: &'static [u8]) -> (AddressSpace, usize) {
   let a = address_space_alloc().unwrap();
-  let page_table = a.page_table();
+  let mut page_table = a.page_table();
   let len = round_up(elf.len(), PAGE_SIZE);
   for i in (0..len).step_by(PAGE_SIZE) {
     let pa = (elf.as_ptr() as usize + i).kva2pa();
     page_table.map(CONFIG_ELF_IMAGE + i, pa, EntryAttribute::user_readonly()).expect("page_table map error");
   }
-  let entry = crate::kernel::elf::load(elf, page_table).expect("elf load error");
+  let entry = crate::kernel::elf::load(elf, &mut page_table).expect("elf load error");
+  drop(page_table);
   (a, entry)
 }
