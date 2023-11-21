@@ -35,6 +35,7 @@ pub struct ContextFrame {
 }
 
 #[cfg(target_arch = "riscv64")]
+#[cfg(feature = "error_unwind")]
 impl Into<Registers> for ContextFrame {
   fn into(self) -> Registers {
     let mut reg = Registers::default();
@@ -75,6 +76,7 @@ impl Into<Registers> for ContextFrame {
 }
 
 #[cfg(target_arch = "aarch64")]
+#[cfg(feature = "error_unwind")]
 impl Into<Registers> for ContextFrame {
   fn into(self) -> Registers {
     let mut reg = Registers::default();

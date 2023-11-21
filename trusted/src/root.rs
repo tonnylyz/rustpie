@@ -50,7 +50,7 @@ pub fn main(info: &'static PlatformInfo) {
               crate::rtc::goldfish::server(dev.register.start, 0);
             }));
           }
-          rpabi::platform::Driver::Nil => {}
+          _ => {}
         },
         None => {}
       },

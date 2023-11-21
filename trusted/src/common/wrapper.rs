@@ -5,9 +5,11 @@ use unwind::catch::catch_unwind;
 
 pub type Error = usize;
 
+#[cfg(feature = "error_unwind")]
 pub const ERROR_PERSISTENT_FAILURE: usize = 0x999;
 
 
+#[cfg(feature = "error_unwind")]
 const RETRY_MAX: usize = 0;
 
 #[cfg(feature = "error_unwind")]
