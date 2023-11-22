@@ -49,15 +49,15 @@ KERNEL := target/${KERNEL_TARGET}/${PROFILE}/rustpi
 .PHONY: all emu debug dependencies clean disk trusted_image user_image rplibc user_c_image force
 
 ifeq (${ARCH}, x86_64)
-all: ${KERNEL} ${KERNEL}.bin ${KERNEL}.asm ${KERNEL}.sec
-
 EFISTUB := rpefistub/target/x86_64-unknown-uefi/release/rpefistub.efi
+
+all: ${KERNEL} ${KERNEL}.bin ${KERNEL}.asm ${KERNEL}.sec ${EFISTUB} user_image rplibc user_c_image
 
 ${EFISTUB}: ${KERNEL}.bin force
 	make ARCH=${ARCH} -C rpefistub
 
 else
-all: ${KERNEL} ${KERNEL}.bin ${KERNEL}.asm
+all: ${KERNEL} ${KERNEL}.bin ${KERNEL}.asm ${KERNEL}.sec user_image rplibc user_c_image
 endif
 
 ${KERNEL}: trusted_image force

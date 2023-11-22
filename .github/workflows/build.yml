@@ -1,0 +1,33 @@
+name: Build all arch
+
+on:
+  push:
+    branches: [ "master", "dev-tonny" ]
+  pull_request:
+    branches: [ "master" ]
+
+jobs:
+  build:
+
+    runs-on: ubuntu-latest
+
+    steps:
+    - uses: actions/checkout@v3
+    - name: rustup toolchain install
+      uses: dtolnay/rust-toolchain@nightly
+      with:
+        components: rust-src
+
+    - name: Install LLVM and Clang
+      uses: KyleMayes/install-llvm-action@v1.9.0
+      with:
+          version: "16.0.4"
+
+    - name: Build aarch64
+      run: make ARCH=aarch64
+
+    - name: Build riscv64
+      run: make ARCH=riscv64
+
+    - name: Build x86_64
+      run: make ARCH=x86_64
