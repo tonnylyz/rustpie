@@ -1,13 +1,10 @@
-use rpabi::{
-  platform::PlatformInfo,
-  X64BootData,
-};
+use rpabi::{platform::PlatformInfo, X64BootData};
 use spin::Once;
 use x86_64::instructions::port::Port;
 
 use crate::{
   arch::PAGE_SIZE,
-  kernel::traits::Address,
+  kernel::{interrupt::InterruptController, traits::Address},
 };
 
 static CPU_NUMBER: Once<usize> = Once::new();
@@ -15,7 +12,10 @@ pub fn cpu_number() -> usize {
   *CPU_NUMBER.get().unwrap()
 }
 
-pub fn init_per_core() {}
+pub fn init_per_core() {
+  crate::driver::timer::init();
+  crate::driver::INTERRUPT_CONTROLLER.init();
+}
 
 pub fn core_id() -> usize {
   0

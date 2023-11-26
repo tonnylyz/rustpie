@@ -1,12 +1,14 @@
 use x86_64::registers::control::{Cr4, Cr4Flags};
 use x86_64::registers::model_specific::{Efer, EferFlags, GsBase, KernelGsBase, Star};
-use x86_64::structures::gdt::{GlobalDescriptorTable, Descriptor};
+use x86_64::registers::segmentation::*;
+use x86_64::structures::gdt::{Descriptor, GlobalDescriptorTable};
 use x86_64::structures::idt::{InterruptDescriptorTable, InterruptStackFrame};
 use x86_64::structures::tss::TaskStateSegment;
-use x86_64::registers::segmentation::*;
 use x86_64::{set_general_handler, VirtAddr};
 
 use super::ContextFrame;
+use crate::driver::{apic, INTERRUPT_CONTROLLER};
+use crate::kernel::interrupt::*;
 
 static mut GDT: GlobalDescriptorTable = GlobalDescriptorTable::new();
 static mut TSS: TaskStateSegment = TaskStateSegment::new();
@@ -32,7 +34,6 @@ pub fn init() {
     fn syscall_entry();
   }
   unsafe {
-
     let kernel_cs = GDT.add_entry(Descriptor::kernel_code_segment()); // 1*8 = 8
     let kernel_ss = GDT.add_entry(Descriptor::kernel_data_segment()); // 2*8 = 16
     let user_cs = GDT.add_entry(Descriptor::user_code_segment()); // 3*8 + 3 = 27
@@ -81,6 +82,10 @@ pub fn init() {
       .general_protection_fault
       .set_handler_fn(general_protection_fault);
     idt.page_fault.set_handler_fn(page_fault_handler);
+    // Set timer handler.
+    idt[apic::INT_TIMER].set_handler_fn(timer_interrupt_handler);
+    idt[apic::ERROR_INTERRUPT_NUMBER as usize].set_handler_fn(error_interrupt_handler);
+    idt[apic::SPURIOUS_INTERRUPT_NUMBER as usize].set_handler_fn(spurious_interrupt_handler);
     IDT.load();
     x86_64::registers::model_specific::LStar::write(VirtAddr::new(syscall_entry as u64));
   }
@@ -126,6 +131,26 @@ extern "x86-interrupt" fn general_protection_fault(
 extern "x86-interrupt" fn stack_segment_fault(stack_frame: InterruptStackFrame, error_code: u64) {
   println!("stack_segment_fault");
   println!("error code: {:?}", error_code);
+  loop {}
+}
+
+extern "x86-interrupt" fn timer_interrupt_handler(_stack_frame: InterruptStackFrame) {
+  println!("timer_interrupt_handler");
+  crate::kernel::timer::interrupt();
+  // Finished interrupt before switching
+  INTERRUPT_CONTROLLER.finish(apic::INT_TIMER);
+}
+
+extern "x86-interrupt" fn error_interrupt_handler(stack_frame: InterruptStackFrame) {
+  error!("APIC LVT Error Interrupt");
+  error!("ESR: {:#?}", unsafe { apic::local_apic().error_flags() });
+  error!("{:#?}", stack_frame);
+  INTERRUPT_CONTROLLER.finish(apic::ERROR_INTERRUPT_NUMBER as usize);
+  loop {}
+}
+
+extern "x86-interrupt" fn spurious_interrupt_handler(stack_frame: InterruptStackFrame) {
+  error!("Spurious Interrupt: {:#?}", stack_frame);
   loop {}
 }
 

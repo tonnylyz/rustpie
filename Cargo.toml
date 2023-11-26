@@ -28,6 +28,8 @@ riscv = { git = "https://github.com/tonnylyz/riscv", branch = "rustpi" }
 
 [target.'cfg(target_arch = "x86_64")'.dependencies]
 x86_64 = "0.14"
+x2apic = "0.4"
+raw-cpuid = "10.6.1"
 
 [features]
 default = ["user_release", "virt", "gicv3"]
