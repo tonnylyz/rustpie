@@ -1,5 +1,8 @@
 use x86_64::registers::control::{Cr4, Cr4Flags};
-use x86_64::registers::model_specific::{Efer, EferFlags, GsBase, KernelGsBase, Star};
+use x86_64::registers::model_specific::{
+  Efer, EferFlags, GsBase, KernelGsBase, LStar, SFMask, Star,
+};
+use x86_64::registers::rflags::RFlags;
 use x86_64::registers::segmentation::*;
 use x86_64::structures::gdt::{Descriptor, GlobalDescriptorTable};
 use x86_64::structures::idt::{InterruptDescriptorTable, InterruptStackFrame};
@@ -57,9 +60,17 @@ pub fn init() {
     Cr4::update(|f| f.insert(Cr4Flags::PCID));
     let cr4 = Cr4::read();
     println!("cr4 {:?}", cr4);
-    TSS.privilege_stack_table[0] = VirtAddr::new(crate::kernel::stack::stack_of_core(0) as u64);
-    X64_PER_CPU_DATA.kernel_rsp = crate::kernel::stack::stack_of_core(0);
+
+    // rustpi uses per-CPU kernel stack (not differentiate for threads)
+    // the same stack is use for interrupt, syscall
+    let kernel_stack = crate::kernel::stack::stack_of_core(0) as u64;
+    
+    TSS.privilege_stack_table[0] = VirtAddr::new(kernel_stack); // interrupt kernel stack
+    TSS.interrupt_stack_table[0] = VirtAddr::new(kernel_stack); // interrupt kernel stack (when IST(0) is set in IDT)
+    X64_PER_CPU_DATA.kernel_rsp = kernel_stack as usize; // syscall kernel stack (retrieved after SWAPGS indexed by GS)
+
     GDT.load();
+    // init all kernel segment selector. Must be done after LGDT
     CS::set_reg(kernel_cs);
     SS::set_reg(kernel_ss);
     DS::set_reg(SegmentSelector(0));
@@ -68,39 +79,72 @@ pub fn init() {
     GS::set_reg(SegmentSelector(0));
     let per_cpu = VirtAddr::new(&X64_PER_CPU_DATA as *const _ as u64);
     println!("per cpu {:?}", per_cpu);
+
+    // make SWAPGS work here. Supposed we are in kernel, set (GS, KernelGS) to (per_cpu_va, 0). Before entering ring-3, it's swapped back.
     GsBase::write(per_cpu);
     KernelGsBase::write(VirtAddr::new(0));
-    Star::write(sysret_cs, user_ss, kernel_cs, kernel_ss).unwrap();
+
     x86_64::instructions::tables::load_tss(tss_selector);
 
     let idt = &mut IDT;
     set_general_handler!(idt, abort, 0..32);
     set_general_handler!(idt, unhandle, 32..64);
     set_general_handler!(idt, unknown, 64..);
-    idt.stack_segment_fault.set_handler_fn(stack_segment_fault);
+    idt
+      .stack_segment_fault
+      .set_handler_fn(stack_segment_fault)
+      .set_stack_index(0);
     idt
       .general_protection_fault
-      .set_handler_fn(general_protection_fault);
-    idt.page_fault.set_handler_fn(page_fault_handler);
+      .set_handler_fn(general_protection_fault)
+      .set_stack_index(0);
+    idt
+      .page_fault
+      .set_handler_fn(page_fault_handler)
+      .set_stack_index(0);
     // Set timer handler.
-    idt[apic::INT_TIMER].set_handler_fn(timer_interrupt_handler);
-    idt[apic::ERROR_INTERRUPT_NUMBER as usize].set_handler_fn(error_interrupt_handler);
-    idt[apic::SPURIOUS_INTERRUPT_NUMBER as usize].set_handler_fn(spurious_interrupt_handler);
+    extern "C" {
+      // see interrupt.S
+      fn timer_interrupt_handler();
+    }
+    idt[apic::INT_TIMER]
+      .set_handler_addr(VirtAddr::new(timer_interrupt_handler as u64))
+      .set_stack_index(0);
+    idt[apic::ERROR_INTERRUPT_NUMBER as usize]
+      .set_handler_fn(error_interrupt_handler)
+      .set_stack_index(0);
+    idt[apic::SPURIOUS_INTERRUPT_NUMBER as usize]
+      .set_handler_fn(spurious_interrupt_handler)
+      .set_stack_index(0);
     IDT.load();
-    x86_64::registers::model_specific::LStar::write(VirtAddr::new(syscall_entry as u64));
+
+    // Syscall
+    // set kernel CS/SS when entering kernel by syscall
+    // currently rustpi doesn't use sysret to return to user-space
+    Star::write(sysret_cs, user_ss, kernel_cs, kernel_ss).unwrap();
+    LStar::write(VirtAddr::new(syscall_entry as u64));
+    let mut flag_mask = RFlags::empty();
+    flag_mask.insert(RFlags::INTERRUPT_FLAG);
+    flag_mask.insert(RFlags::IOPL_HIGH);
+    flag_mask.insert(RFlags::IOPL_LOW);
+    // clear RFLAGS:IF and set IOPL=0 when entering kernel by syscall
+    SFMask::write(flag_mask);
   }
 }
 
 fn abort(stack_frame: InterruptStackFrame, index: u8, error_code: Option<u64>) {
   println!("abort");
+  println!("{:?} index {} error_code {:?}", stack_frame, index, error_code);
   loop {}
 }
 fn unhandle(stack_frame: InterruptStackFrame, index: u8, error_code: Option<u64>) {
   println!("unhandle");
+  println!("{:?} index {} error_code {:?}", stack_frame, index, error_code);
   loop {}
 }
 fn unknown(stack_frame: InterruptStackFrame, index: u8, error_code: Option<u64>) {
   println!("unknown");
+  println!("{:?} index {} error_code {:?}", stack_frame, index, error_code);
   loop {}
 }
 
@@ -115,7 +159,7 @@ extern "x86-interrupt" fn page_fault_handler(
     "fault address: {:?}",
     x86_64::registers::control::Cr2::read()
   );
-  println!("error code: {:?}", error_code);
+  println!("error code: {:?} {:?}", error_code, stack_frame);
   loop {}
 }
 
@@ -124,21 +168,24 @@ extern "x86-interrupt" fn general_protection_fault(
   error_code: u64,
 ) {
   println!("general protection fault");
-  println!("error code: {:?}", error_code);
+  println!("error code: {:?} {:?}", error_code, stack_frame);
   loop {}
 }
 
 extern "x86-interrupt" fn stack_segment_fault(stack_frame: InterruptStackFrame, error_code: u64) {
   println!("stack_segment_fault");
-  println!("error code: {:?}", error_code);
+  println!("error code: {:?} {:?}", error_code, stack_frame);
   loop {}
 }
 
-extern "x86-interrupt" fn timer_interrupt_handler(_stack_frame: InterruptStackFrame) {
-  println!("timer_interrupt_handler");
+#[no_mangle]
+extern "C" fn timer_rust_entry(ctx: *mut ContextFrame) {
+  let core = crate::kernel::cpu::cpu();
+  core.set_context(ctx);
   crate::kernel::timer::interrupt();
   // Finished interrupt before switching
   INTERRUPT_CONTROLLER.finish(apic::INT_TIMER);
+  core.clear_context();
 }
 
 extern "x86-interrupt" fn error_interrupt_handler(stack_frame: InterruptStackFrame) {

@@ -8,7 +8,6 @@ use crate::core_id;
 use crate::kernel::interrupt::{
   InterProcessInterrupt as IPI, InterProcessorInterruptController, InterruptController,
 };
-use crate::kernel::traits::Address;
 
 pub const TIMER_INTERRUPT_NUMBER: u8 = 123;
 pub const ERROR_INTERRUPT_NUMBER: u8 = 126;
@@ -24,6 +23,10 @@ const IO_APIC_BASE: usize = 0xFEC0_0000;
 static mut LOCAL_APIC: Option<LocalApic> = None;
 static mut IS_X2APIC: bool = false;
 // static mut IO_APIC: Once<Mutex<IoApic>> = Once::new();
+
+fn phys_to_non_cache_va(pa: usize) -> usize {
+  pa | (crate::arch::mmu::NON_CACHE_BASE as usize)
+}
 
 pub struct Apic {
   //   local_apic: LocalApic,
@@ -58,9 +61,9 @@ impl InterruptController for Once<Apic> {
         info!("Using x2APIC.");
         is_x2apic = true;
       } else {
-        let xapic_base_vaddr = (unsafe { xapic_base() } as usize).pa2kva();
+        let xapic_base_vaddr = phys_to_non_cache_va(unsafe { xapic_base() } as usize);
         info!(
-          "Using xAPIC. paddr at {:#x} map to {:?}",
+          "Using xAPIC. paddr at {:x} map to {:x}",
           unsafe { xapic_base() } as usize,
           xapic_base_vaddr
         );
@@ -76,10 +79,10 @@ impl InterruptController for Once<Apic> {
 
       info!("Initialize IO APIC...");
       let ioapic_paddr = IO_APIC_BASE as usize;
-      let ioapic_vaddr = ioapic_paddr.pa2kva();
+      let ioapic_vaddr = phys_to_non_cache_va(ioapic_paddr);
 
       info!(
-        "Initialize IO APIC paddr at {:#x} map to {:?}",
+        "Initialize IO APIC paddr at {:x} map to {:x}",
         ioapic_paddr, ioapic_vaddr
       );
 

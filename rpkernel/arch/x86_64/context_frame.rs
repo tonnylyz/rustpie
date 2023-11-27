@@ -72,7 +72,9 @@ impl ContextFrameTrait for X64ContextFrame {
     use x86_64::registers::rflags::RFlags;
     let mut flags = RFlags::from_bits_retain(0x2); // EFLAGS (bit 1)
     flags |= RFlags::INTERRUPT_FLAG;
-    if privileged {
+    if !privileged {
+      // set IOPL to 3 (for ring-3 user-space)
+      flags |= RFlags::IOPL_HIGH;
       flags |= RFlags::IOPL_LOW;
     }
 
@@ -170,7 +172,7 @@ impl ContextFrameTrait for X64ContextFrame {
     self.rdi = arg as u64;
   }
 
-  fn gpr(&self, index: usize) -> usize {
+  fn gpr(&self, _index: usize) -> usize {
     panic!()
   }
 }

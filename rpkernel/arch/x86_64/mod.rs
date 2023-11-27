@@ -1,6 +1,6 @@
 pub use self::interface::*;
 
-mod mmu;
+pub mod mmu;
 mod exception;
 mod interface;
 mod page_table;

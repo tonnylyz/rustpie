@@ -65,7 +65,7 @@ cfg_if::cfg_if! {
 
     #[path = "driver/x86_64/mod.rs"]
     mod driver;
-    // assert_eq_size!([u8; 0x110], ContextFrame);
+    assert_eq_size!([u8; 0xA0], ContextFrame);
 
   } else {
     compile_error!("unsupported target_arch");
@@ -198,7 +198,6 @@ extern "C" fn main(core_id: arch::CoreId, boot_data: usize) -> ! {
     );
     kernel::thread::thread_wake(&t);
 
-    #[cfg(not(target_arch = "x86_64"))]
     for device in &board::PLATFORM_INFO.get().unwrap().devices {
       if let Some(device) = device {
         for uf in kernel::device::device_to_user_frames(device).iter() {

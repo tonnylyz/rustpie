@@ -62,3 +62,33 @@ syscall_entry:
     call syscall_rust_entry
     jmp pop_context
 # TODO: use sysret to return to ring 3
+
+.macro INTERRUPT_ENTRY name rust_entry
+.global \name
+\name:
+    # rip, cs, rflags, rsp, ss are pushed by CPU itself
+    swapgs
+    push r15
+    push r14
+    push r13
+    push r12
+    push r11
+    push r10
+    push r9
+    push r8
+    push rbp
+    push rdi
+    push rsi
+    push rdx
+    push rcx
+    push rbx
+    push rax
+
+    # call rust_entry with ctx: *mut ContextFrame
+    mov rdi, rsp
+    call \rust_entry
+
+    jmp pop_context
+.endm
+
+INTERRUPT_ENTRY timer_interrupt_handler timer_rust_entry

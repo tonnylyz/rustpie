@@ -30,6 +30,7 @@ pub fn device_new(
   r
 }
 
+#[allow(dead_code)]
 pub fn device_from_fdt_node(fdt: &Fdt, node: &FdtNode, driver: Option<Driver>) -> Device {
   let mut regs = node.reg().unwrap();
   let register;

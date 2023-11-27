@@ -6,7 +6,7 @@ use uefi::prelude::*;
 use uefi::proto::loaded_image::LoadedImage;
 use uefi::table::boot::{self, MemoryType};
 use x86_64::structures::paging::{
-  FrameAllocator, Mapper, OffsetPageTable, Page, PageTable, PageTableFlags, PhysFrame, Size2MiB,
+  FrameAllocator, Mapper, OffsetPageTable, Page, PageTable, PageTableFlags, PhysFrame,
   Size4KiB, Size1GiB,
 };
 use x86_64::{PhysAddr, VirtAddr};

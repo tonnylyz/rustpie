@@ -1,4 +1,4 @@
-use rpabi::{platform::PlatformInfo, X64BootData};
+use rpabi::{platform::{PlatformInfo, Device}, X64BootData};
 use spin::Once;
 use x86_64::instructions::port::Port;
 
@@ -13,6 +13,9 @@ pub fn cpu_number() -> usize {
 }
 
 pub fn init_per_core() {
+  if core_id() == 0 {
+    crate::arch::mmu::map_non_cache_region_boot();
+  }
   crate::driver::timer::init();
   crate::driver::INTERRUPT_CONTROLLER.init();
 }
@@ -33,14 +36,32 @@ impl crate::kernel::print::DebugUart for I8250 {
   fn init(&self) {}
 
   fn putc(&self, c: u8) {
+    const COM1: u16 = 0x3f8;
     unsafe {
-      const COM1: u16 = 0x3f8;
-      // todo: poll LSR (COM1+5)
-      Port::new(COM1 + 0).write(c);
+      let mut thr_port = Port::new(COM1 + 0);
+      let mut lsr_port = Port::new(COM1 + 5);
+      loop {
+        let lsr: u8 = lsr_port.read();
+        // if thr is empty, ready to send
+        if lsr & (1 << 5) != 0 {
+          break;
+        }
+      }
+      thr_port.write(c);
     }
   }
 
   fn getc(&self) -> Option<u8> {
+    const COM1: u16 = 0x3f8;
+    unsafe {
+      let mut rhr_port = Port::new(COM1 + 0);
+      let mut lsr_port = Port::new(COM1 + 5);
+      let lsr: u8 = lsr_port.read();
+      // if ready flag is set
+      if lsr & 0b1 != 0 {
+        return Some(rhr_port.read())
+      }
+    }
     None
   }
 }
@@ -64,6 +85,16 @@ pub fn init(boot_data: usize) -> (core::ops::Range<usize>, core::ops::Range<usiz
   let paged_start = heap_end;
   let paged_end = boot_data.free_mem_start + boot_data.free_mem_count * PAGE_SIZE;
 
+  PLATFORM_INFO.call_once(|| {
+    let mut r = PlatformInfo::default();
+    r.devices[0] = Some(Device {
+        name: [0; rpabi::platform::DEVICE_NAME_LEN],
+        register: 0..0,
+        interrupt: None,
+        driver: Some(rpabi::platform::Driver::Ramdisk),
+    });
+    r
+  });
   CPU_NUMBER.call_once(|| 1);
   (heap_start..heap_end, paged_start..paged_end)
 }

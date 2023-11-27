@@ -27,28 +27,8 @@ impl X64PageTableEntry {
 }
 
 impl X64PageTableEntry {
-  fn from_pte(value: usize) -> Self {
-    X64PageTableEntry(value)
-  }
-
-  fn from_pa(pa: usize) -> Self {
-    X64PageTableEntry(pa) // null flags
-  }
-
-  fn to_pte(&self) -> usize {
-    self.0
-  }
-
   fn to_pa(&self) -> usize {
     self.0 & 0x0000_FFFF_FFFF_F000
-  }
-
-  fn to_kva(&self) -> usize {
-    self.to_pa().pa2kva()
-  }
-
-  fn valid(&self) -> bool {
-    self.flags().contains(PageTableFlags::PRESENT)
   }
 }
 
@@ -102,16 +82,12 @@ impl X64PageTable {
     let pt = self.l4pt();
     unsafe { MappedPageTable::new(pt, X64PageTableFrameMapping {}) }
   }
-
-  unsafe fn mut_ref(&self) -> &mut Self {
-    (self as *const _ as usize as *mut Self).as_mut().unwrap()
-  }
 }
 
 impl PageTableTrait for X64PageTable {
   fn new(directory_kva: usize, table_frames: &mut Vec<PhysicalFrame>) -> Self {
     const PHY_ADDR_MAX: usize = 0x1_0000_0000;
-    let mut r = X64PageTable { directory_kva };
+    let r = X64PageTable { directory_kva };
     let pt = r.l4pt();
     let mut offset_pt = unsafe { OffsetPageTable::new(pt, VirtAddr::new(0.pa2kva() as u64)) };
     let start_frame = PhysFrame::<Size1GiB>::containing_address(PhysAddr::new(0));
@@ -125,6 +101,17 @@ impl PageTableTrait for X64PageTable {
       unsafe {
         let _ = offset_pt
           .map_to(page, frame, flags, &mut X64FrameAllocator(table_frames))
+          .unwrap();
+      }
+    }
+    for frame in PhysFrame::range_inclusive(start_frame, end_frame) {
+      let page = x86_64::structures::paging::Page::containing_address(VirtAddr::new(
+          mmu::NON_CACHE_BASE + frame.start_address().as_u64()
+      ));
+      let flags = PageTableFlags::PRESENT | PageTableFlags::WRITABLE;
+      unsafe {
+        let _ = offset_pt
+        .map_to(page, frame, flags, &mut X64FrameAllocator(table_frames))
           .unwrap();
       }
     }
@@ -177,7 +164,7 @@ impl PageTableTrait for X64PageTable {
     match result {
       TranslateResult::Mapped {
         frame,
-        offset,
+        offset: _,
         flags,
       } => Some(Entry::new(
         Entry::from(X64PageTableEntry(flags.bits() as usize)).attribute(),

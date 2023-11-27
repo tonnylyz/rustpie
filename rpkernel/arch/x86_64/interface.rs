@@ -4,6 +4,7 @@ use crate::kernel::traits::*;
 
 pub const PAGE_SHIFT: usize = 12;
 pub const PAGE_SIZE: usize = 1 << PAGE_SHIFT;
+#[allow(dead_code)]
 pub const MACHINE_SIZE: usize = size_of::<usize>();
 
 const PA2KVA: usize = 0xFFFF_8000_0000_0000;

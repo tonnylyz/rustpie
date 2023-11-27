@@ -64,7 +64,11 @@ endif
 ${KERNEL}: trusted_image force
 	cargo build --target rpkernel/cargo_target/${KERNEL_TARGET}.json -Z build-std=core,alloc  ${CARGO_FLAGS}
 
+ifeq (${ARCH}, x86_64)
+trusted_image: ramdisk.img
+else
 trusted_image:
+endif
 	make ARCH=${ARCH} TRUSTED_PROFILE=${TRUSTED_PROFILE} MACHINE=${MACHINE} TARGET=${TRUSTED_TARGET} -C trusted
 
 user_image:
@@ -105,10 +109,10 @@ QEMU_CMD := qemu-system-x86_64 -bios ${BIOS_DIR}
 QEMU_DISK_OPTIONS := 
 QEMU_COMMON_OPTIONS := -serial stdio -display none -m 2048
 
-emu: ${EFISTUB}
+emu: ${EFISTUB} ${KERNEL}.asm
 	${QEMU_CMD} ${QEMU_COMMON_OPTIONS} ${QEMU_DISK_OPTIONS} -kernel $< -s
 
-debug: ${EFISTUB}
+debug: ${EFISTUB} ${KERNEL}.asm
 	${QEMU_CMD} ${QEMU_COMMON_OPTIONS} ${QEMU_DISK_OPTIONS} -kernel $< -s -S
 
 else
@@ -143,6 +147,17 @@ disk: user_image user_c_image
 	cp user-c/hello2 disk
 	sync
 	umount disk
+
+ramdisk.img: user_image user_c_image
+	test -f $@ || (dd if=/dev/zero of=$@ bs=1M count=4 && redoxfs-mkfs $@)
+	true || (mountpoint -q disk && umount disk)
+	rm -rf ramdisk
+	mkdir ramdisk
+	redoxfs $@ ramdisk
+	for f in shell cat ls mkdir touch rm rd stat hello ps write date; do cp user/target/${USER_TARGET}/${USER_PROFILE}/$$f ramdisk; done
+	cp user-c/hello2 ramdisk
+	sync
+	umount ramdisk
 
 # sdcard: user_image
 # 	rm -rf sdcard

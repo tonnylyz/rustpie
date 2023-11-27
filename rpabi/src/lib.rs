@@ -46,6 +46,7 @@ pub mod platform {
     Pl011,
     Pl031,
     GoldfishRtc,
+    Ramdisk,
   }
   #[derive(Debug)]
   pub struct Device {
