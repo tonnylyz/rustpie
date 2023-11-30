@@ -30,6 +30,7 @@ riscv = { git = "https://github.com/tonnylyz/riscv", branch = "rustpi" }
 x86_64 = "0.14"
 x2apic = "0.4"
 raw-cpuid = "10.6.1"
+acpi = "5.0.0"
 
 [features]
 default = ["user_release", "virt", "gicv3"]

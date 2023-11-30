@@ -107,7 +107,7 @@ endif
 ifeq (${ARCH}, x86_64)
 QEMU_CMD := qemu-system-x86_64 -bios ${BIOS_DIR}
 QEMU_DISK_OPTIONS := 
-QEMU_COMMON_OPTIONS := -serial stdio -display none -m 2048
+QEMU_COMMON_OPTIONS := -serial stdio -display none -smp 4 -m 2048
 
 emu: ${EFISTUB} ${KERNEL}.asm
 	${QEMU_CMD} ${QEMU_COMMON_OPTIONS} ${QEMU_DISK_OPTIONS} -kernel $< -s

@@ -1,10 +1,9 @@
 use x2apic::ioapic::IoApic;
 use x2apic::lapic::{xapic_base, LocalApic, LocalApicBuilder};
-use x86_64::instructions::port::Port;
 
 use spin::{Mutex, Once};
 
-use crate::core_id;
+use crate::{core_id, MAX_CPU_NUMBER};
 use crate::kernel::interrupt::{
   InterProcessInterrupt as IPI, InterProcessorInterruptController, InterruptController,
 };
@@ -13,14 +12,12 @@ pub const TIMER_INTERRUPT_NUMBER: u8 = 123;
 pub const ERROR_INTERRUPT_NUMBER: u8 = 126;
 pub const SPURIOUS_INTERRUPT_NUMBER: u8 = 127;
 
-pub const IRQ_MIN: usize = 0x20;
-
 /// The timer IRQ number.
 pub const INT_TIMER: usize = TIMER_INTERRUPT_NUMBER as usize;
 
+// TODO: remove this hardcode address
 const IO_APIC_BASE: usize = 0xFEC0_0000;
 
-static mut LOCAL_APIC: Option<LocalApic> = None;
 static mut IS_X2APIC: bool = false;
 // static mut IO_APIC: Once<Mutex<IoApic>> = Once::new();
 
@@ -33,6 +30,9 @@ pub struct Apic {
   io_apic: Mutex<IoApic>,
 }
 
+const DEFAULT_LAPIC: Option<LocalApic> = None;
+static mut LAPIC_LIST: [Option<LocalApic>; MAX_CPU_NUMBER] = [DEFAULT_LAPIC; MAX_CPU_NUMBER];
+
 pub static INTERRUPT_CONTROLLER: Once<Apic> = Once::new();
 
 pub type Interrupt = usize;
@@ -43,11 +43,6 @@ impl InterruptController for Once<Apic> {
       unsafe { local_apic().enable() };
     } else {
       info!("Initialize Local APIC...");
-      unsafe {
-        // Disable 8259A interrupt controllers
-        Port::<u8>::new(0x21).write(0xff);
-        Port::<u8>::new(0xA1).write(0xff);
-      }
 
       let mut builder = LocalApicBuilder::new();
       builder
@@ -73,7 +68,9 @@ impl InterruptController for Once<Apic> {
       let mut lapic = builder.build().unwrap();
       unsafe {
         lapic.enable();
-        LOCAL_APIC = Some(lapic);
+        let apic_id = lapic.id() as usize;
+        info!("Enabled Local APIC of CPU{}", apic_id);
+        LAPIC_LIST[apic_id] = Some(lapic);
         IS_X2APIC = is_x2apic;
       }
 
@@ -141,18 +138,21 @@ impl InterruptController for Once<Apic> {
 }
 
 impl InterProcessorInterruptController for Once<Apic> {
-  fn send_to_one(&self, irq: IPI, target: usize) {
+  fn send_to_one(&self, _irq: IPI, _target: usize) {
     todo!()
   }
 
-  fn send_to_multiple(&self, irq: IPI, target_mask: usize) {
+  fn send_to_multiple(&self, _irq: IPI, _target_mask: usize) {
     todo!()
   }
 }
 
 pub fn local_apic<'a>() -> &'a mut LocalApic {
   // It's safe as LAPIC is per-cpu.
-  unsafe { LOCAL_APIC.as_mut().unwrap() }
+  unsafe { 
+    let apic_id = crate::core_id();
+    LAPIC_LIST[apic_id].as_mut().unwrap()
+  }
 }
 
 fn cpu_has_x2apic() -> bool {

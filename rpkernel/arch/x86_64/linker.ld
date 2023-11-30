@@ -6,7 +6,10 @@ SECTIONS
     KERNEL_ENTRY = .;
     .init : {
         *(.text.start)
-        *(.data.start)
+    }
+    . = ALIGN(4096);
+    .sec_init : {
+        *(.text.sec_start)
     }
     .text : {
         *(.text*)

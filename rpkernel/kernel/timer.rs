@@ -24,6 +24,26 @@ pub fn current_sec() -> usize {
   count / freq
 }
 
+#[allow(dead_code)]
+pub fn udelay(us: usize) {
+  let now = current_us();
+  loop {
+    if current_us() > (now + us) {
+      break;
+    }
+  }
+}
+
+#[allow(dead_code)]
+pub fn mdelay(ms: usize) {
+  let now = current_ms();
+  loop {
+    if current_ms() > (now + ms) {
+      break;
+    }
+  }
+}
+
 pub fn interrupt() {
   crate::kernel::cpu::cpu().tick(true);
 }

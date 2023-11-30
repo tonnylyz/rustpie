@@ -131,6 +131,8 @@ pub fn init(fdt: usize) -> (Range<usize>, Range<usize>) {
   (heap_start..heap_end, paged_start..paged_end)
 }
 
+pub fn init_post_heap_setup(fdt: usize) {}
+
 pub fn init_per_core() {
   use aarch64_cpu::registers::*;
   use tock_registers::interfaces::Writeable;

@@ -119,6 +119,7 @@ extern "C" fn main(core_id: arch::CoreId, boot_data: usize) -> ! {
 
     mm::page_pool::init(pr);
     info!("page pool init ok");
+    board::init_post_heap_setup(boot_data);
 
     board::launch_other_cores();
     info!("launched other cores");

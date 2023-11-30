@@ -1,3 +1,4 @@
+use spin::Once;
 use x86_64::registers::control::{Cr4, Cr4Flags};
 use x86_64::registers::model_specific::{
   Efer, EferFlags, GsBase, KernelGsBase, LStar, SFMask, Star,
@@ -12,84 +13,89 @@ use x86_64::{set_general_handler, VirtAddr};
 use super::ContextFrame;
 use crate::driver::{apic, INTERRUPT_CONTROLLER};
 use crate::kernel::interrupt::*;
-
-static mut GDT: GlobalDescriptorTable = GlobalDescriptorTable::new();
-static mut TSS: TaskStateSegment = TaskStateSegment::new();
+use crate::MAX_CPU_NUMBER;
 
 #[repr(C)]
-#[derive(Debug)]
-struct X64PerCpuData {
+#[derive(Debug, Clone)]
+struct PerCpu {
   kernel_rsp: usize,
   user_rsp: usize,
   scratch: usize,
+  gdt: GlobalDescriptorTable,
 }
 
-static mut X64_PER_CPU_DATA: X64PerCpuData = X64PerCpuData {
-  kernel_rsp: 0,
-  user_rsp: 0,
-  scratch: 0,
-};
-
-pub static mut IDT: InterruptDescriptorTable = InterruptDescriptorTable::new();
-
-pub fn init() {
-  extern "C" {
-    fn syscall_entry();
+impl PerCpu {
+  const fn new() -> Self {
+    PerCpu {
+      kernel_rsp: 0,
+      user_rsp: 0,
+      scratch: 0,
+      gdt: GlobalDescriptorTable::new(),
+    }
   }
-  unsafe {
-    let kernel_cs = GDT.add_entry(Descriptor::kernel_code_segment()); // 1*8 = 8
-    let kernel_ss = GDT.add_entry(Descriptor::kernel_data_segment()); // 2*8 = 16
-    let user_cs = GDT.add_entry(Descriptor::user_code_segment()); // 3*8 + 3 = 27
-    let user_ss = GDT.add_entry(Descriptor::user_data_segment()); // 4*8 + 3 = 35
-    let sysret_cs = GDT.add_entry(Descriptor::user_data_segment()); // 5*8 + 3 = 43
+}
 
-    println!("kernel_cs {:?} {}", kernel_cs, kernel_cs.0);
-    println!("kernel_ss {:?} {}", kernel_ss, kernel_ss.0);
-    println!("user_cs {:?} {}", user_cs, user_cs.0);
-    println!("user_ss {:?} {}", user_ss, user_ss.0);
-    println!("sysret_cs {:?} {}", sysret_cs, sysret_cs.0);
+static PER_CPU: Once<[PerCpu; MAX_CPU_NUMBER]> = Once::new();
+static PER_CPU_TSS: Once<[TaskStateSegment; MAX_CPU_NUMBER]> = Once::new();
+static PER_CPU_TSS_SEL: Once<[SegmentSelector; MAX_CPU_NUMBER]> = Once::new();
 
-    let tss_selector = GDT.add_entry(Descriptor::tss_segment(&TSS));
+const KERNEL_CODE_SEGMENT_SEL: u16 = 0x8;
+const KERNEL_STACK_SEGMENT_SEL: u16 = 0x10;
+const USER_CODE_SEGMENT_SEL: u16 = 0x1B;
+const USER_STACK_SEGMENT_SEL: u16 = 0x23;
+const SYSRET_CODE_SEGMENT_SEL: u16 = 0x2B;
 
-    Efer::update(|f: &mut EferFlags| {
-      f.insert(EferFlags::SYSTEM_CALL_EXTENSIONS);
-      f.remove(EferFlags::NO_EXECUTE_ENABLE)
-    });
-    let efer = Efer::read();
-    println!("efer {:?}", efer);
-    Cr4::update(|f| f.insert(Cr4Flags::PCID));
-    let cr4 = Cr4::read();
-    println!("cr4 {:?}", cr4);
+fn per_cpu_init() -> &'static [PerCpu; MAX_CPU_NUMBER] {
+  const PER_CPU_DEFAULT: PerCpu = PerCpu::new();
+  let mut per_cpu = [PER_CPU_DEFAULT; MAX_CPU_NUMBER];
+  let mut per_cpu_tss = [TaskStateSegment::new(); MAX_CPU_NUMBER];
+  let mut per_cpu_tss_sel = [SegmentSelector::NULL; MAX_CPU_NUMBER];
 
+  for i in 0..MAX_CPU_NUMBER {
     // rustpi uses per-CPU kernel stack (not differentiate for threads)
     // the same stack is use for interrupt, syscall
-    let kernel_stack = crate::kernel::stack::stack_of_core(0) as u64;
-    
-    TSS.privilege_stack_table[0] = VirtAddr::new(kernel_stack); // interrupt kernel stack
-    TSS.interrupt_stack_table[0] = VirtAddr::new(kernel_stack); // interrupt kernel stack (when IST(0) is set in IDT)
-    X64_PER_CPU_DATA.kernel_rsp = kernel_stack as usize; // syscall kernel stack (retrieved after SWAPGS indexed by GS)
+    let kernel_stack = crate::kernel::stack::stack_of_core(i) as u64;
+    per_cpu_tss[i].privilege_stack_table[0] = VirtAddr::new(kernel_stack); // interrupt kernel stack
+    per_cpu_tss[i].interrupt_stack_table[0] = VirtAddr::new(kernel_stack); // interrupt kernel stack (when IST(0) is set in IDT)
+  }
 
-    GDT.load();
-    // init all kernel segment selector. Must be done after LGDT
-    CS::set_reg(kernel_cs);
-    SS::set_reg(kernel_ss);
-    DS::set_reg(SegmentSelector(0));
-    ES::set_reg(SegmentSelector(0));
-    FS::set_reg(SegmentSelector(0));
-    GS::set_reg(SegmentSelector(0));
-    let per_cpu = VirtAddr::new(&X64_PER_CPU_DATA as *const _ as u64);
-    println!("per cpu {:?}", per_cpu);
+  let per_cpu_tss = PER_CPU_TSS.call_once(|| per_cpu_tss);
+  for i in 0..MAX_CPU_NUMBER {
+    let gdt = &mut per_cpu[i].gdt;
+    let kernel_cs = gdt.add_entry(Descriptor::kernel_code_segment());
+    let kernel_ss = gdt.add_entry(Descriptor::kernel_data_segment());
+    let user_cs = gdt.add_entry(Descriptor::user_code_segment());
+    let user_ss = gdt.add_entry(Descriptor::user_data_segment());
+    let sysret_cs = gdt.add_entry(Descriptor::user_data_segment());
+    assert_eq!(kernel_cs.0, KERNEL_CODE_SEGMENT_SEL);
+    assert_eq!(kernel_ss.0, KERNEL_STACK_SEGMENT_SEL);
+    assert_eq!(user_cs.0, USER_CODE_SEGMENT_SEL);
+    assert_eq!(user_ss.0, USER_STACK_SEGMENT_SEL);
+    assert_eq!(sysret_cs.0, SYSRET_CODE_SEGMENT_SEL);
 
-    // make SWAPGS work here. Supposed we are in kernel, set (GS, KernelGS) to (per_cpu_va, 0). Before entering ring-3, it's swapped back.
-    GsBase::write(per_cpu);
-    KernelGsBase::write(VirtAddr::new(0));
+    let kernel_stack = crate::kernel::stack::stack_of_core(i) as u64;
+    per_cpu[i].kernel_rsp = kernel_stack as usize; // syscall kernel stack (retrieved after SWAPGS indexed by GS)
 
-    x86_64::instructions::tables::load_tss(tss_selector);
+    let tss_selector = gdt.add_entry(Descriptor::tss_segment(&per_cpu_tss[i]));
+    per_cpu_tss_sel[i] = tss_selector;
+  }
+  PER_CPU_TSS_SEL.call_once(|| per_cpu_tss_sel);
+  PER_CPU.call_once(|| per_cpu)
+}
 
-    let idt = &mut IDT;
-    set_general_handler!(idt, abort, 0..32);
-    set_general_handler!(idt, unhandle, 32..64);
-    set_general_handler!(idt, unknown, 64..);
+static IDT: Once<InterruptDescriptorTable> = Once::new();
+
+fn idt_init() -> InterruptDescriptorTable {
+  extern "C" {
+    // see interrupt.S
+    fn timer_interrupt_handler();
+  }
+  let mut idt = InterruptDescriptorTable::new();
+  set_general_handler!(&mut idt, abort, 0..32);
+  set_general_handler!(&mut idt, unhandle, 32..64);
+  set_general_handler!(&mut idt, unknown, 64..);
+  // we don't allow nested interrupt in rustpi, thus using same stack index is safe
+  unsafe {
     idt
       .stack_segment_fault
       .set_handler_fn(stack_segment_fault)
@@ -103,10 +109,6 @@ pub fn init() {
       .set_handler_fn(page_fault_handler)
       .set_stack_index(0);
     // Set timer handler.
-    extern "C" {
-      // see interrupt.S
-      fn timer_interrupt_handler();
-    }
     idt[apic::INT_TIMER]
       .set_handler_addr(VirtAddr::new(timer_interrupt_handler as u64))
       .set_stack_index(0);
@@ -116,12 +118,59 @@ pub fn init() {
     idt[apic::SPURIOUS_INTERRUPT_NUMBER as usize]
       .set_handler_fn(spurious_interrupt_handler)
       .set_stack_index(0);
-    IDT.load();
+  }
+  idt
+}
+
+pub fn init() {
+  extern "C" {
+    // see interrupt.S
+    fn syscall_entry();
+  }
+  unsafe {
+    // Set MSR EFER
+    //  - enable syscall extensions
+    //  - disable no execute TODO: enable it
+    Efer::update(|f: &mut EferFlags| {
+      f.insert(EferFlags::SYSTEM_CALL_EXTENSIONS);
+      f.remove(EferFlags::NO_EXECUTE_ENABLE);
+    });
+
+    // Set CR4
+    //  - enable PCID
+    Cr4::update(|f| f.insert(Cr4Flags::PCID));
+
+    // Setup GDT; Load GDT (every CPU)
+    per_cpu_init()[crate::core_id()].gdt.load();
+    // init all kernel segment selector. Must be done after LGDT
+    CS::set_reg(SegmentSelector(0x8));
+    SS::set_reg(SegmentSelector(0x10));
+    DS::set_reg(SegmentSelector::NULL);
+    ES::set_reg(SegmentSelector::NULL);
+    FS::set_reg(SegmentSelector::NULL);
+    GS::set_reg(SegmentSelector::NULL);
+
+    // make SWAPGS work here. Supposed we are in kernel, set (GS, KernelGS) to (per_cpu_va, 0). Before entering ring-3, it's swapped back.
+    let per_cpu = &PER_CPU.get().unwrap()[crate::core_id()];
+    GsBase::write(VirtAddr::new(per_cpu as *const _ as u64));
+    KernelGsBase::write(VirtAddr::new(0));
+
+    // Load TSS, get tss selector from per-cpu data
+    x86_64::instructions::tables::load_tss(PER_CPU_TSS_SEL.get().unwrap()[crate::core_id()]);
+
+    // Setup IDT (bsp CPU only); Load IDT (every CPU)
+    IDT.call_once(|| idt_init()).load();
 
     // Syscall
-    // set kernel CS/SS when entering kernel by syscall
-    // currently rustpi doesn't use sysret to return to user-space
-    Star::write(sysret_cs, user_ss, kernel_cs, kernel_ss).unwrap();
+    //  - set kernel CS/SS when entering kernel by syscall
+    //  - currently rustpi doesn't use sysret to return to user-space
+    Star::write(
+      SegmentSelector(SYSRET_CODE_SEGMENT_SEL),
+      SegmentSelector(USER_STACK_SEGMENT_SEL),
+      SegmentSelector(KERNEL_CODE_SEGMENT_SEL),
+      SegmentSelector(KERNEL_STACK_SEGMENT_SEL),
+    )
+    .unwrap();
     LStar::write(VirtAddr::new(syscall_entry as u64));
     let mut flag_mask = RFlags::empty();
     flag_mask.insert(RFlags::INTERRUPT_FLAG);
@@ -134,17 +183,26 @@ pub fn init() {
 
 fn abort(stack_frame: InterruptStackFrame, index: u8, error_code: Option<u64>) {
   println!("abort");
-  println!("{:?} index {} error_code {:?}", stack_frame, index, error_code);
+  println!(
+    "{:?} index {} error_code {:?}",
+    stack_frame, index, error_code
+  );
   loop {}
 }
 fn unhandle(stack_frame: InterruptStackFrame, index: u8, error_code: Option<u64>) {
   println!("unhandle");
-  println!("{:?} index {} error_code {:?}", stack_frame, index, error_code);
+  println!(
+    "{:?} index {} error_code {:?}",
+    stack_frame, index, error_code
+  );
   loop {}
 }
 fn unknown(stack_frame: InterruptStackFrame, index: u8, error_code: Option<u64>) {
   println!("unknown");
-  println!("{:?} index {} error_code {:?}", stack_frame, index, error_code);
+  println!(
+    "{:?} index {} error_code {:?}",
+    stack_frame, index, error_code
+  );
   loop {}
 }
 

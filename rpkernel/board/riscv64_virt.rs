@@ -90,6 +90,8 @@ pub fn init(fdt: usize) -> (Range<usize>, Range<usize>) {
   (heap_start..heap_end, paged_start..paged_end)
 }
 
+pub fn init_post_heap_setup(fdt: usize) {}
+
 pub fn init_per_core() {
   crate::driver::timer::init();
   crate::driver::INTERRUPT_CONTROLLER.init();

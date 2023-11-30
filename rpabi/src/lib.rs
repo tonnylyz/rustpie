@@ -368,4 +368,5 @@ pub mod time {
 pub struct X64BootData {
   pub free_mem_start: usize,
   pub free_mem_count: usize,
+  pub acpi2_table_pa: usize,
 }

@@ -17,3 +17,5 @@ pub extern "C" fn _start(boot_data: usize) -> ! {
   }
   crate::main(0, boot_data);
 }
+
+// core::arch::global_asm!(include_str!("start.S"));
