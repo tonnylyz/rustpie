@@ -1,7 +1,6 @@
 # Rustpi Enhanced
 
-Rustpi is a research micro-kernel. It is also my dissertation project. 
-An abstract paper was published at ISSRE 2021 conference.
+Rustpi is a research micro-kernel written in Rust.
 
 ## Boards and Platforms
 
@@ -11,32 +10,33 @@ Rustpi now supports following platforms.
 |---------|-------------------------|-----------------------------------------|
 | virt    | **aarch64** (AArch64)   | QEMU virt machine (qemu-system-aarch64) |
 | virt    | **riscv64** (RISC-V 64) | QEMU virt machine (qemu-system-riscv64) |
-| k210    | **riscv64** (RISC-V 64) | Kendryte K210                           |
+| virt    | **x86_64**  (x64) NEW!  | QEMU virt machine (qemu-system-x86_64)  |
 
 
 For QEMU target, use this line to build and emulate:
 ```
-make MACHINE=virt ARCH=[aarch64|riscv64] emu
+make MACHINE=virt ARCH=[aarch64|riscv64|x86_64] emu
 ```
 
-For K210 target, use this line to flash:
-```
-make MACHINE=k210 ARCH=riscv64 flash
-```
-K210 also require a SBI image. I suggest using [RustSBI](https://github.com/rustsbi/rustsbi/releases/tag/v0.1.1).
+Note: K210 machine is no longer maintained, and will be removed in the future. If you want it, please checkout previous commit.
 
 ## Toolchains
 
-1. Nightly Rust (`rustc 1.72.0-nightly (114fb86ca 2023-06-15)` tested)
-2. `rust-src` component (use `make dependencies` to install)
+1. Nightly Rust (building is tested with latest nightly toolchain with GitHub actions)
+2. `rust-src` component installed by `rustup component add rust-src`
 3. QEMU (`8.0.2` tested)
-4. LLVM tools (`llvm-objcopy` and `llvm-objdump`, can be replaced with GNU ones)
-4. LLVM lds (`ld.lld` for C compatibility)
-5. K210 `kflash` tool [kflash.py](https://github.com/kendryte/kflash.py).
-6. `mkimage` u-boot image tool
-7. RedoxFS utilities [link](https://gitlab.redox-os.org/redox-os/redoxfs) (`redoxfs` and `redoxfs-mkfs`) Install with `cargo install redoxfs@0.4.4`, `libfuse-dev`` is required.
+4. LLVM tools (`llvm-objcopy` and `llvm-objdump`, also feel free to use GNU ones)
+5. LLVM lds (`ld.lld` for C compatibility)
+6. RedoxFS utilities [link](https://gitlab.redox-os.org/redox-os/redoxfs) (`redoxfs` and `redoxfs-mkfs`) Install with `cargo install redoxfs@0.4.4` (requires host fuse dev package)
 
-For Ubuntu:
+## Host dependencies
+
+Ubuntu:
 ```
 sudo apt install llvm lld libfuse-dev
 ```
+Archlinux:
+```
+sudo pacman -Sy clang llvm lld fuse2 qemu-system-aarch64 qemu-system-riscv qemu-system-x86
+```
+
